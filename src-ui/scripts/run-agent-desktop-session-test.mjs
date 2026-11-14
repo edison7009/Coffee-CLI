@@ -14,6 +14,7 @@ const compiled = await build({
   plugins: [{ name: 'desktop-transport', setup(builder) {
     builder.onLoad({ filter: /app-state\.tsx$/ }, async ({ path }) => ({ contents: `${await readFile(path, 'utf8')}\nexport { reducer };`, loader: 'tsx' }));
     builder.onLoad({ filter: /[/\\]tauri\.ts$/ }, () => ({ loader: 'js', contents: `
+      export const isTauri=true;
       export const invoke=(name,args)=>globalThis.bridge.invoke(name,args);
       export const commands={listTools:()=>invoke('list_tools'),checkToolsInstalled:()=>invoke('check_tools_installed'),tierTerminalKill:id=>invoke('tier_terminal_kill',{id}),tierTerminalInput:(id,data)=>invoke('tier_terminal_input',{id,data})};
     ` }));

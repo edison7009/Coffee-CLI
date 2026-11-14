@@ -4,6 +4,7 @@ import { createContext, useContext, useLayoutEffect, useReducer, useRef, useStat
 import type { ReactNode, RefObject } from 'react';
 import { isConversationSession, supportsEnhancedTool } from '../lib/chat-tools';
 import { REMOTE, remoteRequest } from '../remote/bridge';
+import { isCompact } from '../lib/viewport';
 import { supportsAdditionalAgentStatus } from '../lib/terminal-agent-status';
 import { insertSessionSplit, removeSessionSplit, replaceSplitSession, splitSessionIds, setSessionSplitRatio, type SessionSplitLayout, type SplitEdge } from '../lib/session-split-layout';
 
@@ -240,6 +241,8 @@ export interface AppState {
   // Default both panels visible — matches first-time user expectation.
   leftPanelHidden: boolean;
   rightPanelHidden: boolean;
+  /** The side panel open as a drawer while the window is too narrow to dock them; this screen only, never saved. */
+  drawer: 'left' | 'right' | null;
 
   // Right-panel task board form. 'list' = compact to-do checklist (default),
   // 'note' = big sticky-note cards (traffic-light status + timestamp + roomy
@@ -360,6 +363,7 @@ export type Action =
   | { type: 'SET_SESSION_TOKEN'; id: string; token: string }
   | { type: 'TOGGLE_LEFT_PANEL' }
   | { type: 'TOGGLE_RIGHT_PANEL' }
+  | { type: 'CLOSE_DRAWER' }
   | { type: 'SAVE_PRE_INPUT'; text: string }
   | { type: 'TAKE_PRE_INPUT'; count: number }
   | { type: 'SET_PRE_INPUT_BUTTON'; value: boolean }
@@ -710,15 +714,20 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_SESSION_TOKEN':
       return { ...state, terminals: state.terminals.map(t => t.id === action.id && t.resumeToken !== action.token ? { ...t, resumeToken: action.token, ownToken: t.resumeToken && t.resumeToken !== t.ownToken ? t.ownToken : action.token } : t) };
     case 'TOGGLE_LEFT_PANEL': {
+      // Narrow: the toggle opens the drawer and leaves the docked layout's saved choice alone.
+      if (isCompact()) return { ...state, drawer: state.drawer === 'left' ? null : 'left' };
       const next = !state.leftPanelHidden;
       try { localStorage.setItem('cc-left-hidden', next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return { ...state, leftPanelHidden: next };
     }
     case 'TOGGLE_RIGHT_PANEL': {
+      if (isCompact()) return { ...state, drawer: state.drawer === 'right' ? null : 'right' };
       const next = !state.rightPanelHidden;
       try { localStorage.setItem('cc-right-hidden', next ? '1' : '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return { ...state, rightPanelHidden: next };
     }
+    case 'CLOSE_DRAWER':
+      return state.drawer ? { ...state, drawer: null } : state;
     case 'SAVE_PRE_INPUT': {
       try { localStorage.setItem('cc-right-hidden', '0'); } catch { /* Best-effort operation; failure is non-fatal. */ }
       return { ...state, preInputQueue: [...state.preInputQueue, action.text], preInputReveal: state.preInputReveal + 1, rightPanelHidden: false };
@@ -966,6 +975,7 @@ function getInitialState(): AppState {
     titlebarToggleDisplay,
     leftPanelHidden,
     rightPanelHidden,
+    drawer: null,
     preInputQueue: [],
     preInputReveal: 0,
     preInputButton,

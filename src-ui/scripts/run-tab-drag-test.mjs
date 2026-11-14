@@ -31,6 +31,7 @@ const stateApi = vm.runInNewContext(compile(`${declaration(store, 'getTabOrder')
   ...splitLayout,
   localStorage: { setItem() {}, removeItem() {} }, crypto: { randomUUID: () => 'replacement-terminal' },
   supportsAgentStatus: () => true,
+  isCompact: () => false,
 });
 const native = value => JSON.parse(JSON.stringify(value));
 let passed = 0;

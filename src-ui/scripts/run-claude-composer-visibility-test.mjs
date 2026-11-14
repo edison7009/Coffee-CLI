@@ -22,7 +22,7 @@ const isPiConversation = evaluate('lib/chat-tools.ts', 'isPiConversation');
 const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation });
 const splitSessionIds = evaluate('lib/session-split-layout.ts', 'splitSessionIds');
 const replaceSplitSession = evaluate('lib/session-split-layout.ts', 'replaceSplitSession', { splitSessionIds });
-const reducer = evaluate('store/app-state.tsx', 'reducer', { isConversationSession, replaceSplitSession, getTabOrder: state => state.tabOrder });
+const reducer = evaluate('store/app-state.tsx', 'reducer', { isConversationSession, replaceSplitSession, getTabOrder: state => state.tabOrder, isCompact: () => false });
 const terminals = [{ id: 'claude', tool: 'claude' }, { id: 'terminal', tool: null }];
 let state;
 const effects = [];
@@ -52,7 +52,7 @@ const context = {
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
 context.sendSessionPrompt = evaluate('lib/send-session-prompt.ts', 'sendSessionPrompt', context);
 const host = evaluate('components/center/ActiveGambit.tsx', 'ActiveGambit', context);
-const titlebar = evaluate('components/common/TitleBar.tsx', 'TitleBar', context);
+const titlebar = evaluate('components/common/TitleBar.tsx', 'TitleBar', { ...context, useCompact: () => false });
 function buttons(node) {
   if (!node || typeof node !== 'object') return [];
   return [...(node.type === 'button' ? [node] : []), ...(node.children ?? []).flat(Infinity).flatMap(buttons)];

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AutomationRunner } from './components/center/AutomationRunner';
 import { SettingsModal } from './components/common/SettingsModal';
 import { useAppState } from './store/app-state';
+import { isCompact, useCompact } from './lib/viewport';
 import { retryInvoke } from './tauri';
 import { initNotifySound } from './lib/notify-sound';
 import { useOrchestration } from './lib/orchestration';
@@ -197,7 +198,7 @@ function useSlidingPanel(hidden: boolean): { mounted: boolean; collapsed: boolea
 }
 
 export function App() {
-  const { state } = useAppState();
+  const { state, dispatch } = useAppState();
   const orchestration = useOrchestration();
   useSessionReplyVisibility(state);
   const activeTabId = state.diffTabActive ? 'diff' : state.activeTerminalId;
@@ -212,8 +213,19 @@ export function App() {
   ));
   const panelWidthsRef = useRef(panelWidths);
 
-  const leftPanel = useSlidingPanel(state.leftPanelHidden);
-  const rightPanel = useSlidingPanel(state.rightPanelHidden);
+  // Narrow windows and phones: both panels become drawers over the center, opened one at a time.
+  const compact = useCompact();
+  const leftPanel = useSlidingPanel(compact ? state.drawer !== 'left' : state.leftPanelHidden);
+  const rightPanel = useSlidingPanel(compact ? state.drawer !== 'right' : state.rightPanelHidden);
+  // A drawer closes on Escape, when the window grows wide enough to dock, and once a tab is picked.
+  useEffect(() => {
+    if (!compact || !state.drawer) return;
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') dispatch({ type: 'CLOSE_DRAWER' }); };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [compact, state.drawer, dispatch]);
+  useEffect(() => { if (!compact) dispatch({ type: 'CLOSE_DRAWER' }); }, [compact, dispatch]);
+  useEffect(() => { dispatch({ type: 'CLOSE_DRAWER' }); }, [state.activeTerminalId, dispatch]);
 
   useLayoutEffect(() => applyPanelWidths(panelWidths), [panelWidths]);
 
@@ -223,6 +235,8 @@ export function App() {
       syncWidths();
     });
     function syncWidths() {
+      // Drawers float over the center, so a narrow window must not squeeze (and save) the docked widths.
+      if (isCompact()) return;
       const next = normalizePanelWidths(
         panelWidthsRef.current,
         window.innerWidth,
@@ -240,7 +254,7 @@ export function App() {
       window.removeEventListener('resize', syncWidths);
       if (visibilityFrame !== null) cancelAnimationFrame(visibilityFrame);
     };
-  }, [state.leftPanelHidden, state.rightPanelHidden]);
+  }, [state.leftPanelHidden, state.rightPanelHidden, compact]);
 
   const resizePanel = (side: PanelSide, requestedSize: number) => {
     const current = panelWidthsRef.current;
@@ -514,7 +528,9 @@ export function App() {
           subs while hidden; on show, we mount in the collapsed state
           and let CSS animate it back open. */}
       <GitStatusProvider>
-        <div className="app-layout">
+        <div className={`app-layout${compact ? ' is-compact' : ''}`}>
+          {/* Behind an open drawer: a tap anywhere outside it closes it. */}
+          {compact && state.drawer && <div className="drawer-scrim" aria-hidden="true" onClick={() => dispatch({ type: 'CLOSE_DRAWER' })} />}
           {leftPanel.mounted && (
             <>
               <aside
@@ -522,14 +538,14 @@ export function App() {
               >
                 <Explorer />
               </aside>
-              <PanelResizer
+              {!compact && <PanelResizer
                 side="left"
                 size={panelWidths.left}
                 collapsed={leftPanel.collapsed}
                 onResize={resizePanel}
                 onResizeEnd={finishPanelResize}
                 onReset={resetPanelWidth}
-              />
+              />}
             </>
           )}
 
@@ -543,14 +559,14 @@ export function App() {
 
           {rightPanel.mounted && (
             <>
-              <PanelResizer
+              {!compact && <PanelResizer
                 side="right"
                 size={panelWidths.right}
                 collapsed={rightPanel.collapsed}
                 onResize={resizePanel}
                 onResizeEnd={finishPanelResize}
                 onReset={resetPanelWidth}
-              />
+              />}
               <aside
                 className={`panel panel-right${rightPanel.collapsed ? ' is-collapsed' : ''}`}
               >

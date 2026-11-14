@@ -2393,6 +2393,45 @@ body.gambit-docked .multi-agent-grid-standalone {
     min-width: 0;
 }
 
+/* Compact (narrower than 1000px, phones included): the side panels become
+   drawers over the center instead of docked columns, one open at a time,
+   with a dimmed scrim behind that closes it. They keep the same width
+   slide; on a phone the drawer takes most of the width and leaves a strip
+   of the conversation showing, which also closes it when tapped. Opaque on
+   every shape, or the conversation would show through the list. */
+.app-layout.is-compact .panel-left,
+.app-layout.is-compact .panel-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    max-width: calc(100% - 48px);
+    background: linear-gradient(var(--bg-panel), var(--bg-panel)), var(--bg-app) !important;
+    box-shadow: 0 0 0 1px var(--border), 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.app-layout.is-compact .panel-left { left: 0; }
+.app-layout.is-compact .panel-right { right: 0; min-width: var(--w-right); }
+.app-layout.is-compact .panel-left.is-collapsed,
+.app-layout.is-compact .panel-right.is-collapsed {
+    width: 0;
+    min-width: 0;
+    box-shadow: none;
+}
+[data-width="xs"] .app-layout.is-compact .panel-left:not(.is-collapsed),
+[data-width="xs"] .app-layout.is-compact .panel-right:not(.is-collapsed) {
+    width: 84%;
+    min-width: 84%;
+}
+.drawer-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 39;
+    background: rgba(0, 0, 0, 0.35);
+    animation: drawer-scrim-in 250ms ease-out;
+}
+@keyframes drawer-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .drawer-scrim { animation: none; } }
+
 .compiler-top {
     flex: 1;
     padding: 0;
