@@ -1359,7 +1359,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 .library-toggle.on .library-toggle-knob { transform: translateX(16px); }
 
 /* Narrow windows and phones: the current tab, then a count that opens every tab. */
-.compact-tabs-button { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; align-self: center; height: 24px; padding: 0 6px 0 8px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-label); font-variant-numeric: tabular-nums; cursor: pointer; }
+/* Same height and corners as the tab beside it, so the strip reads as one row. */
+.compact-tabs-button { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; align-self: stretch; height: auto; padding: 0 8px 0 10px; border: 1px solid var(--border); border-radius: var(--shape-radius-tab); color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-label); font-variant-numeric: tabular-nums; cursor: pointer; }
 .compact-tabs-button:hover, .compact-tabs-button[aria-expanded="true"] { color: var(--text-1); background: var(--bg-hover); }
 .compact-tabs-button svg { width: 13px; height: 13px; }
 .ctx-menu.compact-tabs-menu { width: min(280px, calc(100vw - 16px)); max-height: min(60vh, 420px); overflow-y: auto; background-color: var(--bg-app) !important; background-image: none !important; border: 1px solid var(--border) !important; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 6px rgba(0, 0, 0, .25), 0 12px 32px rgba(0, 0, 0, .35); transform-origin: top left; animation: compact-tabs-in .16s cubic-bezier(.2, .8, .2, 1); }
