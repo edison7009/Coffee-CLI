@@ -14,7 +14,7 @@ function App(){const[visible,setVisible]=useState(true),[language,setLanguage]=u
   b.onResolve({filter:/(^|\/)tauri$/},()=>({path:'native',namespace:'fixture'}));
   b.onResolve({filter:/store\/app-state$/},()=>({path:'store',namespace:'fixture'}));
   b.onLoad({filter:/.*/,namespace:'fixture'},args=>({loader:'js',contents:args.path==='store'?`export function useAppLanguage(){return window.language||'zh-CN'}`:`
-export const isTauri=true;window.launches=0;window.configs=0;window.modes=0;window.checks=[];window.updates=[];window.releaseChecks=[];window.releaseUpdates={};
+export const isTauri=true;export async function invoke(){};window.launches=0;window.configs=0;window.modes=0;window.checks=[];window.updates=[];window.releaseChecks=[];window.releaseUpdates={};
 window.statuses={claude:{tool:'claude',current:'1.0.0',latest:'1.2.0',available:true},codex:{tool:'codex',current:'1.0.0',latest:'2.0.0',available:true},cursor:{tool:'cursor',current:'2026.10.22-abc',latest:null,available:false},copilot:{tool:'copilot',current:'1.0.0',latest:'1.0.0',available:false}};
 export const commands={async checkCliUpdate(tool){window.checks.push(tool);if(window.holdChecks)await new Promise(resolve=>window.releaseChecks.push(resolve));if(window.failCheck)throw 'offline';return window.statuses[tool]},async updateCli(tool){window.updates.push(tool);return new Promise((resolve,reject)=>{window.releaseUpdates[tool]=error=>{if(error){reject(error);return}window.statuses[tool]={...window.statuses[tool],current:window.statuses[tool].latest,available:false};resolve(window.statuses[tool])}})}};`}));
 } }] });

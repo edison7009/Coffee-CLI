@@ -1,4 +1,4 @@
-// Settings → Mobile: allow phones on this network, pair one with a QR code, and remove paired phones.
+// Settings → Devices: let other devices on this network connect, pair one with a QR code, and remove paired ones.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { commands, isTauri, type MobileRpcFirewall, type MobileRpcPairing, type MobileRpcStatus } from '../../tauri';
@@ -88,7 +88,6 @@ export function MobileSettings() {
     setPairing({ ...next, qr });
   });
 
-  // Opened from the sidebar's "pair a device": show the code once the server is listening.
   const cancelPairing = () => run(async () => { await commands.mobileRpcCancelPairing(); setPairing(null); });
   const revoke = (publicKey: string) => run(async () => { setStatus(await commands.mobileRpcRevokeDevice(publicKey)); });
 
@@ -134,7 +133,7 @@ export function MobileSettings() {
         </div></div>}
         <div className="settings-sound-item settings-voice-controls" aria-disabled={!enabled}>
           {pairing
-            // One card: the code, the one address (click to copy the link) and the network it uses.
+            // One card: the code, its address (click to copy the link), and a virtual-LAN address when there is one.
             ? <div className="settings-mobile-pairing">
               <img className="settings-mobile-qr" src={pairing.qr} alt={t('settings.mobile.qr_alt')} width={132} height={132} />
               <div className="settings-mobile-pairing-text">
