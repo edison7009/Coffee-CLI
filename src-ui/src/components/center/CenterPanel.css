@@ -366,7 +366,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 .pane-number-badge--closable:hover .pane-badge-num { display: none; }
 .pane-number-badge--closable:hover .pane-badge-x   { display: flex; }
 
-
 .terminal-mode-surface {
   display: flex;
   flex: 1;
@@ -672,8 +671,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
-
-
 .launchpad-icon {
   /* Fluid pixel box (44px at normal widths, down to 32px on narrow
      windows). Every icon inside is forced to fill this box so visual
@@ -798,18 +795,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   align-content: start;
 }
 
-/* Tool library section heading. */
-.library-section-title {
-  margin-top: 28px;
-  margin-bottom: 10px;
-  font-size: var(--type-label);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-2, #aaa);
-  user-select: none;
-}
-
 .library-item {
   display: flex;
   align-items: center;
@@ -820,7 +805,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   border-radius: var(--radius-md);
   cursor: pointer;
 }
-
 
 /* Selection state is shown by the toggle switch on the right; the card itself stays uniform - no pinned border highlight. */
 
@@ -902,7 +886,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   width: 18px;
   height: 18px;
 }
-
 
 /* ─── Tool launch-override modal ─────────────────────────────────── */
 /* Theme-driven: reads --bg-panel / --text-1 / --accent / --border-*  */
@@ -1148,7 +1131,6 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 .remote-pill-close:hover {
   opacity: 1;
 }
-
 
 .remote-form-card {
   width: 380px;

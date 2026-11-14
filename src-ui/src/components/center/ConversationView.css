@@ -1,18 +1,4 @@
-/* Shared message, Markdown and navigation styles for Coffee Agent and Claude desktop. */
-.conversation-view {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  position: relative;
-  container-type: inline-size;
-  overflow: hidden;
-  color: var(--text-2);
-  background: var(--bg-terminal);
-}
 
-.conversation-view--has-bg {
-  background: transparent;
-}
 
 .conversation-background {
   position: absolute;
@@ -28,51 +14,6 @@
   height: 100%;
   object-fit: cover;
   opacity: var(--wallpaper-opacity, 0.35);
-}
-
-.conversation-scroll {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-}
-
-.conversation-thread {
-  width: min(860px, calc(100% - 40px));
-  min-height: 100%;
-  margin: 0 auto;
-  padding: 34px 0 46px;
-  overflow-anchor: none;
-}
-
-.conversation-view--has-navigation .conversation-thread {
-  width: min(860px, calc(100% - 96px));
-}
-
-.conversation-virtual-row {
-  display: flow-root;
-  overflow-anchor: none;
-}
-
-.conversation-virtual-spacer {
-  width: 1px;
-  min-height: 0;
-  pointer-events: none;
-}
-
-.conversation-virtual-index {
-  display: none;
-}
-
-.conversation-selection-proxy {
-  position: fixed;
-  top: -10000px;
-  left: -10000px;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .conversation-navigation {
@@ -91,7 +32,7 @@
 
 /* Gambit is an app-level fixed overlay, while the conversation remains full
    height so its wallpaper can continue behind the dock. Match the navigation
-   rail's positioning area to the already-shrunk .conversation-scroll viewport
+   rail's positioning area to the conversation's already-shrunk scroll viewport
    instead of centring it across the obscured full-height outer view. The CSS
    variable updates live while the user resizes Gambit. */
 body.gambit-docked .conversation-navigation {
@@ -206,54 +147,6 @@ body.gambit-docked .conversation-navigation {
   transform: translateY(-50%);
 }
 
-.conversation-message {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin: 0 0 22px;
-}
-
-.conversation-message--user {
-  align-items: flex-end;
-}
-
-.conversation-bubble {
-  min-width: 0;
-  max-width: min(76%, 680px);
-  font-size: 14px;
-  line-height: 1.65;
-  user-select: text;
-}
-
-.conversation-message--user .conversation-bubble {
-  padding: 11px 15px;
-  border: 0;
-  border-radius: var(--shape-radius-panel, 8px);
-  background: var(--accent-bg);
-}
-
-/* Panel is the only shape whose visual language uses drawn dividers. */
-[data-shape="panel"] .conversation-message--user .conversation-bubble {
-  border: 1px solid color-mix(in srgb, var(--accent) 46%, var(--border));
-}
-
-/* Material/backdrop shapes already provide the surface. Keep the message
-   grouping through alignment and spacing without painting another tile. Frost
-   is normalized to data-shape="glass" by App.tsx, so it is covered here too. */
-:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"])
-  .conversation-message--user .conversation-bubble {
-  background: transparent;
-}
-
-.conversation-message--assistant .conversation-bubble {
-  width: 100%;
-  max-width: 100%;
-}
-
-.conversation-message--optimistic {
-  opacity: 0.82;
-}
-
 .conversation-copy {
   display: inline-flex;
   align-items: center;
@@ -289,179 +182,12 @@ body.gambit-docked .conversation-navigation {
   outline-offset: 1px;
 }
 
-.conversation-bubble .md-body > :first-child,
-.conversation-reasoning .md-body > :first-child { margin-top: 0; }
-.conversation-bubble .md-body > :last-child,
-.conversation-reasoning .md-body > :last-child { margin-bottom: 0; }
-.conversation-bubble .md-body :is(h1, h2, h3, h4, h5, h6),
-.conversation-reasoning .md-body :is(h1, h2, h3, h4, h5, h6) {
-  margin: 16px 0 8px;
-  font-size: inherit;
-  line-height: inherit;
-  font-weight: 400;
-}
-.conversation-bubble .md-body :is(strong, b),
-.conversation-reasoning .md-body :is(strong, b, th) { font-weight: 400; }
-.conversation-bubble .md-body p { margin: 0 0 10px; }
-.conversation-bubble .md-body ul,
-.conversation-bubble .md-body ol { padding-left: 22px; }
-.conversation-bubble .md-body table {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
-}
-.conversation-bubble .md-body :is(th, td) {
-  padding: 5px 7px;
-  border: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
-}
-.conversation-bubble .md-body th {
-  background: var(--bg-hover);
-  font-weight: 500;
-}
-.conversation-bubble .md-body a {
-  color: var(--accent);
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-.conversation-bubble .md-inline-code {
-  padding: 1px 5px;
-  border-radius: var(--shape-radius-btn, 4px);
-  background: var(--bg-hover);
-  font-family: var(--term-font, monospace);
-}
-.conversation-bubble .md-code {
-  overflow-x: auto;
-  margin: 12px 0;
-  padding: 13px 15px;
-  border: 1px solid var(--border);
-  border-radius: var(--shape-radius-panel, 8px);
-  background: var(--bg-panel);
-  font-family: var(--term-font, monospace);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
 .md-code-line { min-height: 1.55em; }
-
-.conversation-tool,
-.conversation-reasoning {
-  margin: -5px 0 18px;
-  color: var(--text-2);
-  font-size: 12.5px;
-}
-
-.conversation-tool summary,
-.conversation-reasoning summary {
-  display: flex;
-  align-items: center;
-  width: fit-content;
-  gap: 7px;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.conversation-tool summary::-webkit-details-marker,
-.conversation-reasoning summary::-webkit-details-marker { display: none; }
-.conversation-tool summary svg { transition: transform 140ms ease; }
-.conversation-tool[open] summary svg { transform: rotate(90deg); }
-
-.conversation-tool-status {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--text-2);
-}
-.conversation-tool-status--running { background: var(--accent); animation: conversation-pulse 1.15s ease-in-out infinite; }
-.conversation-tool-status--done { background: var(--success, #62b883); }
-.conversation-tool-status--failed { background: var(--danger, #df6b6b); }
-.conversation-tool pre {
-  overflow-x: auto;
-  margin: 9px 0 0 14px;
-  padding: 10px 12px;
-  border-left: 1px solid var(--border);
-  white-space: pre-wrap;
-  font-family: var(--term-font, monospace);
-  user-select: text;
-}
-.conversation-reasoning-glyph { color: var(--accent); }
-.conversation-reasoning .md-body {
-  margin: 9px 0 0 14px;
-  padding-left: 12px;
-  border-left: 1px solid var(--border);
-  user-select: text;
-}
-
-.conversation-thinking {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 2px 2px;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.conversation-thinking-braille {
-  display: inline-block;
-  width: 1ch;
-  overflow: hidden;
-  white-space: nowrap;
-  color: var(--text-2);
-  font-family: ui-monospace, 'Cascadia Code', Consolas, 'Courier New', monospace;
-  line-height: inherit;
-  transform: translateY(0.06em);
-}
-
-.conversation-thinking-braille::after {
-  display: inline-block;
-  content: '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
-  animation: conversation-thinking-braille 0.9s steps(10, end) infinite;
-}
-
-.conversation-thinking-text {
-  background: linear-gradient(
-    90deg,
-    var(--text-2) 0%,
-    var(--text-2) 40%,
-    color-mix(in srgb, var(--text-2) 38%, transparent) 50%,
-    var(--text-2) 60%,
-    var(--text-2) 100%
-  );
-  background-position: 100% 0;
-  background-size: 225% 100%;
-  background-clip: text;
-  color: transparent;
-  animation: conversation-thinking-shimmer 2.7s linear infinite;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-@keyframes conversation-pulse { 50% { opacity: 0.35; } }
-@keyframes conversation-thinking-braille { to { transform: translateX(-10ch); } }
-@keyframes conversation-thinking-shimmer { to { background-position: 0 0; } }
-
-@media (max-width: 720px) {
-  .conversation-thread { width: calc(100% - 24px); padding-top: 22px; }
-  .conversation-bubble { max-width: 88%; }
-}
 
 @container (max-width: 760px) {
   .conversation-navigation { display: none; }
-  .conversation-view--has-navigation .conversation-thread {
-    width: calc(100% - 24px);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .conversation-thinking-text,
-  .conversation-thinking-braille::after,
-  .conversation-tool-status--running { animation: none; }
-
   .conversation-navigation-item > span { transition: none; }
-
-  .conversation-thinking-braille { opacity: 0.5; }
 }

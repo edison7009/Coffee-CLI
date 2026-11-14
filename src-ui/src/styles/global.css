@@ -97,7 +97,6 @@
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-
 /* ─── Base Reset ─────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; cursor: default !important; }
 
@@ -1867,7 +1866,6 @@ html.is-macos .titlebar-left-slot:not(.is-collapsed) {
     width: calc(var(--w-left) * var(--ui-scale));
 }
 
-
 /* ─── Custom Titlebar ────────────────────────────────── */
 /* Settings covers the window: the bar keeps only the window controls. The tab slot stays mounted
    (the centre portals its tabs into it), just hidden. */
@@ -2221,33 +2219,6 @@ body.resizing-panels .pane-resizer {
     color: var(--text-2);
 }
 
-.icon-btn {
-    padding: 6px;
-    border: none;
-    background: none;
-    color: var(--text-2);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-family: var(--font);
-    font-weight: 600;
-}
-
-.icon-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-1);
-}
-
-.icon-btn.xs {
-    padding: 3px;
-    font-size: 13px;
-    border-radius: 4px;
-}
-
 .section-title {
     display: flex;
     justify-content: space-between;
@@ -2335,20 +2306,6 @@ body.gambit-docked .multi-agent-grid-standalone {
     display: flex;
 }
 .sep { margin: 0 6px; opacity: 0.5; }
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes sp-orb-bounce {
-    0%, 80%, 100% {
-        transform: scale(0.6);
-        opacity: 0.4;
-    }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -2491,14 +2448,6 @@ body.gambit-docked .multi-agent-grid-standalone {
     from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
-@keyframes summaryFadeIn {
-    from { opacity: 0; transform: translateY(-2px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes dotBounce {
-    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-    40%            { transform: translateY(-4px); opacity: 1; }
-}
 
 /* ═══════════════════════════════════════════════════════
    SHAPE-SPECIFIC VISUAL OVERRIDES
@@ -2533,7 +2482,6 @@ body.gambit-docked .multi-agent-grid-standalone {
     display: none;
 }
 
-[data-shape="slab"] .task-card,
 [data-shape="slab"] .launchpad-card,
 [data-shape="slab"] .guide-card,
 [data-shape="slab"] .remote-form-card,
@@ -2724,7 +2672,6 @@ html.is-windows[data-frost="frost"] #root {
     background: transparent;
 }
 
-[data-shape="glass"] .task-card,
 [data-shape="glass"] .task-note-card,
 [data-shape="glass"] .task-prompt-card,
 [data-shape="glass"] .guide-card,

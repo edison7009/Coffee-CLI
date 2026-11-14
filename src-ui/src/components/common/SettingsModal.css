@@ -37,7 +37,6 @@
 .settings-modal.settings-modal--page { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; animation: none; background: transparent; }
 .settings-modal--page .settings-rail { flex-basis: 200px; padding: 20px 12px; }
 .settings-modal--page .settings-body { width: min(760px, 100%); margin: 0 auto; }
-.settings-body--agent { padding: 0; }
 
 /* Space between two groups merged into one section (appearance + wallpaper, general + sound). */
 .settings-group-gap { height: 1px; margin: 24px 0 8px; background: var(--border, rgba(255, 255, 255, 0.06)); }
@@ -57,15 +56,6 @@
   padding: 16px 10px;
   background: color-mix(in srgb, var(--bg-app, #161618) 55%, transparent);
   border-right: 1px solid var(--border, rgba(255, 255, 255, 0.06));
-}
-
-.settings-rail-title {
-  font-size: var(--type-label);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-3, rgba(255, 255, 255, 0.4));
-  padding: 4px 12px 12px;
 }
 
 .settings-rail-item {
@@ -340,11 +330,8 @@
 
 /* ── Wallpaper ─────────────────────────────────────────────────────────── */
 .settings-wallpaper-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.settings-sound-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.settings-sound-file { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .settings-sound-name { overflow: hidden; min-width: 0; font-size: var(--type-label); color: var(--text-1); text-overflow: ellipsis; white-space: nowrap; }
 .settings-sound-remove { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--shape-radius-btn, 6px); background: transparent; color: var(--text-3); cursor: pointer; }
-.settings-sound-switch .settings-key-card { flex: 1; }
 .settings-sound-failed { margin-top: 8px; font-size: var(--type-label); color: #e06666; }
 .settings-btn {
   padding: 8px 16px;
@@ -360,7 +347,6 @@
 .settings-btn:hover { border-color: transparent; background: color-mix(in srgb, var(--text-1, #fff) 11%, transparent); }
 .settings-btn-danger { color: #e06666; }
 .settings-btn-danger:hover { border-color: transparent; background: color-mix(in srgb, #e06666 18%, transparent); }
-
 
 /* ── Terminal text-colour chips ────────────────────────────────────────── */
 .settings-term-chip {
@@ -388,11 +374,7 @@
    overflowing, so two rows of two reads cleanly. min-width:0 lets the cards
    shrink to the column — the shared .settings-key-card keeps min-width:160px
    for the 2-up send row above. */
-.settings-key-row--keys {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-}
-.settings-key-row--keys .settings-key-card { min-width: 0; }
+
 .settings-key-card {
   display: flex;
   flex-direction: column;
@@ -412,7 +394,6 @@
   background: color-mix(in srgb, var(--accent, #c4956a) 26%, transparent);
 }
 .settings-key-combo { display: flex; align-items: center; gap: 5px; color: var(--text-2, rgba(255, 255, 255, 0.7)); }
-.settings-key-plus { color: var(--text-3, rgba(255, 255, 255, 0.4)); font-size: var(--type-label); }
 .settings-key-card kbd {
   display: inline-flex;
   align-items: center;

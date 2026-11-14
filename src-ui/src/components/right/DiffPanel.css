@@ -40,34 +40,6 @@
   gap: 12px;
 }
 
-/* Full-window overlay (from clicking ⤢ on the half-paper). Backdrop
- * captures pointer events behind it so user can only act on diff or
- * dismiss. z-index well above Gambit, below context menus. */
-.diff-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(2px);
-  z-index: 1000;
-}
-
-.diff-panel--expanded {
-  position: fixed;
-  inset: 24px;
-  /* Override default height:55% — fixed inset top+bottom sizes us. */
-  height: auto;
-  z-index: 1001;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  /* Theme-driven radius (16/4/0 across themes) instead of hardcoded
-     8px. In the panel theme (--radius-md = 0) this naturally goes
-     square, matching the rest of the panel-shape vocabulary. */
-  border-radius: var(--radius-md);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
-  overflow: hidden;
-}
-
 /* Center-tab surface: the diff renders inside a center tab's content area
  * (mounted by CenterPanel, NOT portal'd to body). Unlike the half overlay
  * (absolute, negative margins, bottom-anchored) this fills its parent —
@@ -109,8 +81,7 @@
  * between its toolbar and textarea). The outer top border + bg-panel
  * surface already give the diff its boundary; an inner divider would
  * over-cardify what should read as one continuous tool. */
-[data-shape="panel"] .diff-panel,
-[data-shape="panel"] .diff-panel--expanded {
+[data-shape="panel"] .diff-panel {
   box-shadow: none;
 }
 
@@ -121,10 +92,7 @@
   background: var(--bg-panel) !important;
   border-color: var(--border) !important;
 }
-[data-shape="glass"] .diff-panel--expanded {
-  background: var(--bg-panel) !important;
-  border-color: var(--border) !important;
-}
+
 /* Tab-mode diff lives in the center panel (not .panel-right), so the
  * glass opt-out above doesn't reach it — but the same global :not()
  * nuke (global.css:1543, `.panel-center :is(div,…):not(…)`) hits center-

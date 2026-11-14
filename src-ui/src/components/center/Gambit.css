@@ -23,7 +23,6 @@
     box-shadow: 0 0 0 1px var(--border);
 }
 
-
 .gambit {
     position: fixed;
     /* Anchor at origin; JS applies transform: translate3d(x, y, 0) for position. */
@@ -465,12 +464,12 @@
 
 /* ─── Worktree switch (beside the target label) ───────────── */
 .gambit-worktree { position: relative; display: flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; font: var(--type-caption)/16px var(--font); color: var(--text-2); }
-.gambit-worktree-toggle, .gambit-worktree-merge, .gambit-new-chat { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 3px 7px 5px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: var(--bg-hover); color: var(--text-2); font: var(--type-caption) var(--font); white-space: nowrap; cursor: pointer; }
-.gambit-worktree-toggle:hover:not(:disabled), .gambit-worktree-merge:hover:not(:disabled), .gambit-new-chat:hover:not(:disabled) { background: var(--accent-bg, var(--bg-hover)); color: var(--text-1); }
-.gambit-worktree-toggle:disabled, .gambit-worktree-merge:disabled, .gambit-new-chat:disabled { cursor: default; opacity: .45; }
+.gambit-worktree-toggle, .gambit-worktree-merge { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 3px 7px 5px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: var(--bg-hover); color: var(--text-2); font: var(--type-caption) var(--font); white-space: nowrap; cursor: pointer; }
+.gambit-worktree-toggle:hover:not(:disabled), .gambit-worktree-merge:hover:not(:disabled) { background: var(--accent-bg, var(--bg-hover)); color: var(--text-1); }
+.gambit-worktree-toggle:disabled, .gambit-worktree-merge:disabled { cursor: default; opacity: .45; }
 /* A worktree conversation that has started is locked, not unavailable: keep it at full strength. */
 .gambit-worktree[data-locked] .gambit-worktree-toggle:disabled { opacity: 1; }
-.gambit-worktree-toggle:focus-visible, .gambit-worktree-merge:focus-visible, .gambit-new-chat:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.gambit-worktree-toggle:focus-visible, .gambit-worktree-merge:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 /* A checkbox inside the chip says it can be ticked; ticked, it fills with the accent. */
 .gambit-worktree-toggle { gap: 6px; }
 .gambit-worktree-box { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; width: 13px; height: 13px; margin-top: 2px; border: 1.5px solid currentColor; border-radius: 3px; }
@@ -478,10 +477,7 @@
 .gambit-worktree-check { color: var(--bg-panel); }
 .gambit-worktree-notice { position: absolute; z-index: 100; bottom: calc(100% + 8px); left: 0; width: max-content; max-width: 300px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); line-height: 1.5; white-space: normal; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; cursor: default; }
 .gambit-worktree-notice[data-error] { color: var(--danger, #e5484d); }
-.gambit-worktree-toggle, .gambit-worktree-merge, .gambit-new-chat { flex-shrink: 0; }
-/* Coffee Agent's New chat, styled like the worktree chip, sits right beside the target label and takes over its push to the right. */
-.gambit-new-chat { gap: 5px; margin-right: auto; }
-.gambit-footer:has(> .gambit-new-chat) > .gambit-workspace { margin-right: 0; }
+.gambit-worktree-toggle, .gambit-worktree-merge { flex-shrink: 0; }
 .gambit-worktree[data-tip]:hover::after { content: attr(data-tip); position: absolute; z-index: 100; bottom: calc(100% + 8px); left: 0; width: max-content; max-width: min(240px, 70vw); padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); font-weight: 500; letter-spacing: .01em; line-height: 1.3; white-space: normal; pointer-events: none; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; }
 
 /* Save-as-pre-input: a solid pill sitting on the dock's top edge, shown only while there is a draft. */
