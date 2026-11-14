@@ -28,7 +28,7 @@ export function RemoteApp() {
   }, [status, ready]);
 
   if (status === 'unpaired') return <RemotePair initialLink={linkFromAddress ?? ''} />;
-  if (!ready) return <div className="remote-pair"><p>{status === 'revoked' ? '这台设备已在电脑上被移除。' : '正在连接电脑…'}</p>{status === 'revoked' && <button type="button" onClick={forgetRemote}>重新配对</button>}</div>;
+  if (!ready) return <div className="remote-pair remote-pair-status"><p>{status === 'revoked' ? '这台设备已在电脑上被移除。' : '正在连接电脑…'}</p>{status === 'revoked' && <button type="button" onClick={forgetRemote}>重新配对</button>}</div>;
   return <>
     {status !== 'connected' && <div className="remote-banner">{status === 'revoked' ? <>这台设备已在电脑上被移除。<button type="button" onClick={forgetRemote}>重新配对</button></> : `与 ${remoteComputerName() || '电脑'} 的连接已断开，正在重连…`}</div>}
     <Suspense fallback={null}><App /></Suspense>
@@ -51,7 +51,7 @@ function RemotePair({ initialLink }: { initialLink: string }) {
   };
   return <div className="remote-pair">
     <h1>连接到 Coffee CLI</h1>
-    <p>{initialLink ? '确认这台设备的名称，点“连接”，然后在电脑上点“允许”。' : '在电脑上打开 Coffee CLI → 设置 → Web 端，点“配对”，打开或粘贴配对链接。'}</p>
+    <p>{initialLink ? '确认这台设备的名称，点“连接”，然后在电脑上点“允许”。' : '在电脑上打开 Coffee CLI → 设置 → 设备连接，点“配对”，打开或粘贴配对链接。'}</p>
     <label>这台设备的名称<input value={name} maxLength={64} onChange={e => setName(e.target.value)} /></label>
     {!initialLink && <label>配对链接<input value={link} placeholder="coffeecli://pair?…" autoCapitalize="none" autoCorrect="off" onChange={e => setLink(e.target.value)} /></label>}
     <button type="button" disabled={waiting || !link.trim()} onClick={() => void submit()}>{waiting ? '请在电脑上点“允许”…' : '连接'}</button>

@@ -1,7 +1,9 @@
 /* Web 端: pairing screen and the reconnect banner over the desktop UI. */
 .remote-banner { position: fixed; z-index: 1000; left: 12px; right: 12px; top: calc(8px + env(safe-area-inset-top)); padding: 10px 14px; border-radius: 10px; background: var(--bg-hover); color: var(--text-1); font-size: 13px; }
 .remote-banner button { margin-left: 8px; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; }
-.remote-pair { max-width: 520px; margin: 0 auto; padding: calc(48px + env(safe-area-inset-top)) 24px 24px; display: flex; flex-direction: column; gap: 14px; }
+/* Centred both ways in the window, clear of the notch and home bar. */
+.remote-pair { box-sizing: border-box; max-width: 520px; min-height: 100vh; min-height: 100dvh; margin: 0 auto; padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+.remote-pair-status { align-items: center; text-align: center; }
 .remote-pair h1 { margin: 0; font-size: 26px; }
 .remote-pair p { margin: 0; color: var(--text-2); line-height: 1.6; }
 .remote-pair label { display: flex; flex-direction: column; gap: 6px; color: var(--text-3); font-size: 13px; }
