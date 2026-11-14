@@ -3211,22 +3211,40 @@ html.is-windows[data-frost="frost"] #root {
     -webkit-mask-image: none;
             mask-image: none;
     filter: invert(1);
-    opacity: var(--basalt-grain, .45);
+    opacity: var(--basalt-grain, .3);
 }
 [data-mode="light"][data-background="basalt"] #root::before {
     filter: none;
     opacity: var(--basalt-grain, .55);
 }
-/* Graphite on stone: lifted from near-black to charcoal, or the stone reads
-   as a black hole and loses its material. */
+/* Graphite on stone (the default): black basalt as on the EchoBird site, large
+   stones at raised contrast under a faint diagonal sheen, no pale grain. */
 [data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) {
-    --bg-app: #1a1a1a;
-    --bg-panel: #1f1f1f;
-    --bg-input: #222222;
-    --bg-input-focus: #272727;
-    --border: #2a2a2a;
-    --border-input: #333333;
-    --bg-terminal: #1a1a1a;
+    --bg-app: #101112;
+    --bg-panel: #151617;
+    --bg-input: #18191a;
+    --bg-input-focus: #1d1e1f;
+    --border: #232527;
+    --border-input: #2b2d30;
+    --bg-terminal: #101112;
+}
+[data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) #root {
+    background: var(--bg-app);
+}
+[data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) #root::before {
+    background:
+        linear-gradient(135deg, #ffffff08, transparent 45%, #0005),
+        url('/backgrounds/basalt-dark.png') center / max(2400px, 190vw) auto no-repeat;
+    filter: contrast(1.35);
+    opacity: 1;
+}
+/* The black pores alone vanish on a black base; a faint lifted copy at the same
+   scale picks the stones out without turning the surface grey. */
+[data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) #root::after {
+    display: block;
+    background: url('/backgrounds/basalt-dark.png') center / max(2400px, 190vw) auto no-repeat;
+    filter: invert(1) contrast(1.35);
+    opacity: var(--basalt-lift, .16);
 }
 
 .character-background,
