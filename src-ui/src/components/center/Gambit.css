@@ -538,7 +538,8 @@
 
 /* ─── Phones: the footer keeps its controls at their usual size and scrolls sideways;
    send stays put on the right. ─── */
-:root[data-width="xs"] .gambit-footer { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+/* Start-aligned: an end-aligned row overflows to the left, which Chromium (Android) cannot scroll to. */
+:root[data-width="xs"] .gambit-footer { justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 :root[data-width="xs"] .gambit-footer::-webkit-scrollbar { display: none; }
 :root[data-width="xs"] .gambit-footer > * { flex-shrink: 0; }
 /* The bar scrolls, so the folder name shows in full instead of cut short. */
