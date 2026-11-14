@@ -149,7 +149,6 @@ function render(template, lang, dicts) {
   // Docs link: only the languages the docs are written in.
   const docs = DOCS_PATH[lang.code];
   swap(/<a class="feedback-btn nav-docs" href="[^"]*" id="docs-link"( hidden)?>/, () => `<a class="feedback-btn nav-docs" href="${docs || "/docs/"}" id="docs-link"${docs ? "" : " hidden"}>`, "#docs-link");
-  swap(/(<button class="lang-switch" id="lang-toggle">)[^<]*(<\/button>)/, (_, a, b) => a + lang.code.split("-")[0].toUpperCase() + b, "#lang-toggle");
   html = html.replace(/<a class="lang-option( selected)?" data-lang="([^"]+)"/g, (_, _s, code) =>
     `<a class="lang-option${code === lang.code ? " selected" : ""}" data-lang="${code}"`);
   swap(/(<p class="is-hint" id="install-hint">)[^<]*(<\/p>)/, (_, a, b) => a + esc(INSTALL_DATA[lang.code].windows.hint) + b, "#install-hint");

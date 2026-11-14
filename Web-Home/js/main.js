@@ -738,12 +738,6 @@ function renderI18N() {
     if (DOCS_PATH[currentLang]) docsLink.setAttribute("href", DOCS_PATH[currentLang]);
   }
 
-  const toggle = document.getElementById("lang-toggle");
-  if (toggle) {
-    const shortLang = currentLang.split("-")[0];
-    toggle.textContent = shortLang.toUpperCase();
-  }
-
   const dropdown = document.getElementById("lang-dropdown");
   if (dropdown) {
     dropdown.querySelectorAll(".lang-option").forEach(opt => {

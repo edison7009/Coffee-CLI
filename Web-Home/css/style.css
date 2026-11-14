@@ -173,6 +173,10 @@ body {
 /* Hero Section */
 
 .lang-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: transparent;
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
@@ -184,6 +188,10 @@ body {
   transition: all 0.25s ease;
   cursor: pointer;
   min-width: 52px;
+}
+
+.lang-icon {
+  flex-shrink: 0;
 }
 
 .lang-switch:hover {
@@ -786,6 +794,8 @@ code::-webkit-scrollbar-thumb {
   .navbar { padding: 1rem 16px; gap: 0.75rem; }
   .logo { gap: 0.5rem; font-size: 1.05rem; white-space: nowrap; }
   .nav-links { gap: 0.6rem; }
+  .lang-switch { min-width: 28px; min-height: 28px; padding: 4px; }
+  .lang-label { display: none; }
   .nav-links .feedback-btn:not(.nav-101):not(.nav-docs) { display: none; }
   /* GitHub is also in the footer; drop the icon so Docs fits. */
   .nav-links a.icon-switch { display: none; }
