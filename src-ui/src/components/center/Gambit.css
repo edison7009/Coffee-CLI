@@ -545,6 +545,9 @@
 :root[data-width="xs"] .gambit-footer { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 :root[data-width="xs"] .gambit-footer::-webkit-scrollbar { display: none; }
 :root[data-width="xs"] .gambit-footer > * { flex-shrink: 0; }
+/* The bar scrolls, so the folder name shows in full instead of cut short. */
+:root[data-width="xs"] .gambit-footer .gambit-workspace { max-width: none; }
+:root[data-width="xs"] .gambit-footer .gambit-workspace-name { overflow: visible; text-overflow: clip; }
 /* The tools' own control groups take their natural width too, so every button keeps its size and the row overflows to scroll. */
 :root[data-width="xs"] .gambit-footer .claude-composer-controls { flex: 0 0 auto; min-width: max-content; }
 :root[data-width="xs"] .gambit-footer .claude-composer-controls > * { flex-shrink: 0; }
