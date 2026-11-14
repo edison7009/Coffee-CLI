@@ -540,6 +540,7 @@ export const en = {
   "settings.mobile.qr_alt": "Access QR code",
   "settings.mobile.expires": "Expires in {time}",
   "settings.mobile.confirm_hint": "Each new device needs its own code; an old device's link won't work",
+  "settings.mobile.copy": "Copy",
   "settings.mobile.copied": "Copied",
   "settings.mobile.remote": "Away from home",
   "settings.mobile.tip": "Tip: want it away from home too? Install a virtual LAN tool such as Tailscale or ZeroTier on this computer and the device; pairing then shows a second address here.",

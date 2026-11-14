@@ -539,6 +539,7 @@ export const vi = {
   "settings.mobile.qr_alt": "Mã QR truy cập",
   "settings.mobile.expires": "Hết hạn sau {time}",
   "settings.mobile.confirm_hint": "Mỗi thiết bị mới cần mã riêng; liên kết của thiết bị cũ không dùng được",
+  "settings.mobile.copy": "Sao chép",
   "settings.mobile.copied": "Đã sao chép",
   "settings.mobile.remote": "Khi ra ngoài",
   "settings.mobile.tip": "Mẹo: muốn dùng cả khi ra ngoài? Cài một công cụ mạng LAN ảo như Tailscale hoặc ZeroTier trên máy tính này và thiết bị; khi ghép nối sẽ hiện thêm một địa chỉ ở đây.",

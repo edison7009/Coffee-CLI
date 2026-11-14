@@ -537,6 +537,7 @@ export const ja = {
   "settings.mobile.qr_alt": "アクセス用 QR コード",
   "settings.mobile.expires": "{time} で失効",
   "settings.mobile.confirm_hint": "新しいデバイスには新しいコードが必要です。以前のデバイスのリンクは使えません",
+  "settings.mobile.copy": "コピー",
   "settings.mobile.copied": "コピーしました",
   "settings.mobile.remote": "外出先で使う",
   "settings.mobile.tip": "ヒント：外出先でも使いたい場合は、このコンピューターとデバイスの両方に Tailscale や ZeroTier などの仮想 LAN ツールを入れると、ペアリング時にここへ外出先用のアドレスが表示されます。",

@@ -535,6 +535,7 @@ export const ru = {
   "settings.mobile.qr_alt": "QR-код для доступа",
   "settings.mobile.expires": "Истекает через {time}",
   "settings.mobile.confirm_hint": "Новому устройству нужен свой код; ссылка старого устройства не подойдёт",
+  "settings.mobile.copy": "Копировать",
   "settings.mobile.copied": "Скопировано",
   "settings.mobile.remote": "Вне дома",
   "settings.mobile.tip": "Совет: хотите пользоваться вне дома? Установите виртуальную сеть, например Tailscale или ZeroTier, на этот компьютер и устройство — при сопряжении здесь появится второй адрес.",

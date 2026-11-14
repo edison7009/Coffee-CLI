@@ -35,11 +35,11 @@ export function CliUpdateButton({ tool, active, installed }: { tool: string; act
   const error = entry.error === 'cli_update_timeout' ? t('cli_update.timeout') : entry.error === 'cli_update_verify' ? t('cli_update.verify') : t('cli_update.failed');
   return <span className="cli-update-control" onClick={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()}>
     <button type="button" className={`cli-update-button${entry.error ? ' has-error' : ''}`} aria-label={label} aria-busy={entry.busy} disabled={entry.busy} onClick={event => { event.stopPropagation(); setTip(null); void updateCli(tool); }} onMouseEnter={event => { const rect = event.currentTarget.getBoundingClientRect(); setTip({ left: rect.left + rect.width / 2, top: rect.bottom + 8 }); }} onMouseLeave={() => setTip(null)} onFocus={event => { const rect = event.currentTarget.getBoundingClientRect(); setTip({ left: rect.left + rect.width / 2, top: rect.bottom + 8 }); }} onBlur={() => setTip(null)}>
-      {/* Both localized labels reserve space so changing update state never resizes the pill. */}
-      {entry.busy && <span className="cli-update-stripes" aria-hidden="true" />}
+      {/* The pill is sized by the idle word; busy swaps the word for three dots that always fit inside it. */}
       <span className="cli-update-size" aria-hidden="true">{t('cli_update.label')}</span>
-      <span className="cli-update-size" aria-hidden="true">{t('cli_update.updating')}</span>
-      <span className="cli-update-label">{t(entry.busy ? 'cli_update.updating' : 'cli_update.label')}</span>
+      {entry.busy
+        ? <span className="cli-update-label cli-update-dots" aria-hidden="true"><i /><i /><i /></span>
+        : <span className="cli-update-label">{t('cli_update.label')}</span>}
     </button>
     {entry.error && <span className="cli-update-error" role="alert">{error}</span>}
     {tip && createPortal(<span ref={tipRef} className="cli-update-tip" role="tooltip" style={{ left: tip.left, top: tip.top }}>{entry.error ? error : entry.busy ? label : t('cli_update.hint', { current: entry.status?.current ?? '', latest: entry.status?.latest ?? '' })}</span>, document.body)}

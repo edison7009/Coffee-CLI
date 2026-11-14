@@ -19,7 +19,9 @@ window.mount();
   b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'store', namespace: 'fixture' }));
   b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'native', namespace: 'fixture' }));
   b.onResolve({ filter: /^@tauri-apps\/api\/event$/ }, () => ({ path: 'event', namespace: 'fixture' }));
+  b.onResolve({ filter: /^@tauri-apps\/plugin-clipboard-manager$/ }, () => ({ path: 'clipboard', namespace: 'fixture' }));
   b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ loader: 'js', contents: args.path === 'store' ? `export function useAppLanguage(){return 'zh-CN'}`
+    : args.path === 'clipboard' ? `export async function writeText(text){window.copied=text}export async function readText(){return window.copied??''}`
     : args.path === 'event' ? `export async function listen(name,handler){window.listeners[name]=handler;return()=>{delete window.listeners[name]}}`
     : `
 window.calls=[];window.listeners={};
@@ -78,6 +80,16 @@ try {
   await page.getByText('扫码配对新设备', { exact: true }).waitFor();
   assert.equal(await page.getByText('192.168.1.8').count(), 1, 'the address shows once');
   await page.getByRole('button', { name: 'http://192.168.1.8:47391', exact: true }).waitFor();
+  // Copy: the button turns into "copied" without changing width, and the link carries the pairing code.
+  const copy = page.locator('.settings-mobile-copy').first();
+  const copyBefore = await copy.boundingBox();
+  await copy.click();
+  await page.waitForFunction(() => document.querySelector('.settings-mobile-copy')?.classList.contains('is-done'));
+  const after = await copy.boundingBox();
+  assert.equal(Math.round(after.width), Math.round(copyBefore.width), "the copy button keeps its width");
+  await page.waitForFunction(() => { const [idle, done] = document.querySelector('.settings-mobile-copy').children; return getComputedStyle(idle).opacity === '0' && getComputedStyle(done).opacity === '1'; });
+  await page.screenshot({ path: join(directory, 'mobile-copied.png') });
+  assert.match(await page.evaluate(() => window.copied), /^http:\/\/192\.168\.1\.8:47391\/\?remote#pair=coffeecli/);
   await page.getByText(/^(5:00|4:59) 后失效$/).waitFor();
   await page.getByText('新设备连接需重新请求，不能沿用老设备的地址', { exact: true }).waitFor();
   assert.equal(await page.getByRole('combobox').count(), 0, 'nobody has to pick a network');

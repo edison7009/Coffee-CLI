@@ -42,12 +42,12 @@ try{
   await page.waitForFunction(()=>window.updates.length===1);
   assert.equal(await page.evaluate(()=>window.launches),0,'update clicks never launch a CLI or open its folder menu');
   const updating=card('Claude Code').getByRole('button',{name:'更新中',exact:true});
-  assert.equal(await updating.isDisabled(),true);assert.equal(await updating.locator('.cli-update-label').evaluate(el=>getComputedStyle(el).visibility),'visible','busy keeps its label visible above the stripes');
-  assert.equal(await updating.locator('.cli-update-label').textContent(),'更新中');
-  assert.equal(await updating.locator('.cli-update-stripes').count(),1);
-  assert.equal(await updating.locator('.cli-update-stripes').evaluate(el=>getComputedStyle(el).animationName),'cli-update-stripes');
+  assert.equal(await updating.isDisabled(),true);assert.equal(await updating.locator('.cli-update-dots').evaluate(el=>getComputedStyle(el).visibility),'visible','busy shows dots instead of a word that could be truncated');
+  assert.equal(await updating.locator('.cli-update-dots i').count(),3);
+  assert.equal(await updating.locator('.cli-update-dots').evaluate(el=>el.scrollWidth<=el.clientWidth),true,'the dots fit without an ellipsis');
+  assert.equal(await updating.locator('.cli-update-dots i').first().evaluate(el=>getComputedStyle(el).animationName),'cli-update-dots');
   await page.emulateMedia({reducedMotion:'reduce'});
-  assert.equal(await updating.locator('.cli-update-stripes').evaluate(el=>getComputedStyle(el).animationName),'none');
+  assert.equal(await updating.locator('.cli-update-dots i').first().evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.emulateMedia({reducedMotion:'no-preference'});
   assert.equal(await card('Codex CLI').getByRole('button',{name:'更新 2.0.0',exact:true}).isEnabled(),true,'another tool retains its own update state');
   await page.evaluate(()=>window.showLauncher(false));await page.evaluate(()=>window.showLauncher(true));await updating.waitFor();
@@ -96,17 +96,17 @@ try{
   }
   for(const language of ['zh-CN','zh-TW','en','ja','ko','es','fr','de','pt','ru','vi']){
     const source=await readFile(join(project,'src','i18n',`${language}.ts`),'utf8');
-    const idleLabel=source.match(/'cli_update.label': '([^']+)'/)[1],busyLabel=source.match(/'cli_update.updating': '([^']+)'/)[1];
+    const idleLabel=source.match(/'cli_update.label': '([^']+)'/)[1];
     await page.evaluate(language=>window.changeLanguage(language),language);
     const button=card('Claude Code').locator('.cli-update-button');
     await page.waitForFunction(label=>document.querySelector('.cli-update-label')?.textContent===label,idleLabel);
     const idle=await button.boundingBox();
     await button.click();
-    await page.waitForFunction(label=>document.querySelector('.cli-update-label')?.textContent===label,busyLabel);
+    await page.waitForFunction(()=>document.querySelector('.cli-update-dots'));
     const busy=await button.boundingBox();
     assert.deepEqual(busy,idle,`${language}: changing state keeps the button position and size`);
-    assert.equal(await button.locator('.cli-update-label').evaluate(el=>getComputedStyle(el).visibility),'visible');
-    assert.equal(await button.locator('.cli-update-label').evaluate(el=>getComputedStyle(el).color),await button.evaluate(el=>{const probe=document.createElement('span');probe.style.color='var(--bg-app)';el.append(probe);const color=getComputedStyle(probe).color;probe.remove();return color}),'busy uses the theme text color for accent backgrounds');
+    assert.equal(await button.locator('.cli-update-dots').evaluate(el=>getComputedStyle(el).visibility),'visible');
+    assert.equal(await button.locator('.cli-update-dots').evaluate(el=>getComputedStyle(el).color),await button.evaluate(el=>{const probe=document.createElement('span');probe.style.color='var(--bg-app)';el.append(probe);const color=getComputedStyle(probe).color;probe.remove();return color}),'busy uses the theme text color for accent backgrounds');
     await page.evaluate(()=>window.releaseUpdates.claude('cli_update_timeout'));
     await page.waitForFunction(()=>document.querySelector('.cli-update-button')?.getAttribute('aria-busy')==='false');
     assert.deepEqual(await button.boundingBox(),idle,`${language}: failure also keeps the button size`);

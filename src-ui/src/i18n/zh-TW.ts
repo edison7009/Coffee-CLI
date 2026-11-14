@@ -538,6 +538,7 @@ export const zhTW = {
   "settings.mobile.qr_alt": "存取 QR 碼",
   "settings.mobile.expires": "{time} 後失效",
   "settings.mobile.confirm_hint": "新裝置連線需重新請求，不能沿用舊裝置的位址",
+  "settings.mobile.copy": "複製",
   "settings.mobile.copied": "已複製",
   "settings.mobile.remote": "在外面用",
   "settings.mobile.tip": "小技巧：想在外面也能用？在電腦和手機上都裝一個異地組網工具（如 Tailscale、ZeroTier），配對時這裡會多出一個外網位址。",

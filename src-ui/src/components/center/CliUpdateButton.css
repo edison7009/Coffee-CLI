@@ -4,15 +4,17 @@
 .launchpad-card .cli-update-size { visibility:hidden; }
 .launchpad-card .cli-update-label { position:relative; color:inherit; overflow:hidden; text-overflow:ellipsis; }
 /* Windows CJK fonts (YaHei) sit high in a line-height:1 box; macOS PingFang is already centered. */
-html.is-windows .launchpad-card .cli-update-label { transform:translateY(1px); }
+html.is-windows .launchpad-card .cli-update-label:not(.cli-update-dots) { transform:translateY(1px); }
 .launchpad-card .cli-update-button:hover { background:color-mix(in srgb,var(--accent) 28%,transparent); color:var(--text-1); }
 .launchpad-card .cli-update-button:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .launchpad-card .cli-update-button:disabled { cursor:default; opacity:1; }
 .launchpad-card .cli-update-button[aria-busy="true"] { background:var(--accent); color:var(--bg-app); }
 .launchpad-card .cli-update-button.has-error { color:var(--error,#d66); background:color-mix(in srgb,var(--error,#d66) 14%,transparent); }
-/* Stripes wider than the pill by one period, moved by transform so the compositor animates them, not a repaint. */
-.cli-update-stripes { position:absolute; top:0; bottom:0; left:-15px; right:0; background:repeating-linear-gradient(-45deg,var(--accent) 0 5px,color-mix(in srgb,var(--accent) 60%,#fff) 5px 10px); animation:cli-update-stripes .8s linear infinite; pointer-events:none; }
+.launchpad-card .cli-update-dots { display:inline-flex; align-items:center; gap:3px; }
+.cli-update-dots i { width:3px; height:3px; border-radius:50%; background:currentColor; animation:cli-update-dots 1.2s ease-in-out infinite; }
+.cli-update-dots i:nth-child(2) { animation-delay:.2s; }
+.cli-update-dots i:nth-child(3) { animation-delay:.4s; }
 .cli-update-error { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 .cli-update-tip { position:fixed; z-index:10000; width:max-content; max-width:min(236px,calc(100vw - 16px)); padding:6px 10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-panel); color:var(--text-1); font:500 var(--type-caption)/1.4 var(--font-nav,var(--font)); text-align:left; overflow-wrap:anywhere; pointer-events:none; box-shadow:0 1px 2px rgba(0,0,0,.2),0 6px 20px rgba(0,0,0,.22); }
-@keyframes cli-update-stripes { to { transform:translateX(14.142px); } }
-@media (prefers-reduced-motion:reduce) { .cli-update-stripes { animation:none; } }
+@keyframes cli-update-dots { 0%,80%,100% { opacity:.35; transform:translateY(0); } 40% { opacity:1; transform:translateY(-2px); } }
+@media (prefers-reduced-motion:reduce) { .cli-update-dots i { animation:none; opacity:1; } }

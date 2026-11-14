@@ -538,6 +538,7 @@ export const zhCN = {
   "settings.mobile.qr_alt": "访问二维码",
   "settings.mobile.expires": "{time} 后失效",
   "settings.mobile.confirm_hint": "新设备连接需重新请求，不能沿用老设备的地址",
+  "settings.mobile.copy": "复制",
   "settings.mobile.copied": "已复制",
   "settings.mobile.remote": "在外面用",
   "settings.mobile.tip": "小技巧：想在外面也能用？在电脑和手机上都装一个异地组网工具（如 Tailscale、ZeroTier），配对时这里会多出一个外网地址。",

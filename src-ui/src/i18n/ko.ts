@@ -537,6 +537,7 @@ export const ko = {
   "settings.mobile.qr_alt": "접근 QR 코드",
   "settings.mobile.expires": "{time} 후 만료",
   "settings.mobile.confirm_hint": "새 기기는 새 코드가 필요합니다. 이전 기기의 링크는 쓸 수 없습니다",
+  "settings.mobile.copy": "복사",
   "settings.mobile.copied": "복사됨",
   "settings.mobile.remote": "외부에서 사용",
   "settings.mobile.tip": "팁: 외부에서도 쓰고 싶다면 이 컴퓨터와 기기 모두에 Tailscale, ZeroTier 같은 가상 LAN 도구를 설치하세요. 페어링할 때 여기에 외부용 주소가 함께 표시됩니다.",

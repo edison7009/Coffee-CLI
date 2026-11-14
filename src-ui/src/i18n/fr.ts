@@ -535,6 +535,7 @@ export const fr = {
   "settings.mobile.qr_alt": "QR code d’accès",
   "settings.mobile.expires": "Expire dans {time}",
   "settings.mobile.confirm_hint": "Chaque nouvel appareil a besoin de son propre code ; le lien d’un ancien appareil ne fonctionne pas",
+  "settings.mobile.copy": "Copier",
   "settings.mobile.copied": "Copié",
   "settings.mobile.remote": "En déplacement",
   "settings.mobile.tip": "Astuce : pour l’utiliser hors de chez vous, installez un réseau local virtuel comme Tailscale ou ZeroTier sur cet ordinateur et l’appareil ; une seconde adresse apparaîtra ici lors de l’association.",

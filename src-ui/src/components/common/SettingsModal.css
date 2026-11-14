@@ -657,16 +657,17 @@
 .settings-mobile-pairing-text .settings-sound-title { flex: none; font-size: calc(var(--type-body) + 1px); }
 .settings-mobile-pairing-text .settings-choice-hint { text-align: left; font-size: var(--type-body); }
 /* The one address: shows where to go, copies the full pairing link. */
-.settings-mobile-link { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-1); background: var(--bg-hover); font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--type-body); cursor: pointer; }
+.settings-mobile-link-row { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+/* The one address: shows where to go, and copies the full pairing link too. */
+.settings-mobile-link { min-width: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-1); background: var(--bg-hover); font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--type-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .settings-mobile-link:hover { border-color: transparent; background: color-mix(in srgb, var(--text-1) 11%, transparent); }
-.settings-mobile-link svg { flex-shrink: 0; width: 14px; height: 14px; color: var(--text-2); }
-.settings-mobile-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.settings-mobile-link-row { display: flex; align-items: center; gap: 10px; max-width: 100%; }
+.settings-mobile-copy { display: inline-grid; }
+.settings-mobile-copy > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: opacity .14s ease; }
+.settings-mobile-copy > span[aria-hidden="true"] { opacity: 0; }
+.settings-mobile-copy svg { width: 13px; height: 13px; }
+.settings-mobile-copy.is-done { color: #4caf7a; }
 .settings-mobile-link-label { flex-shrink: 0; color: var(--text-3); font-size: var(--type-body); }
 .settings-mobile-tip { margin: 10px 2px 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.5; }
-.settings-mobile-copied { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; color: #4caf7a; font-size: var(--type-label); animation: settings-mobile-copied .16s ease-out; }
-.settings-mobile-copied svg { width: 13px; height: 13px; }
-@keyframes settings-mobile-copied { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
 .settings-mobile-devices { margin-top: 0; }
 .settings-mobile-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); opacity: 0.5; }
 .settings-mobile-dot.is-connected { background: #4caf7a; opacity: 1; }

@@ -102,16 +102,22 @@ export function MobileSettings() {
   }, [enabled]);
   const allowFirewall = () => run(async () => { setFirewall((await commands.mobileRpcFirewallAllow()).state); });
 
-  const addressRow = (which: 'lan' | 'remote', host: string, label?: string) => pairing && <div className="settings-mobile-link-row">
-    {label && <span className="settings-mobile-link-label">{label}</span>}
-    <button type="button" className="settings-mobile-link" onClick={() => void clipboardWrite(webPairingUrl(pairing, host)).then(() => setCopied(which), () => setCopied(null))}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
-      <span>{`http://${host.includes(':') ? `[${host}]` : host}:${pairing.port}`}</span>
-    </button>
-    {copied === which && <span className="settings-mobile-copied" role="status">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>{t('settings.mobile.copied')}
-    </span>}
-  </div>;
+  const addressRow = (which: 'lan' | 'remote', host: string, label?: string) => {
+    if (!pairing) return null;
+    const copy = () => void clipboardWrite(webPairingUrl(pairing, host)).then(() => setCopied(which), () => setCopied(null));
+    const done = copied === which;
+    return <div className="settings-mobile-link-row">
+      {label && <span className="settings-mobile-link-label">{label}</span>}
+      <button type="button" className="settings-mobile-link" onClick={copy}>{`http://${host.includes(':') ? `[${host}]` : host}:${pairing.port}`}</button>
+      {/* Both labels share one cell, so the button keeps the wider one's width and never jumps. */}
+      <button type="button" className={`settings-voice-scan settings-mobile-copy${done ? ' is-done' : ''}`} onClick={copy}>
+        <span aria-hidden={done}>{t('settings.mobile.copy')}</span>
+        <span aria-hidden={!done} role="status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>{t('settings.mobile.copied')}
+        </span>
+      </button>
+    </div>;
+  };
   const connected = new Set(status?.connected ?? []);
   const seconds = pairing ? Math.max(0, Math.ceil((pairing.expiresAt - now) / 1000)) : 0;
 

@@ -535,6 +535,7 @@ export const pt = {
   "settings.mobile.qr_alt": "QR code de acesso",
   "settings.mobile.expires": "Expira em {time}",
   "settings.mobile.confirm_hint": "Cada dispositivo novo precisa do próprio código; o link de um dispositivo antigo não funciona",
+  "settings.mobile.copy": "Copiar",
   "settings.mobile.copied": "Copiado",
   "settings.mobile.remote": "Fora de casa",
   "settings.mobile.tip": "Dica: quer usar fora de casa? Instale uma rede local virtual como Tailscale ou ZeroTier neste computador e no dispositivo; ao parear, um segundo endereço aparecerá aqui.",

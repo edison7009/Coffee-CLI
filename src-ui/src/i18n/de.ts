@@ -535,6 +535,7 @@ export const de = {
   "settings.mobile.qr_alt": "QR-Code für den Zugriff",
   "settings.mobile.expires": "Läuft ab in {time}",
   "settings.mobile.confirm_hint": "Jedes neue Gerät braucht einen eigenen Code; der Link eines alten Geräts funktioniert nicht",
+  "settings.mobile.copy": "Kopieren",
   "settings.mobile.copied": "Kopiert",
   "settings.mobile.remote": "Unterwegs",
   "settings.mobile.tip": "Tipp: Auch unterwegs nutzen? Installiere ein virtuelles LAN wie Tailscale oder ZeroTier auf diesem Computer und dem Gerät; beim Koppeln erscheint hier dann eine zweite Adresse.",
