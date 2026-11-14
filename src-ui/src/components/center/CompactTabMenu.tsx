@@ -35,7 +35,7 @@ export function CompactTabMenu({ tabs, onPick, onClose }: { tabs: CompactTab[]; 
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>
     {rect && createPortal(<div ref={menu} className="ctx-menu compact-tabs-menu" role="menu" aria-label={t('tabs.all', { count: String(tabs.length) })}
-      style={{ position: 'fixed', top: rect.bottom + 6, left: Math.max(8, Math.min(rect.left, window.innerWidth - 288)) }}>
+      style={{ position: 'fixed', top: rect.bottom + 6, left: Math.max(8, Math.min(rect.left, window.innerWidth - 328)) }}>
       {tabs.map(tab => <div key={tab.id} role="menuitem" tabIndex={0} className={`compact-tabs-item${tab.active ? ' is-active' : ''}`}
         onClick={() => { setOpen(false); onPick(tab.id); }}
         onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen(false); onPick(tab.id); } }}>

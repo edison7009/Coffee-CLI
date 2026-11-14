@@ -3338,11 +3338,16 @@ html.is-windows[data-frost="frost"] #root {
 [data-shape="carbon"] .ctx-menu,
 [data-shape="monogram"] .ctx-menu,
 [data-shape="carbon"] .term-ctx-menu,
-[data-shape="monogram"] .term-ctx-menu,
-[data-shape="carbon"] .history-search-dialog,
-[data-shape="monogram"] .history-search-dialog {
+[data-shape="monogram"] .term-ctx-menu {
     background-color: color-mix(in oklab, var(--bg-app) 76%, transparent) !important;
     background-image: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+/* Search is a whole page of results to read: opaque, or the stone and the list behind it show through. */
+[data-shape="carbon"] .history-search-dialog,
+[data-shape="monogram"] .history-search-dialog {
+    background-color: var(--bg-app) !important;
+    background-image: linear-gradient(var(--bg-panel), var(--bg-panel)) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
