@@ -1,6 +1,14 @@
 /* Web 端: pairing screen and the reconnect banner over the desktop UI. */
-.remote-banner { position: fixed; z-index: 1000; left: 12px; right: 12px; top: calc(8px + env(safe-area-inset-top)); padding: 10px 14px; border-radius: 10px; background: var(--bg-hover); color: var(--text-1); font-size: 13px; }
-.remote-banner button { margin-left: 8px; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; }
+/* Reconnecting or removed: a plain page with the words centred, like the first connect — nothing stale shows behind it. */
+.remote-banner { position: fixed; inset: 0; z-index: 20000; display: grid; place-items: center; padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)); background: var(--bg-app); animation: remote-banner-in .2s ease-out; }
+.remote-banner-card { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 360px; color: var(--text-2); font-size: 15px; text-align: center; }
+.remote-banner-card p { margin: 0; line-height: 1.5; }
+.remote-banner-sub { color: var(--text-3); font-size: 13px; }
+.remote-banner-card button { margin-top: 8px; padding: 10px 20px; border: 0; border-radius: 10px; background: var(--accent); color: var(--bg-panel, #1f1b1a); font: inherit; font-weight: 600; }
+.remote-banner-spinner { width: 22px; height: 22px; margin-bottom: 4px; border: 2px solid var(--border); border-top-color: var(--text-1); border-radius: 50%; animation: remote-banner-spin .9s linear infinite; }
+@keyframes remote-banner-spin { to { transform: rotate(360deg); } }
+@keyframes remote-banner-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .remote-banner { animation: none; } .remote-banner-spinner { animation-duration: 2.4s; } }
 /* Centred both ways in the window, clear of the notch and home bar. */
 .remote-pair { box-sizing: border-box; max-width: 520px; min-height: 100vh; min-height: 100dvh; margin: 0 auto; padding: calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; justify-content: center; gap: 14px; }
 .remote-pair-status { align-items: center; text-align: center; }

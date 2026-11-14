@@ -30,7 +30,14 @@ export function RemoteApp() {
   if (status === 'unpaired') return <RemotePair initialLink={linkFromAddress ?? ''} />;
   if (!ready) return <div className="remote-pair remote-pair-status"><p>{status === 'revoked' ? '这台设备已在电脑上被移除。' : '正在连接电脑…'}</p>{status === 'revoked' && <button type="button" onClick={forgetRemote}>重新配对</button>}</div>;
   return <>
-    {status !== 'connected' && <div className="remote-banner">{status === 'revoked' ? <>这台设备已在电脑上被移除。<button type="button" onClick={forgetRemote}>重新配对</button></> : `与 ${remoteComputerName() || '电脑'} 的连接已断开，正在重连…`}</div>}
+    {/* Covers the whole page, so it never sits on the title bar; the desktop UI comes back once connected. */}
+    {status !== 'connected' && <div className="remote-banner" role="alertdialog" aria-live="polite">
+      <div className="remote-banner-card">
+        {status === 'revoked'
+          ? <><p>这台设备已在电脑上被移除。</p><button type="button" onClick={forgetRemote}>重新配对</button></>
+          : <><span className="remote-banner-spinner" aria-hidden="true" /><p>与 {remoteComputerName() || '电脑'} 的连接已断开</p><p className="remote-banner-sub">正在重连…</p></>}
+      </div>
+    </div>}
     <Suspense fallback={null}><App /></Suspense>
   </>;
 }
