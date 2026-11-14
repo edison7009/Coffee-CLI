@@ -16,3 +16,5 @@
 .changelog-body .md-code { max-width:100%; overflow:auto; background:var(--bg-hover); padding:10px; }
 .changelog-status { padding:24px 0; text-align:center; color:var(--text-2); }
 .changelog-status .changelog-retry { width:auto; margin:12px auto 0; padding:0 12px; font:inherit; }
+/* A phone's title bar keeps only the panel and settings buttons; release notes still open once after each update. */
+:root[data-width="xs"] .titlebar-btn.changelog-trigger { display: none; }

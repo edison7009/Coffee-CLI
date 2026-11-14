@@ -516,6 +516,8 @@ export const es = {
   "settings.mobile": "Dispositivos",
   "remote.notify.wait": "Esperando tu respuesta",
   "remote.notify.done": "Listo",
+  "tabs.all": "Todas las pestañas ({count})",
+  "tabs.close": "Cerrar pestaña",
   "sidebar.devices.none": "Ningún dispositivo conectado",
   "sidebar.devices.count": "{count} conectados",
   "sidebar.devices.web": "Web",

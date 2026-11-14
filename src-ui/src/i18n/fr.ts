@@ -516,6 +516,8 @@ export const fr = {
   "settings.mobile": "Appareils",
   "remote.notify.wait": "En attente de vous",
   "remote.notify.done": "Terminé",
+  "tabs.all": "Tous les onglets ({count})",
+  "tabs.close": "Fermer l’onglet",
   "sidebar.devices.none": "Aucun appareil connecté",
   "sidebar.devices.count": "{count} connectés",
   "sidebar.devices.web": "Web",

@@ -519,6 +519,8 @@ export const zhTW = {
   "settings.mobile": "裝置連線",
   "remote.notify.wait": "等待你確認",
   "remote.notify.done": "已完成",
+  "tabs.all": "全部分頁（{count}）",
+  "tabs.close": "關閉分頁",
   "sidebar.devices.none": "尚未有裝置連線",
   "sidebar.devices.count": "已連線 {count} 台裝置",
   "sidebar.devices.web": "Web 端",

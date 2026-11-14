@@ -521,6 +521,8 @@ export const en = {
   "settings.mobile": "Devices",
   "remote.notify.wait": "Waiting for you",
   "remote.notify.done": "Done",
+  "tabs.all": "All tabs ({count})",
+  "tabs.close": "Close tab",
   "sidebar.devices.none": "No devices connected",
   "sidebar.devices.count": "{count} connected",
   "sidebar.devices.web": "Web",

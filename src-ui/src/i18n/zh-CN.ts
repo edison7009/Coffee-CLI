@@ -519,6 +519,8 @@ export const zhCN = {
   "settings.mobile": "设备连接",
   "remote.notify.wait": "等待你确认",
   "remote.notify.done": "已完成",
+  "tabs.all": "全部标签（{count}）",
+  "tabs.close": "关闭标签",
   "sidebar.devices.none": "尚未有设备连接",
   "sidebar.devices.count": "已连接 {count} 台设备",
   "sidebar.devices.web": "Web 端",

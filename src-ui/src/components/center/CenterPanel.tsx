@@ -5,6 +5,8 @@ import { REMOTE } from '../../remote/bridge';
 import { onSharedStorage } from '../../lib/storage-mirror';
 import { pickFolder } from '../../lib/folder-picker';
 import { createPortal } from 'react-dom';
+import { CompactTabMenu, type CompactTab } from './CompactTabMenu';
+import { useCompact } from '../../lib/viewport';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { focusTerminal } from '../../lib/focus-registry';
 import { onWindowForeground } from '../../lib/window-focus-filter';
@@ -388,6 +390,7 @@ export function CenterPanel() {
   const usageOpen = state.usageOpen;
   const utilityPageOpen = usageOpen || state.toolSettingsOpen || state.settingsOpen || state.automationsOpen;
   const contentActive = !utilityPageOpen && !diffTabActive;
+  const compact = useCompact();
   const splitIds = splitSessionIds(state.sessionSplit);
   const splitVisible = contentActive && splitIds.length > 1 && splitIds.includes(activeTerminalId ?? '');
   const splitRects = splitVisible ? sessionSplitRects(state.sessionSplit!).leaves : [];
@@ -1243,7 +1246,9 @@ export function CenterPanel() {
             const session = sessions.get(id);
             return !!session && session.tool !== null && (!session.isHidden || id === activeTerminalId);
           });
-          return visibleTabs.map((tabId, visibleIndex) => {
+          // Narrow: only the current tab stays in the strip; the menu beside it lists them all.
+          const compactTabs: CompactTab[] = [];
+          const rendered = visibleTabs.map((tabId, visibleIndex) => {
           const isDragging = tabDrag?.tabId === tabId;
           const dragStyle = getTabDragStyle(tabId, visibleIndex);
           const session = sessions.get(tabId)!;
@@ -1262,6 +1267,7 @@ export function CenterPanel() {
           const title = task?.title || (session.tool === 'muse' ? baseTitle : session.pinnedTitle || session.toolTitle?.trim() || baseTitle);
           const showAgentStatus = supportsAgentStatus(session.tool)
             && (['claude', 'codex', 'kimicode', 'omp', 'dsh'].includes(session.tool ?? '') || session.agentStatus !== undefined);
+          compactTabs.push({ id: session.id, icon, title, active: session.id === activeTerminalId, status: showAgentStatus ? (session.agentStatus === 'wait_input' ? 'waiting' : session.agentStatus ?? 'idle') : undefined });
           return (
             <div
               key={session.id}
@@ -1306,6 +1312,12 @@ export function CenterPanel() {
             </div>
           );
         });
+          if (!compact) return rendered;
+          const current = visibleTabs.indexOf(activeTerminalId ?? '');
+          return <>
+            {current >= 0 && rendered[current]}
+            {visibleTabs.length > 1 && <CompactTabMenu tabs={compactTabs} onPick={onTabClickGuarded} onClose={handleCloseTab} />}
+          </>;
         })()}
 
         {/* Diff tab — a peer of the terminal tabs in the strip, but not a

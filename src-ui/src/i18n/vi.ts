@@ -520,6 +520,8 @@ export const vi = {
   "settings.mobile": "Kết nối thiết bị",
   "remote.notify.wait": "Đang chờ bạn",
   "remote.notify.done": "Xong",
+  "tabs.all": "Tất cả tab ({count})",
+  "tabs.close": "Đóng tab",
   "sidebar.devices.none": "Chưa có thiết bị kết nối",
   "sidebar.devices.count": "{count} thiết bị đã kết nối",
   "sidebar.devices.web": "Web",

@@ -516,6 +516,8 @@ export const pt = {
   "settings.mobile": "Dispositivos",
   "remote.notify.wait": "Aguardando você",
   "remote.notify.done": "Concluído",
+  "tabs.all": "Todas as abas ({count})",
+  "tabs.close": "Fechar aba",
   "sidebar.devices.none": "Nenhum dispositivo conectado",
   "sidebar.devices.count": "{count} conectados",
   "sidebar.devices.web": "Web",

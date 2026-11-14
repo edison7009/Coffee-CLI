@@ -1357,3 +1357,25 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   transition: transform 150ms;
 }
 .library-toggle.on .library-toggle-knob { transform: translateX(16px); }
+
+/* Narrow windows and phones: the current tab, then a count that opens every tab. */
+.compact-tabs-button { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; align-self: center; height: 24px; padding: 0 6px 0 8px; border: 1px solid var(--border); border-radius: var(--shape-radius-btn, 8px); color: var(--text-2); background: transparent; font: inherit; font-size: var(--type-label); font-variant-numeric: tabular-nums; cursor: pointer; }
+.compact-tabs-button:hover, .compact-tabs-button[aria-expanded="true"] { color: var(--text-1); background: var(--bg-hover); }
+.compact-tabs-button svg { width: 13px; height: 13px; }
+.ctx-menu.compact-tabs-menu { width: min(280px, calc(100vw - 16px)); max-height: min(60vh, 420px); overflow-y: auto; background-color: var(--bg-app) !important; background-image: none !important; border: 1px solid var(--border) !important; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 6px rgba(0, 0, 0, .25), 0 12px 32px rgba(0, 0, 0, .35); transform-origin: top left; animation: compact-tabs-in .16s cubic-bezier(.2, .8, .2, 1); }
+@keyframes compact-tabs-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ctx-menu.compact-tabs-menu { animation: none; } }
+.compact-tabs-item { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 4px 0 10px; border-radius: max(0px, calc(var(--radius-sm) - 2px)); color: var(--text-2); font-size: var(--type-body); cursor: pointer; }
+.compact-tabs-item:hover, .compact-tabs-item:focus-visible { color: var(--text-1); background: var(--bg-hover); outline: none; }
+.compact-tabs-item.is-active { color: var(--text-1); background: var(--bg-active); }
+.compact-tabs-icon { display: inline-flex; flex-shrink: 0; }
+.compact-tabs-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact-tabs-status { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: #34d399; }
+.compact-tabs-status.status-working { background: #D97757; }
+.compact-tabs-status.status-waiting { background: #60a5fa; }
+.compact-tabs-close { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--text-3); background: transparent; cursor: pointer; }
+.compact-tabs-close:hover { color: var(--text-1); background: var(--bg-hover); }
+.compact-tabs-close svg { width: 12px; height: 12px; }
+[data-width="xs"] .compact-tabs-item { min-height: 44px; }
+/* The one tab left in a narrow strip may take what room there is. */
+:root:is([data-width="xs"], [data-width="s"]) .chrome-tab { max-width: min(240px, 50vw); }

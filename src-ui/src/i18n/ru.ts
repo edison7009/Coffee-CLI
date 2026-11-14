@@ -516,6 +516,8 @@ export const ru = {
   "settings.mobile": "Устройства",
   "remote.notify.wait": "Ждёт вашего ответа",
   "remote.notify.done": "Готово",
+  "tabs.all": "Все вкладки ({count})",
+  "tabs.close": "Закрыть вкладку",
   "sidebar.devices.none": "Нет подключённых устройств",
   "sidebar.devices.count": "подключено: {count}",
   "sidebar.devices.web": "Web",

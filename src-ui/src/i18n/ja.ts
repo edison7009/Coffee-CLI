@@ -518,6 +518,8 @@ export const ja = {
   "settings.mobile": "デバイス接続",
   "remote.notify.wait": "確認待ち",
   "remote.notify.done": "完了",
+  "tabs.all": "すべてのタブ（{count}）",
+  "tabs.close": "タブを閉じる",
   "sidebar.devices.none": "接続中のデバイスはありません",
   "sidebar.devices.count": "{count} 台が接続中",
   "sidebar.devices.web": "Web",
