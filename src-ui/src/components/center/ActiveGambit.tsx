@@ -22,6 +22,7 @@ import { sendSessionPrompt } from '../../lib/send-session-prompt';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
+import { useCompact } from '../../lib/viewport';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { interruptCodex, useCodexSession } from '../../lib/codex-session';
 import { interruptOpenCode, useOpenCodeSession } from '../../lib/opencode-session';
@@ -57,6 +58,7 @@ function remoteHost(toolData: string | undefined): string {
 
 export function ActiveGambit() {
   const { state, dispatch } = useAppState();
+  const compact = useCompact();
   const stateRef = useAppStateRef();
   const orchestration = useOrchestration();
   const activeId = state.activeTerminalId;
@@ -180,8 +182,9 @@ export function ActiveGambit() {
       attachable={activeSession?.tool !== 'remote'}
       running={running}
       onCancel={isDsh ? () => { void stopDsh(activeId); } : isPi ? () => { void abortPi(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
-      leftPanelHidden={state.leftPanelHidden}
-      rightPanelHidden={state.rightPanelHidden}
+      // Narrow: the panels are drawers over the center, so the composer spans the full width.
+      leftPanelHidden={compact || state.leftPanelHidden}
+      rightPanelHidden={compact || state.rightPanelHidden}
     />
   );
 }

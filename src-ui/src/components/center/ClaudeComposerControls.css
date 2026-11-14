@@ -52,3 +52,15 @@
 .dsh-preset-icon { width:14px; height:14px; flex-shrink:0; }
 .claude-permission-control .dsh-preset-icon { margin-right:5px; vertical-align:-2px; }
 .claude-continuation-detail { margin:0; padding:4px 8px 8px; color:var(--text-2); line-height:1.5; }
+
+/* Phones: a picker (model, effort, permissions, the / commands…) has no room beside its button,
+   so it opens from the bottom at full width, above the controls sheet, with finger-sized rows. */
+:root[data-width="xs"] .claude-control-menu {
+  left: 8px !important; right: 8px !important; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  width: auto !important; min-width: 0 !important; max-width: none !important; max-height: 65vh !important;
+  padding: 8px; font-size: var(--type-body); box-shadow: 0 -8px 40px rgba(0, 0, 0, .45);
+  animation: claude-menu-sheet-in .2s cubic-bezier(.2, .8, .2, 1);
+}
+:root[data-width="xs"] .claude-control-menu button { min-height: 44px; align-items: center; padding: 10px 12px; }
+@keyframes claude-menu-sheet-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { :root[data-width="xs"] .claude-control-menu { animation: none; } }

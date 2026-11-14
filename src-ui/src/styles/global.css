@@ -2395,39 +2395,41 @@ body.gambit-docked .multi-agent-grid-standalone {
 
 /* Compact (narrower than 1000px, phones included): the side panels become
    drawers over the center instead of docked columns, one open at a time,
-   with a dimmed scrim behind that closes it. They keep the same width
-   slide; on a phone the drawer takes most of the width and leaves a strip
-   of the conversation showing, which also closes it when tapped. Opaque on
-   every shape, or the conversation would show through the list. */
-.app-layout.is-compact .panel-left,
-.app-layout.is-compact .panel-right {
+   with a dimmed scrim behind that closes it. A drawer has one fixed width of
+   its own (the docked widths belong to the desktop layout and are left
+   alone): 320px on a narrow window, 84% on a phone so a strip of the
+   conversation stays visible and closes it when tapped. Opaque on every
+   shape, or the conversation would show through the list. */
+.app-layout.is-compact {
+    --drawer-w: min(320px, calc(100vw - 48px));
+    --w-left: var(--drawer-w);
+    --w-right: var(--drawer-w);
+}
+[data-width="xs"] .app-layout.is-compact { --drawer-w: 84vw; }
+.app-layout.is-compact > .panel-left,
+.app-layout.is-compact > .panel-right {
     position: absolute;
     top: 0;
     bottom: 0;
-    z-index: 40;
-    max-width: calc(100% - 48px);
+    /* Above the docked composer (z-index 200), which would otherwise float over the list. */
+    z-index: 210;
     background: linear-gradient(var(--bg-panel), var(--bg-panel)), var(--bg-app) !important;
     box-shadow: 0 0 0 1px var(--border), 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 /* The center is the only column left, so it takes any width down to a phone's. */
 .app-layout.is-compact .panel-center { min-width: 0; }
-.app-layout.is-compact .panel-left { left: 0; }
-.app-layout.is-compact .panel-right { right: 0; min-width: var(--w-right); }
-.app-layout.is-compact .panel-left.is-collapsed,
-.app-layout.is-compact .panel-right.is-collapsed {
+.app-layout.is-compact > .panel-left { left: 0; }
+.app-layout.is-compact > .panel-right { right: 0; }
+.app-layout.is-compact > .panel-left.is-collapsed,
+.app-layout.is-compact > .panel-right.is-collapsed {
     width: 0;
     min-width: 0;
     box-shadow: none;
 }
-[data-width="xs"] .app-layout.is-compact .panel-left:not(.is-collapsed),
-[data-width="xs"] .app-layout.is-compact .panel-right:not(.is-collapsed) {
-    width: 84%;
-    min-width: 84%;
-}
 .drawer-scrim {
     position: absolute;
     inset: 0;
-    z-index: 39;
+    z-index: 205;
     background: rgba(0, 0, 0, 0.35);
     animation: drawer-scrim-in 250ms ease-out;
 }

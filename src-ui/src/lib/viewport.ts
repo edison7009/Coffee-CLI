@@ -45,6 +45,13 @@ function update() {
 /** Too narrow for docked side panels: they open as drawers over the center instead. */
 export const isCompact = () => current === 'xs' || current === 's';
 
+/** A phone's width: controls move off the composer's bar into one menu. */
+export const isPhone = () => current === 'xs';
+
+export function usePhone(): boolean {
+  return useSyncExternalStore(listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }, isPhone, () => false);
+}
+
 export function useCompact(): boolean {
   return useSyncExternalStore(listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }, isCompact, () => false);
 }

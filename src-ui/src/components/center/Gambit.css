@@ -539,3 +539,10 @@
 /* Reduced motion keeps only a short fade, no flip. */
 @keyframes gambit-pre-input-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .gambit-pre-input-save { animation: gambit-pre-input-fade .15s ease both; } .gambit-pre-input-save.is-leaving { animation: gambit-pre-input-fade .15s ease reverse both; } }
+
+/* ─── Phones: the footer keeps its controls at their usual size and scrolls sideways;
+   send stays put on the right. ─── */
+:root[data-width="xs"] .gambit-footer { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+:root[data-width="xs"] .gambit-footer::-webkit-scrollbar { display: none; }
+:root[data-width="xs"] .gambit-footer > * { flex-shrink: 0; }
+:root[data-width="xs"] .gambit-footer > .gambit-send { position: sticky; right: 0; z-index: 1; box-shadow: -10px 0 10px -4px var(--bg-panel, var(--bg-app)); }

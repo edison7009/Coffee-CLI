@@ -14,6 +14,7 @@
 // Claude Code) will read the file; agents that don't just see the raw path.
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { usePhone } from '../../lib/viewport';
 import { isWorktreePending } from '../../lib/worktree-pending';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
@@ -150,6 +151,9 @@ function PreInputSave({ shown, label, clearLabel, onSave, onClear }: { shown: bo
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
 
+/** A phone or tablet: focusing a field there raises the on-screen keyboard. */
+const isTouchScreen = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+
 function GambitImpl({
   sessionId,
   draft,
@@ -248,20 +252,29 @@ function GambitImpl({
   // renders. Null when no resize is in progress.
   const dockResizeRef = useRef<{ startY: number; origH: number; lastH?: number; handle?: HTMLElement } | null>(null);
 
+  // A phone has no keyboard shortcuts to advertise; it gets the short placeholder.
+  const phone = usePhone();
+
+  // Ready to type on open — except on a touch screen, where focusing the draft raises the on-screen
+  // keyboard over the conversation before anyone asked to type.
   useEffect(() => {
-    textareaRef.current?.focus();
+    if (!isTouchScreen()) textareaRef.current?.focus();
   }, []);
 
   // A mouse click on a footer control or its menu leaves the caret in the draft, so Enter still sends instead of
-  // pressing that control again. Only the mouse: tabbing to a control still focuses it.
+  // pressing that control again. Only the mouse: tabbing to a control still focuses it, and a finger only picks
+  // an option — it keeps whatever focus there was, so the on-screen keyboard neither appears nor closes.
   useEffect(() => {
+    let finger = false;
+    const pointer = (e: PointerEvent) => { finger = e.pointerType !== 'mouse'; };
     const keepCaret = (e: MouseEvent) => {
       if (!(e.target as Element).closest?.('button')?.closest('.gambit-footer, .claude-control-menu')) return;
       e.preventDefault();
-      if (!document.querySelector('.claude-control-menu')) textareaRef.current?.focus();
+      if (!finger && !document.querySelector('.claude-control-menu')) textareaRef.current?.focus();
     };
+    document.addEventListener('pointerdown', pointer, true);
     document.addEventListener('mousedown', keepCaret, true);
-    return () => document.removeEventListener('mousedown', keepCaret, true);
+    return () => { document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('mousedown', keepCaret, true); };
   }, []);
 
   // Floating scrollbar for the input box. A long draft's scroll owner is
@@ -408,7 +421,7 @@ function GambitImpl({
   const removeAttachment = (path: string) => {
     onDraftChange(removeGambitAttachment(latestDraftRef.current, path));
     if (previewPath === path) setPreviewPath(null);
-    requestAnimationFrame(() => textareaRef.current?.focus());
+    if (!isTouchScreen()) requestAnimationFrame(() => textareaRef.current?.focus());
   };
   const openThumbPreview = (path: string) => {
     setPreviewPath(path);
@@ -853,7 +866,7 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={draft}
-          placeholder={suggestion ? undefined : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ? undefined : phone ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}
