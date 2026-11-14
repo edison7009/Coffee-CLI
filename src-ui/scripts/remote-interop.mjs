@@ -1,7 +1,7 @@
-// Pairs with and reconnects to a desktop over the real protocol, using the app's own client.
-// Usage: node scripts/noise-interop.mjs <host> <port> <desktopPublicKeyHex> <pairingCode>
+// Pairs with and reconnects to a desktop over the real protocol, using the browser's own client.
+// Usage: node scripts/remote-interop.mjs <host> <port> <desktopPublicKeyHex> <pairingCode>
 // Prints one JSON line with what happened; the Rust test (src/mobile_rpc/tests.rs) drives it.
-import { CoffeeClient, generateKeyPair } from '../../src-ui/src/remote/protocol.ts';
+import { CoffeeClient, generateKeyPair } from '../src/remote/protocol.ts';
 
 const [host, port, publicKey, code] = process.argv.slice(2);
 // An unreachable address first: the client must race past it.
@@ -16,8 +16,8 @@ out.ping = typeof (await paired.request('ping')).t;
 paired.close();
 const resumed = await CoffeeClient.connect(base);
 const big = 'x'.repeat(200_000);
-try { await resumed.request('conversation.send', { id: 'missing', text: big }); } catch (error) { out.bigError = error.code; }
-out.subscribe = await resumed.request('session.subscribe', { id: 'interop-conv' });
+try { await resumed.request('interop.big', { text: big }); } catch (error) { out.bigError = error.code; }
+out.subscribe = await resumed.request('ui.subscribe');
 const event = new Promise(resolve => resumed.onEvent(resolve));
 console.log(JSON.stringify({ ready: true }));
 out.event = await event;

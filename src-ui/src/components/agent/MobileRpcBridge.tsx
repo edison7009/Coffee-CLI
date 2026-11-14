@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useT } from '../../i18n/useT';
-import { getProjectFolders } from '../../lib/project-folders';
 import { useAppState, useAppStateRef } from '../../store/app-state';
 import { commands, invoke, isTauri } from '../../tauri';
-import { getAgentSession } from '../../lib/agent-session';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import { SETTINGS_ACTIONS, pickMirroredSettings, typingDraft, type Action, type TerminalSession } from '../../store/app-state';
 import { writeFromBrowser } from '../../lib/storage-mirror';
 import { mirrorSnapshot, mirrorSource, runMirrorAction, setMirrorActive, type MirrorKind } from '../../lib/session-mirror';
@@ -26,21 +23,16 @@ function inTabOrder(terminals: TerminalSession[], order: string[]): TerminalSess
   return [...terminals].sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity));
 }
 
-function conversationKind(tab: TerminalSession) {
-  return isClaudeConversation(tab) ? 'claude' : isCodexConversation(tab) ? 'codex' : isOpenCodeConversation(tab) ? 'opencode'
-    : isPiConversation(tab) ? 'pi' : isDshConversation(tab) ? 'dsh' : null;
-}
-
-/** Answers phone requests (see mobile/PROTOCOL.md) through the same session paths the desktop uses. */
+/** Answers remote browsers' requests (see docs/remote-protocol.md) through the same session paths the desktop uses. */
 export function MobileRpcBridge() {
   const stateRef = useAppStateRef();
   const t = useT(), tRef = useRef(t);
   useEffect(() => { tRef.current = t; }, [t]);
 
-  // Phones re-read the list when what it shows changes; bursts (restoring tabs) collapse into one notice.
+  // Browsers re-read the list when what it shows changes; bursts (restoring tabs) collapse into one notice.
   const { state, dispatch } = useAppState();
   const listed = useMemo(() => inTabOrder(state.terminals, state.tabOrder).filter(tab => tab.tool && !tab.isHidden)
-    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', conversationKind(tab) ?? ''].join('\u0000')).join('\u0001'), [state.terminals, state.tabOrder]);
+    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', tab.claudeMode, tab.codexMode, tab.opencodeMode, tab.piMode, tab.worktree && JSON.stringify(tab.worktree), tab.parentId].map(value => value ?? '').join('\u0000')).join('\u0001'), [state.terminals, state.tabOrder]);
   const firstList = useRef(true);
   useEffect(() => {
     if (!isTauri) return;
@@ -72,11 +64,6 @@ export function MobileRpcBridge() {
   useEffect(() => {
     if (!isTauri) return;
     let disposed = false, stop: (() => void) | undefined;
-    const tabFor = (id?: string) => {
-      const tab = stateRef.current.terminals.find(tab => tab.id === id && tab.tool && !tab.isHidden);
-      if (!tab) throw new RequestError('Session not found', 'not_found');
-      return tab;
-    };
     const run = async ({ method, params }: MobileRequest) => {
       // A browser's command (Web 端), already checked against the desktop's rules in Rust.
       if (method === 'invoke' && params.cmd) return invoke(params.cmd, (params.args ?? {}) as Record<string, unknown>);
@@ -108,8 +95,6 @@ export function MobileRpcBridge() {
         }, 0);
         return {};
       }
-      // The folders this desktop has opened, offered to a browser in place of the folder dialog.
-      if (method === 'projects.list') return { folders: getProjectFolders() };
       // A browser saved one of the desktop's records (a recent folder, a launch mode…).
       if (method === 'storage.set') {
         const { key, value } = params as unknown as { key?: unknown; value?: unknown };
@@ -126,25 +111,14 @@ export function MobileRpcBridge() {
         return { accepted };
       }
       if (method === 'session.list') {
-        return { sessions: inTabOrder(stateRef.current.terminals, stateRef.current.tabOrder).filter(tab => tab.tool && !tab.isHidden).map(tab => {
-          const kind = conversationKind(tab);
-          return {
-            id: tab.id, tool: tab.tool, kind, view: kind ? 'conversation' : 'terminal',
-            claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode, piMode: tab.piMode, worktree: tab.worktree, parentId: tab.parentId,
-            title: tab.pinnedTitle || tab.toolTitle || '', cwd: tab.folderPath ?? '',
-            status: tab.agentStatus ?? null, updatedAt: tab.activeAt ?? tab.startedAt ?? null,
-          };
-        }) };
+        // The desktop's tabs in its order, with what a browser needs to show them the same way.
+        return { sessions: inTabOrder(stateRef.current.terminals, stateRef.current.tabOrder).filter(tab => tab.tool && !tab.isHidden).map(tab => ({
+          id: tab.id, tool: tab.tool,
+          claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode, piMode: tab.piMode, worktree: tab.worktree, parentId: tab.parentId,
+          title: tab.pinnedTitle || tab.toolTitle || '', cwd: tab.folderPath ?? '',
+          status: tab.agentStatus ?? null,
+        })) };
       }
-      const tab = tabFor(params.id), session = getAgentSession(tab);
-      if (!session || session.mode !== 'desktop') throw new RequestError('Not a desktop conversation', 'not_found');
-      const generation = session.generation, guard = () => !disposed && getAgentSession(tabFor(params.id))?.generation === generation;
-      if (method === 'conversation.send') {
-        if (!session.ready) throw new RequestError('Session is not ready', 'busy');
-        await session.send(String(params.text ?? ''), guard);
-        return {};
-      }
-      if (method === 'conversation.cancel') { await session.key('CtrlC', guard); return {}; }
       throw new RequestError('Unsupported request', 'internal');
     };
     void import('@tauri-apps/api/event').then(({ listen }) => listen<MobileRequest>('mobile-rpc-request', async ({ payload }) => {

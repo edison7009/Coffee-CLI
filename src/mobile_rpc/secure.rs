@@ -79,7 +79,7 @@ pub fn respond(local_private: &[u8], msg1: &[u8], psk: &[u8; 32]) -> Result<(Vec
     Ok((buf[..len].to_vec(), remote, Channel::new(transport)))
 }
 
-/// Initiator side (the phone). Used by tests and as the reference for the app.
+/// Initiator side (the remote device). Used by tests; the browser's own is in `src-ui/src/remote/protocol.ts`.
 #[cfg_attr(not(test), allow(dead_code))]
 pub struct Initiator { hs: HandshakeState }
 

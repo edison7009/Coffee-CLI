@@ -75,7 +75,7 @@ export function WebAccessStatus() {
     </button>
     {open && rect && createPortal(<div ref={menu} className="ctx-menu sidebar-web-menu" role="menu" aria-label={label}
       style={{ position: 'fixed', left: rect.left, bottom: window.innerHeight - rect.top + 6 }}>
-      {/* The mobile app is not out yet; the entry shows where it will live. */}
+      {/* A placeholder for a future mobile app; the browser covers phones today. */}
       <button type="button" role="menuitem" className="ctx-menu-item" aria-disabled="true" disabled>{t('sidebar.devices.mobile_app')}</button>
       <div className="ctx-menu-divider" />
       {devices.map(device => <div key={device.publicKey} className="sidebar-web-device" role="menuitem" aria-disabled="true">

@@ -10,7 +10,7 @@
 //! than fence a hostile device in:
 //!
 //! - A deny-list keeps the desktop window, the host's dialogs and speakers,
-//!   pairing, installers, the desktop's background agent and anything that
+//!   pairing, installers, the orchestration hub and anything that
 //!   opens programs on the desktop's screen (the browser opens links itself)
 //!   out of reach, and passwords stay where they are.
 //! - Sessions are started, closed and sized only by the desktop. The browser
@@ -20,16 +20,16 @@
 use serde_json::Value;
 
 /// Desktop events the browser UI listens to. Requests the desktop window
-/// answers itself (orchestration, agent tools, launch) are not forwarded, or
+/// answers itself (orchestration, launch) are not forwarded, or
 /// both sides would act on them.
 /// Not here: terminal output (numbered, see `record_terminal`) and conversation
 /// events (the desktop sends its state instead, see `mobile_rpc_mirror`).
-pub const FORWARDED_EVENTS: [&str; 11] = [
+pub const FORWARDED_EVENTS: [&str; 8] = [
     "tier-terminal-size", "tier-terminal-status", "tier-terminal-exit", "tier-terminal-cwd", "tier-terminal-token",
-    "fs-refresh", "tasks-changed", "agent-conversations-changed", "agent-work-modes", "channel-status", "orchestration-updated",
+    "fs-refresh", "tasks-changed", "orchestration-updated",
 ];
 
-const DENIED: [&str; 34] = [
+const DENIED: [&str; 26] = [
     // The desktop window and the host's own devices, dialogs and speakers.
     "window_minimize", "window_maximize", "window_close", "show_main_window", "set_frosted_backdrop", "set_background_mode",
     "pick_folder", "notify_sound_choose", "show_in_folder", "open_url", "read_clipboard_image", "save_clipboard_image", "play_notify_sound",
@@ -37,10 +37,9 @@ const DENIED: [&str; 34] = [
     "start_fs_watcher", "stop_fs_watcher",
     // Credentials, installers and account binding stay on the desktop.
     "save_password", "load_password", "delete_password", "download_and_install_update", "update_cli", "install_browser_control",
-    "maintain_tool_integration", "channel_connect_telegram", "channel_disconnect", "channel_weixin_start", "channel_weixin_poll",
-    // The desktop's background agent and orchestration hub.
-    "agent_bridge_ready", "take_pending_launch", "agent_tool_is_pending", "agent_resolve_tool", "agent_sentinel_report",
-    "orchestration_sync", "orchestration_pending", "orchestration_resolve",
+    "maintain_tool_integration",
+    // The desktop's launch queue and orchestration hub.
+    "take_pending_launch", "orchestration_sync", "orchestration_pending", "orchestration_resolve",
 ];
 const DENIED_PREFIXES: [&str; 3] = ["mobile_rpc_", "voice_", "plugin:"];
 

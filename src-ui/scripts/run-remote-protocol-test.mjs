@@ -1,8 +1,8 @@
-// Protocol unit tests, run by Node directly against src/protocol.ts.
-// The desktop interop test lives in src/mobile_rpc/tests.rs (cargo test).
+// Encrypted remote protocol (src/remote/protocol.ts), run by Node directly.
+// The interop test against the real desktop server lives in src/mobile_rpc/tests.rs (cargo test).
 import assert from 'node:assert/strict';
 import { x25519 } from '@noble/curves/ed25519.js';
-import { Channel, CoffeeClient, Initiator, MAX_REQUEST, RpcError, generateKeyPair, pairingPsk, parsePairingLink, toHex, fromHex, PROTOCOL } from '../../src-ui/src/remote/protocol.ts';
+import { Channel, CoffeeClient, Initiator, MAX_REQUEST, RpcError, generateKeyPair, pairingPsk, parsePairingLink, toHex, fromHex, PROTOCOL } from '../src/remote/protocol.ts';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log(`ok ${name}`); };
@@ -89,4 +89,4 @@ await (async () => {
   passed++; console.log('ok nothing answering is unreachable, failing fast or after the dial timeout');
 })();
 
-console.log(`${passed} mobile protocol tests passed`);
+console.log(`${passed} remote protocol tests passed`);

@@ -1,14 +1,15 @@
-//! Mobile companion RPC (protocol v0, see `mobile/PROTOCOL.md`).
+//! Remote access RPC for other devices' browsers (protocol v0, see `docs/remote-protocol.md`).
 //!
-//! Off by default. When enabled, a WebSocket listener on the LAN lets a paired
-//! phone list sessions, replay and follow terminal output and structured
-//! conversation events, and send input. Session listing and conversation sends
-//! are delegated to the main window (`mobile-rpc-request`) so they take the
-//! exact path the desktop UI uses.
+//! Off by default. When enabled, a WebSocket listener on the LAN serves this
+//! computer's own UI to a paired browser and mirrors it: the browser lists the
+//! desktop's tabs, follows its terminals, session stores and settings, and
+//! asks the desktop to act. Requests that need the UI's state are delegated to
+//! the main window (`mobile-rpc-request`) so they take the exact path the
+//! desktop UI uses.
 //!
 //! Every connection is end-to-end encrypted with Noise `IKpsk2` (see
-//! `secure.rs`): phones pair once with a one-time QR code, then reconnect
-//! with their own static key.
+//! `secure.rs`): a device pairs once with a one-time QR code, then reconnects
+//! with its own static key.
 
 mod buffers;
 mod config;
@@ -19,7 +20,7 @@ mod secure;
 mod upload;
 mod web;
 
-use buffers::{Buffers, Replay};
+use buffers::Buffers;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
@@ -27,7 +28,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter, Listener, Manager};
+use tauri::{AppHandle, Emitter, Listener};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -49,23 +50,12 @@ const INVOKE_TIMEOUT: Duration = Duration::from_secs(120);
 const PAIRING_CONFIRM_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// Events forwarded to phones, with the stream kind each one feeds.
-const CONVERSATION_EVENTS: [(&str, &str); 5] = [
-    ("claude-session-event", "claude"),
-    ("codex-session-event", "codex"),
-    ("opencode-session-event", "opencode"),
-    ("pi-session-event", "pi"),
-    ("dsh-session-event", "dsh"),
-];
-
 struct Client {
     /// Hex public key of the paired phone, so revocation can drop it.
     device: String,
     /// Fired on revocation or shutdown to close the socket immediately.
     kill: tokio::sync::Notify,
     tx: mpsc::Sender<Value>,
-    subscriptions: Mutex<HashSet<String>>,
-    /// Set when output was dropped for a session because the queue was full.
-    resync: Mutex<HashSet<String>>,
     /// Runs the desktop UI (`?remote`): receives raw desktop events.
     ui: AtomicBool,
     /// Files this browser is sending (Web 端 uploads).
@@ -116,13 +106,6 @@ pub fn init(app: &AppHandle) {
             if let Some(id) = payload["id"].as_str() { broadcast_all(json!({"event":"session.changed","params":{"id":id}})); }
         });
     }
-    for (name, kind) in CONVERSATION_EVENTS {
-        app.listen_any(name, move |event| {
-            if !active() { return; }
-            let Ok(payload) = serde_json::from_str::<Value>(event.payload()) else { return };
-            record_conversation(kind, payload);
-        });
-    }
     for name in remote_ui::FORWARDED_EVENTS {
         app.listen_any(name, move |event| {
             if !active() { return; }
@@ -130,7 +113,6 @@ pub fn init(app: &AppHandle) {
             deliver_ui(name, payload);
         });
     }
-    app.listen_any("agent-conversations-changed", |_| broadcast_all(json!({"event":"session.changed","params":{"kind":"agent"}})));
     let saved = config::load();
     if saved.enabled { let _ = start(saved); }
 }
@@ -142,7 +124,6 @@ fn record_terminal(id: &str, data: &str) {
     // Held across delivery so a snapshot and the live chunks after it never overlap or leave a hole.
     let mut buffers = hub().buffers.lock().unwrap();
     let (start, end) = buffers.push_terminal(id, data);
-    deliver(id, json!({"event":"terminal.output","params":{"id":id,"data":data}}));
     deliver_ui("tier-terminal-output", json!({"id":id,"data":data,"start":start,"end":end}));
 }
 
@@ -180,29 +161,9 @@ fn terminal_attach(id: &str) -> Result<Value, RpcError> {
     Ok(json!({"snapshot": snapshot, "end": end, "cols": cols, "rows": rows}))
 }
 
-fn record_conversation(kind: &str, payload: Value) {
-    if !active() { return; }
-    let (Some(id), Some(generation)) = (payload["id"].as_str().map(str::to_owned), payload["generation"].as_str().map(str::to_owned)) else { return };
-    let event = payload["event"].clone();
-    hub().buffers.lock().unwrap().push_conversation(&id, kind, &generation, event.clone());
-    deliver(&id, json!({"event":"conversation.event","params":{"id":id,"kind":kind,"generation":generation,"payload":event}}));
-}
-
 fn next_seq(mut frame: Value) -> Value {
     frame["seq"] = json!(hub().seq.fetch_add(1, Ordering::Relaxed));
     frame
-}
-
-/// Sends to clients subscribed to `id`. A full queue never blocks the PTY or
-/// session reader: the client is told to resubscribe instead.
-fn deliver(id: &str, frame: Value) {
-    let frame = next_seq(frame);
-    for client in hub().clients.lock().unwrap().values() {
-        if !client.subscriptions.lock().unwrap().contains(id) { continue; }
-        if client.tx.try_send(frame.clone()).is_err() {
-            client.resync.lock().unwrap().insert(id.to_owned());
-        }
-    }
 }
 
 /// Raw desktop events for phones running the desktop UI. Dropped (not
@@ -277,7 +238,7 @@ fn stop() {
 fn lane(request: &Value) -> Option<usize> {
     let method = request["method"].as_str().unwrap_or("");
     if method == "ui.invoke" && matches!(request["params"]["cmd"].as_str(), Some("tier_terminal_input" | "tier_terminal_raw_write")) { return Some(0); }
-    if matches!(method, "ui.dispatch" | "ui.storage" | "ui.call" | "ui.watch" | "session.input" | "session.interrupt" | "conversation.send" | "conversation.cancel") || method.starts_with("upload.") { return Some(1); }
+    if matches!(method, "ui.dispatch" | "ui.storage" | "ui.call" | "ui.watch") || method.starts_with("upload.") { return Some(1); }
     None
 }
 
@@ -288,7 +249,6 @@ async fn respond(client: &Client, request: Value) {
         Err((code, message)) => json!({"id":id,"error":{"code":code,"message":message}}),
     };
     let _ = client.tx.send(frame).await;
-    flush_resync(client).await;
 }
 
 async fn serve(stream: TcpStream) {
@@ -310,7 +270,7 @@ async fn serve(stream: TcpStream) {
     let channel = Arc::new(channel);
 
     let (tx, mut rx) = mpsc::channel::<Value>(CLIENT_QUEUE);
-    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, subscriptions: Mutex::default(), resync: Mutex::default(), ui: AtomicBool::new(false), uploads: Mutex::default(), watcher: Mutex::default() });
+    let client = Arc::new(Client { device: client_device, kill: tokio::sync::Notify::new(), tx, ui: AtomicBool::new(false), uploads: Mutex::default(), watcher: Mutex::default() });
     let client_id = hub().next_client.fetch_add(1, Ordering::SeqCst);
     {
         let mut clients = hub().clients.lock().unwrap();
@@ -446,11 +406,6 @@ fn broadcast_desktop_devices() {
     if let Some(app) = hub().app.lock().unwrap().clone() { let _ = app.emit_to("main", "mobile-rpc-devices", status_value()); }
 }
 
-async fn flush_resync(client: &Client) {
-    let ids: Vec<String> = client.resync.lock().unwrap().drain().collect();
-    for id in ids { let _ = client.tx.send(next_seq(json!({"event":"terminal.resync","params":{"id":id}}))).await; }
-}
-
 fn check_hello(request: &Value) -> Result<Value, Value> {
     if request["method"] != "hello" { return Err(json!({"code":"unauthorized","message":"hello required"})); }
     let params = &request["params"];
@@ -461,7 +416,7 @@ fn check_hello(request: &Value) -> Result<Value, Value> {
         "protocol": PROTOCOL,
         "desktopVersion": env!("CARGO_PKG_VERSION"),
         "computerName": crate::server::computer_name_value(),
-        "capabilities": ["terminal", "conversation"],
+        "capabilities": ["ui"],
     }))
 }
 
@@ -473,34 +428,6 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
     match request["method"].as_str().unwrap_or("") {
         "ping" => Ok(json!({"t": chrono::Utc::now().timestamp_millis()})),
         "session.list" => gui("session.list", json!({})).await,
-        "session.subscribe" => {
-            let id = id()?;
-            client.subscriptions.lock().unwrap().insert(id.clone());
-            client.resync.lock().unwrap().remove(&id);
-            let replay = hub().buffers.lock().unwrap().replay(&id);
-            Ok(match replay {
-                Replay::Terminal(snapshot) => json!({"view":"terminal","snapshot":snapshot}),
-                Replay::Conversation { kind, generation, events } => json!({"view":"conversation","kind":kind,"generation":generation,"events":events}),
-                Replay::Empty => json!({"view":null}),
-            })
-        }
-        "session.unsubscribe" => { client.subscriptions.lock().unwrap().remove(&id()?); Ok(json!({})) }
-        "session.input" => {
-            let data = params["data"].as_str().ok_or(("invalid_params", "data required".to_string()))?;
-            write_terminal(&id()?, data).map(|_| json!({}))
-        }
-        "session.interrupt" => {
-            let id = id()?;
-            if write_terminal(&id, "\u{3}").is_ok() { return Ok(json!({})); }
-            gui("conversation.cancel", json!({"id":id})).await
-        }
-        "conversation.send" => {
-            let text = params["text"].as_str().filter(|t| !t.trim().is_empty() && t.len() <= 100_000).ok_or(("invalid_params", "text required".to_string()))?;
-            gui("conversation.send", json!({"id":id()?,"text":text})).await
-        }
-        "conversation.cancel" => gui("conversation.cancel", json!({"id":id()?})).await,
-        // The desktop's recent project folders: a browser picks from these instead of a folder dialog.
-        "ui.projects" => gui("projects.list", json!({})).await,
         // Files sent from the browser's device, in chunks; the result is a path on this computer.
         "upload.begin" => {
             let name = params["name"].as_str().ok_or(("invalid_params", "name required".to_string()))?;
@@ -551,18 +478,6 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         }
         _ => Err(("unsupported", "unknown method".into())),
     }
-}
-
-fn write_terminal(id: &str, data: &str) -> Result<(), RpcError> {
-    let app = hub().app.lock().unwrap().clone().ok_or(("internal", "app unavailable".to_string()))?;
-    let writer = {
-        let state = app.state::<crate::server::AppState>();
-        let map = state.terminal_session.lock().unwrap();
-        map.get(id).map(|s| s.writer_lock.clone()).ok_or(("not_found", "no terminal session".to_string()))?
-    };
-    use std::io::Write;
-    let mut w = writer.lock().map_err(|_| ("internal", "writer poisoned".to_string()))?;
-    w.write_all(data.as_bytes()).and_then(|_| w.flush()).map_err(|e| ("internal", e.to_string()))
 }
 
 /// Asks the main window to run `method` and waits for `mobile_rpc_resolve`.

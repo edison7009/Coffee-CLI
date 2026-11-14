@@ -1,4 +1,4 @@
-use super::buffers::{Buffers, Replay, TERMINAL_BYTES};
+use super::buffers::{Buffers, TERMINAL_BYTES};
 use super::secure::{Initiator, MODE_PAIR, MODE_RESUME};
 use super::*;
 
@@ -34,27 +34,18 @@ fn terminal_buffer_keeps_the_newest_bytes_on_char_boundaries() {
     let mut b = Buffers::default();
     b.push_terminal("t", &"咖".repeat(TERMINAL_BYTES / 3 + 10));
     b.push_terminal("t", "end");
-    let Replay::Terminal(snapshot) = b.replay("t") else { panic!("terminal replay") };
+    let (snapshot, end) = b.terminal("t").expect("terminal output");
+    assert_eq!(end as usize, "咖".len() * (TERMINAL_BYTES / 3 + 10) + 3, "the offset counts every byte, not just the kept ones");
     assert!(snapshot.len() <= TERMINAL_BYTES && snapshot.ends_with("end"));
     assert!(snapshot.starts_with('咖'));
-}
-
-#[test]
-fn a_new_generation_discards_the_previous_conversation() {
-    let mut b = Buffers::default();
-    b.push_conversation("c", "claude", "g1", json!({"type":"a"}));
-    b.push_conversation("c", "claude", "g1", json!({"type":"b"}));
-    b.push_conversation("c", "claude", "g2", json!({"type":"c"}));
-    assert_eq!(b.replay("c"), Replay::Conversation { kind: "claude".into(), generation: "g2".into(), events: vec![json!({"type":"c"})] });
-    assert_eq!(b.replay("missing"), Replay::Empty);
 }
 
 #[test]
 fn old_sessions_are_evicted() {
     let mut b = Buffers::default();
     for i in 0..(buffers::MAX_SESSIONS + 5) { b.push_terminal(&format!("s{i}"), "x"); }
-    assert_eq!(b.replay("s0"), Replay::Empty);
-    assert!(matches!(b.replay(&format!("s{}", buffers::MAX_SESSIONS + 4)), Replay::Terminal(_)));
+    assert_eq!(b.terminal("s0"), None);
+    assert!(b.terminal(&format!("s{}", buffers::MAX_SESSIONS + 4)).is_some());
 }
 
 #[test]
@@ -153,8 +144,8 @@ async fn connect(url: &str, private: &[u8], desktop_public: &[u8], mode: u8, psk
 }
 
 /// End to end over a real socket: pairing with the one-time code, reconnect
-/// with the device key, unknown and revoked phones dropped, encrypted
-/// subscribe replay and live events.
+/// with the device key, unknown and revoked devices dropped, and the desktop's
+/// live terminal output reaching a browser that runs the desktop UI.
 #[test]
 fn encrypted_websocket_round_trip() {
     let _env = socket_test_env();
@@ -194,14 +185,15 @@ fn encrypted_websocket_round_trip() {
         phone.send(json!({"id":3,"method":"nope","params":{}})).await;
         assert_eq!(phone.recv().await.unwrap()["error"]["code"], "unsupported");
 
-        record_conversation("codex", json!({"id":"rt-conv","generation":"g","event":{"type":"first"}}));
-        phone.send(json!({"id":4,"method":"session.subscribe","params":{"id":"rt-conv"}})).await;
-        let replay = phone.recv().await.unwrap();
-        assert_eq!((replay["result"]["view"].as_str(), &replay["result"]["events"]), (Some("conversation"), &json!([{"type":"first"}])));
-        record_terminal("rt-other", "not subscribed");
-        record_conversation("codex", json!({"id":"rt-conv","generation":"g","event":{"type":"second"}}));
+        // Desktop events reach only a connection that runs the desktop UI.
+        record_terminal("rt-term", "before");
+        phone.send(json!({"id":4,"method":"ui.subscribe","params":{}})).await;
+        assert!(phone.recv().await.unwrap()["result"]["events"].is_array());
+        record_terminal("rt-term", "after");
         let live = phone.recv().await.unwrap();
-        assert_eq!((live["event"].as_str(), live["params"]["payload"]["type"].as_str()), (Some("conversation.event"), Some("second")));
+        assert_eq!(live["event"], "tauri.event");
+        assert_eq!(live["params"]["event"], "tier-terminal-output");
+        assert_eq!((live["params"]["payload"]["data"].as_str(), live["params"]["payload"]["start"].as_u64(), live["params"]["payload"]["end"].as_u64()), (Some("after"), Some(6), Some(11)));
 
         // A tampered frame ends the connection.
         let mut sealed = phone.channel.encrypt(json!({"id":5,"method":"ping"}).to_string().as_bytes()).unwrap();
@@ -221,16 +213,16 @@ fn encrypted_websocket_round_trip() {
     });
 }
 
-/// The phone app's own protocol code (mobile/src/protocol.ts, run by Node)
-/// against this server: pairing, a frame larger than one Noise message,
-/// replay, a live event and a stranger being refused. Skipped when Node or the
-/// mobile dependencies are not installed.
+/// The browser's own protocol code (src-ui/src/remote/protocol.ts, run by
+/// Node) against this server: pairing, a frame larger than one Noise message,
+/// a live desktop event and a stranger being refused. Skipped when Node or the
+/// frontend dependencies are not installed.
 #[test]
-fn mobile_app_protocol_interoperates() {
+fn browser_protocol_interoperates() {
     use std::io::BufRead;
-    let mobile = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("mobile");
-    if !mobile.join("node_modules/@noble/curves").exists() || std::process::Command::new("node").arg("--version").output().is_err() {
-        eprintln!("skipped: run `npm install` in mobile/ to check the app protocol");
+    let frontend = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src-ui");
+    if !frontend.join("node_modules/@noble/curves").exists() || std::process::Command::new("node").arg("--version").output().is_err() {
+        eprintln!("skipped: run `npm install` in src-ui/ to check the browser protocol");
         return;
     }
     let _env = socket_test_env();
@@ -238,21 +230,21 @@ fn mobile_app_protocol_interoperates() {
     let addr = spawn_test_server(&runtime);
     *hub().pairing.lock().unwrap() = Some(("interop-code".into(), Instant::now() + PAIRING_TTL));
     let mut child = std::process::Command::new("node")
-        .args(["--no-warnings", "scripts/noise-interop.mjs", "127.0.0.1", &addr.port().to_string(), &config::load().public_key, "interop-code"])
-        .current_dir(&mobile).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::inherit()).spawn().unwrap();
+        .args(["--no-warnings", "scripts/remote-interop.mjs", "127.0.0.1", &addr.port().to_string(), &config::load().public_key, "interop-code"])
+        .current_dir(&frontend).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::inherit()).spawn().unwrap();
     let mut lines = std::io::BufReader::new(child.stdout.take().unwrap()).lines();
     let ready: Value = serde_json::from_str(&lines.next().expect("ready line").unwrap()).unwrap();
     assert_eq!(ready["ready"], true);
-    record_conversation("pi", json!({"id":"interop-conv","generation":"g1","event":{"type":"agent_start"}}));
+    record_terminal("interop-term", "hello");
     let out: Value = serde_json::from_str(&lines.next().expect("result line").unwrap()).unwrap();
     assert!(child.wait().unwrap().success());
     assert_eq!(out["hello"], PROTOCOL);
     assert_eq!(out["host"], "127.0.0.1", "raced past the unreachable first address");
     assert_eq!(out["ping"], "number");
-    assert_eq!(out["bigError"], "invalid_params", "a 200 KB request decrypted and was validated");
-    assert_eq!(out["subscribe"]["view"], Value::Null);
-    assert_eq!(out["event"]["event"], "conversation.event");
-    assert_eq!(out["event"]["params"]["payload"]["type"], "agent_start");
+    assert_eq!(out["bigError"], "unsupported", "a 200 KB request decrypted and was read");
+    assert!(out["subscribe"]["events"].is_array());
+    assert_eq!(out["event"]["event"], "tauri.event");
+    assert_eq!(out["event"]["params"]["payload"]["data"], "hello");
     assert_eq!(out["stranger"], "unauthorized");
     assert_eq!(config::load().devices.iter().map(|d| d.name.as_str()).collect::<Vec<_>>(), ["Interop phone"]);
 }
@@ -334,7 +326,7 @@ fn browsers_only_type_into_terminals_and_leave_sessions_to_the_desktop() {
     // Everyday desktop features pass through.
     for cmd in ["list_directory", "get_usage_statistics", "git_changes", "load_tasks", "get_native_history", "list_tools", "claude_session_preview", "dsh_session_history"] { assert!(ok(cmd, json!({})), "{cmd}"); }
     // The desktop window, host devices, credentials, pairing, installers and the agent hub are not.
-    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "open_url", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "agent_resolve_tool", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
+    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "open_url", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "take_pending_launch", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
         assert!(!ok(cmd, json!({})), "{cmd}");
     }
     // Typing reaches the desktop's terminals; starting, sizing, closing and conversations go through the desktop.
