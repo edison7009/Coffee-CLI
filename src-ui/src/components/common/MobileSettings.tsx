@@ -1,15 +1,12 @@
 // Settings → Mobile: allow phones on this network, pair one with a QR code, and remove paired phones.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { commands, isTauri, type MobileRpcAddress, type MobileRpcFirewall, type MobileRpcPairing, type MobileRpcStatus } from '../../tauri';
-import { ThemedSelect } from './ThemedSelect';
+import { commands, isTauri, type MobileRpcFirewall, type MobileRpcPairing, type MobileRpcStatus } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { clipboardWrite } from '../../lib/clipboard';
 import { webPairingUrl } from '../../lib/web-access';
 
-interface Pairing extends MobileRpcPairing { qr: string; webUrl: string }
-
-const AUTO = 'auto';
+interface Pairing extends MobileRpcPairing { qr: string }
 
 export function MobileSettings() {
   const t = useT();
@@ -18,7 +15,8 @@ export function MobileSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
-  const [copied, setCopied] = useState(false);
+  // Which address was just copied: this network's, or the one for away from home.
+  const [copied, setCopied] = useState<'lan' | 'remote' | null>(null);
   const [firewall, setFirewall] = useState<MobileRpcFirewall['state'] | null>(null);
   const pairedBefore = useRef<Set<string>>(new Set());
   const live = useRef(true);
@@ -59,7 +57,7 @@ export function MobileSettings() {
   // "Copied" fades after a moment.
   useEffect(() => {
     if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 2000);
+    const timer = setTimeout(() => setCopied(null), 2000);
     return () => clearTimeout(timer);
   }, [copied]);
 
@@ -79,17 +77,16 @@ export function MobileSettings() {
     if (!next.enabled) setPairing(null);
   });
 
-  const showPairing = async () => {
+  const beginPairing = () => run(async () => {
     const next = await commands.mobileRpcBeginPairing();
     // A camera opens this straight in the browser, already carrying the pairing link.
     const webUrl = webPairingUrl(next);
     const qr = await QRCode.toDataURL(webUrl, { width: 264, margin: 2, errorCorrectionLevel: 'M' });
     pairedBefore.current = new Set(status?.devices.map(device => device.publicKey));
     setNow(Date.now());
-    setCopied(false);
-    setPairing({ ...next, qr, webUrl });
-  };
-  const beginPairing = () => run(showPairing);
+    setCopied(null);
+    setPairing({ ...next, qr });
+  });
 
   // Opened from the sidebar's "pair a device": show the code once the server is listening.
   const cancelPairing = () => run(async () => { await commands.mobileRpcCancelPairing(); setPairing(null); });
@@ -106,18 +103,16 @@ export function MobileSettings() {
   }, [enabled]);
   const allowFirewall = () => run(async () => { setFirewall((await commands.mobileRpcFirewallAllow()).state); });
 
-  const addresses = status?.addresses ?? [];
-  // The address already shows above; the network is named by kind, with its address only when two share a kind.
-  const networkName = (item: MobileRpcAddress) => item.kind === 'other' ? item.interface : t(`settings.mobile.net.${item.kind}`);
-  const addressLabel = (item: MobileRpcAddress) => addresses.filter(other => networkName(other) === networkName(item)).length > 1
-    ? t('settings.mobile.net.other', { name: networkName(item), address: item.address })
-    : networkName(item);
-  const automatic = addresses[0];
-  const chooseAddress = (value: string) => run(async () => {
-    setStatus(await commands.mobileRpcSetAddress(value === AUTO ? null : value));
-    // A code already on screen points at the old address; show a fresh one in its place.
-    if (pairing) await showPairing();
-  });
+  const addressRow = (which: 'lan' | 'remote', host: string, label?: string) => pairing && <div className="settings-mobile-link-row">
+    {label && <span className="settings-mobile-link-label">{label}</span>}
+    <button type="button" className="settings-mobile-link" onClick={() => void clipboardWrite(webPairingUrl(pairing, host)).then(() => setCopied(which), () => setCopied(null))}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
+      <span>{`http://${host.includes(':') ? `[${host}]` : host}:${pairing.port}`}</span>
+    </button>
+    {copied === which && <span className="settings-mobile-copied" role="status">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>{t('settings.mobile.copied')}
+    </span>}
+  </div>;
   const connected = new Set(status?.connected ?? []);
   const seconds = pairing ? Math.max(0, Math.ceil((pairing.expiresAt - now) / 1000)) : 0;
 
@@ -145,22 +140,11 @@ export function MobileSettings() {
               <div className="settings-mobile-pairing-text">
                 <div className="settings-sound-title">{t('settings.mobile.pair.active')}</div>
                 {/* The address stays put; "copied" shows beside it for a moment. */}
-                <div className="settings-mobile-link-row">
-                  <button type="button" className="settings-mobile-link" onClick={() => void clipboardWrite(pairing.webUrl).then(() => setCopied(true), () => setCopied(false))}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
-                    <span>{`http://${pairing.host}:${pairing.port}`}</span>
-                  </button>
-                  {copied && <span className="settings-mobile-copied" role="status">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>{t('settings.mobile.copied')}
-                  </span>}
-                </div>
-                <div className="settings-mobile-meta">
-                  <span>{t('settings.mobile.expires', { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` })} · {t('settings.mobile.confirm_hint')}</span>
-                  {addresses.length > 1 && <ThemedSelect className="settings-mobile-net" align="start" menuWidth={240} label={t('settings.mobile.net')} disabled={busy}
-                    value={status?.preferredAddress && addresses.some(a => a.address === status.preferredAddress) ? status.preferredAddress : AUTO}
-                    options={[{ value: AUTO, label: t('settings.mobile.net.auto', { name: automatic ? addressLabel(automatic) : '' }) }, ...addresses.map(a => ({ value: a.address, label: addressLabel(a) }))]}
-                    onChange={value => void chooseAddress(value)} />}
-                </div>
+                {addressRow('lan', pairing.host)}
+                {/* A virtual LAN (Tailscale, ZeroTier…) also reaches this computer away from home. */}
+                {pairing.remoteHost && addressRow('remote', pairing.remoteHost, t('settings.mobile.remote'))}
+                <div className="settings-choice-hint">{t('settings.mobile.expires', { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` })}</div>
+                <div className="settings-choice-hint">{t('settings.mobile.confirm_hint')}</div>
               </div>
               <button type="button" className="settings-voice-scan" disabled={busy} onClick={() => void cancelPairing()}>{t('settings.mobile.pair.cancel')}</button>
             </div>
@@ -171,6 +155,8 @@ export function MobileSettings() {
           {enabled && !status?.host && <div className="settings-sound-failed" role="alert">{t('settings.mobile.no_network')}</div>}
         </div>
       </div>
+
+      {enabled && !status?.remoteHost && <p className="settings-mobile-tip">{t('settings.mobile.tip')}</p>}
 
       <section className="settings-voice-channels">
         <div className="settings-sound-row">

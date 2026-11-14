@@ -265,26 +265,31 @@ fn addresses_skip_proxies_tunnels_and_bridges() {
     // A proxy in TUN mode owns the default route with 198.18.0.1; Wi-Fi comes first.
     let list = rank_candidates(&[raw("utun4", [198, 18, 0, 1], true), raw("en1", [192, 168, 10, 80], false), raw("en0", [192, 168, 10, 79], false), raw("lo0", [127, 0, 0, 1], false)], &wifi);
     assert_eq!(list.iter().map(|c| (c.address.as_str(), c.kind)).collect::<Vec<_>>(), [("192.168.10.79", Kind::Wifi), ("192.168.10.80", if cfg!(target_os = "macos") { Kind::Ethernet } else { Kind::Other })]);
-    // Proxy adapters with private addresses, any point-to-point tunnel, Docker and link-local are hidden; Tailscale is kept after LAN.
+    // Proxy adapters with private addresses, any point-to-point tunnel, Docker and link-local are hidden; virtual LANs are kept after LAN.
     let list = rank_candidates(&[raw("Clash", [172, 19, 0, 1], false), raw("tun0", [10, 8, 0, 2], true), raw("docker0", [172, 17, 0, 1], false), raw("eth0", [10, 0, 0, 5], false), raw("en5", [169, 254, 3, 4], false), raw("tailscale0", [100, 101, 1, 2], false)], &[]);
-    assert_eq!(list.iter().map(|c| (c.address.as_str(), c.kind)).collect::<Vec<_>>(), [("10.0.0.5", Kind::Ethernet), ("100.101.1.2", Kind::Tailscale)]);
+    assert_eq!(list.iter().map(|c| (c.address.as_str(), c.kind)).collect::<Vec<_>>(), [("10.0.0.5", Kind::Ethernet), ("100.101.1.2", Kind::Mesh)]);
     let list = rank_candidates(&[raw("以太网", [192, 168, 1, 20], false), raw("vEthernet (WSL)", [172, 30, 0, 1], false), raw("WLAN", [192, 168, 1, 21], false)], &[]);
     assert_eq!(list.iter().map(|c| (c.interface.as_str(), c.kind)).collect::<Vec<_>>(), [("WLAN", Kind::Wifi), ("以太网", Kind::Ethernet)]);
+    // Virtual-LAN tools are kept even on tunnel devices a proxy would also use, and rank after the LAN.
+    let list = rank_candidates(&[raw("ztks5abc12", [10, 147, 17, 3], false), raw("feth1234", [172, 22, 1, 9], false), raw("ZeroTier One [8056c2e21c]", [10, 147, 20, 1], false), raw("utun7", [100, 88, 2, 4], true), raw("wt0", [100, 90, 1, 1], true), raw("eth0", [10, 0, 0, 5], false)], &[]);
+    assert_eq!(list.first().map(|c| c.address.as_str()), Some("10.0.0.5"));
+    assert!(list[1..].iter().all(|c| c.kind == Kind::Mesh) && list.len() == 6);
     // A disconnected adapter is not offered.
     assert!(rank_candidates(&[Raw { name: "en0", ip: Ipv4Addr::new(192, 168, 1, 2), point_to_point: false, up: false }], &wifi).is_empty());
 }
 
 #[test]
-fn advertised_hosts_put_the_choice_first_and_end_with_the_local_name() {
+fn advertised_hosts_rank_lan_first_and_end_with_the_local_name() {
     use network::{advertised_hosts, Candidate, Kind};
     let c = |a: &str, k| Candidate { address: a.into(), interface: "x".into(), kind: k };
-    let list = [c("192.168.1.2", Kind::Wifi), c("10.0.0.3", Kind::Ethernet), c("100.100.1.1", Kind::Tailscale), c("172.20.0.4", Kind::Other)];
-    assert_eq!(advertised_hosts(&list, None, Some("mac.local")), ["192.168.1.2", "10.0.0.3", "100.100.1.1", "mac.local"]);
-    assert_eq!(advertised_hosts(&list, Some("100.100.1.1"), None), ["100.100.1.1", "192.168.1.2", "10.0.0.3"]);
-    // A choice that disappeared falls back to the automatic order.
-    assert_eq!(advertised_hosts(&list, Some("192.168.9.9"), None)[0], "192.168.1.2");
+    let list = [c("192.168.1.2", Kind::Wifi), c("10.0.0.3", Kind::Ethernet), c("100.100.1.1", Kind::Mesh), c("172.20.0.4", Kind::Other)];
+    // LAN addresses lead; the virtual-LAN one always makes the list, even after three LAN ones.
+    assert_eq!(advertised_hosts(&list, Some("mac.local")), ["192.168.1.2", "10.0.0.3", "172.20.0.4", "100.100.1.1", "mac.local"]);
+    assert_eq!(advertised_hosts(&list[..2], None), ["192.168.1.2", "10.0.0.3"]);
+    assert_eq!(network::remote_host(&list).as_deref(), Some("100.100.1.1"));
+    assert_eq!(network::remote_host(&list[..2]), None);
     // No network: no QR code, not just a .local name.
-    assert!(advertised_hosts(&[], None, Some("mac.local")).is_empty());
+    assert!(advertised_hosts(&[], Some("mac.local")).is_empty());
 }
 
 #[test]

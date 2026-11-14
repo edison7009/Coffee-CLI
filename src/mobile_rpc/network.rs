@@ -3,17 +3,16 @@
 //! The default route is not trusted: a proxy or VPN in TUN mode owns it, and
 //! its address (often 198.18.0.1) is unreachable from a phone. Instead every
 //! interface is listed, tunnels and host-only bridges are hidden, and the rest
-//! are labelled so a person can pick one when the automatic choice is wrong.
+//! are ranked so the likeliest LAN address comes first.
 
-use serde::Serialize;
 use std::net::Ipv4Addr;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Kind { Wifi, Ethernet, Tailscale, Other }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// `Mesh` is a virtual LAN from a tool such as Tailscale or ZeroTier: reachable
+/// away from home when the phone runs the same tool.
+pub enum Kind { Wifi, Ethernet, Mesh, Other }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Candidate {
     pub address: String,
     pub interface: String,
@@ -25,6 +24,9 @@ pub struct Raw<'a> { pub name: &'a str, pub ip: Ipv4Addr, pub point_to_point: bo
 
 const BRIDGES: [&str; 17] = ["docker", "br-", "virbr", "vmnet", "vboxnet", "veth", "lxcbr", "cni", "flannel", "cali", "bridge", "awdl", "llw", "anpi", "ap1", "vmware network adapter", "virtualbox host-only"];
 const TUNNELS: [&str; 8] = ["utun", "tun", "tap", "wg", "ppp", "ipsec", "gif", "stf"];
+/// Adapter names of virtual-LAN tools (ZeroTier is `zt*` on Linux, `feth*` on macOS).
+const MESH_WORDS: [&str; 5] = ["tailscale", "zerotier", "easytier", "netbird", "headscale"];
+const MESH_PREFIXES: [&str; 2] = ["zt", "feth"];
 /// Proxy and VPN adapter names that carry private addresses but no LAN route.
 const PROXY_WORDS: [&str; 8] = ["clash", "mihomo", "meta", "sing-box", "singbox", "wintun", "v2ray", "xray"];
 
@@ -37,7 +39,9 @@ pub fn classify(raw: &Raw, wifi_devices: &[String]) -> Option<Kind> {
     if !raw.up || raw.ip.is_loopback() || raw.ip.is_link_local() || raw.ip.is_unspecified() || raw.ip.is_multicast() { return None; }
     // 198.18.0.0/15 is the benchmark range proxy fake-IP modes hand out.
     if o[0] == 198 && (o[1] & 0xfe) == 18 { return None; }
-    if is_tailnet(raw.ip) && (name.contains("tailscale") || name.starts_with("utun") || name.starts_with("tun") || raw.point_to_point) { return Some(Kind::Tailscale); }
+    if MESH_WORDS.iter().any(|w| name.contains(w)) || MESH_PREFIXES.iter().any(|p| name.starts_with(p)) { return Some(Kind::Mesh); }
+    // Tailscale, NetBird and Headscale hand out 100.64.0.0/10 on a tunnel device.
+    if is_tailnet(raw.ip) && (name.starts_with("utun") || name.starts_with("tun") || name.starts_with("wt") || raw.point_to_point) { return Some(Kind::Mesh); }
     if BRIDGES.iter().any(|b| name.starts_with(b) || name.contains(b))
         // Hyper-V/WSL switches are host-only unless they hold the default route, which we cannot see here.
         || name.starts_with("vethernet")
@@ -53,11 +57,11 @@ pub fn classify(raw: &Raw, wifi_devices: &[String]) -> Option<Kind> {
     Some(if wired { Kind::Ethernet } else { Kind::Other })
 }
 
-/// Private LAN ranges first, Wi-Fi and Ethernet before the rest, Tailscale after LAN.
+/// Private LAN ranges first, Wi-Fi and Ethernet before the rest, virtual LANs after them.
 fn rank(c: &Candidate) -> (u8, u8, String) {
     let ip: Ipv4Addr = c.address.parse().unwrap_or(Ipv4Addr::UNSPECIFIED);
     let private = match ip.octets() { [192, 168, ..] => 0, [10, ..] => 1, [172, b, ..] if (16..32).contains(&b) => 2, _ => 3 };
-    let kind = match c.kind { Kind::Wifi | Kind::Ethernet => 0, Kind::Tailscale => 1, Kind::Other => 2 };
+    let kind = match c.kind { Kind::Wifi | Kind::Ethernet => 0, Kind::Mesh => 1, Kind::Other => 2 };
     (kind, private, c.interface.to_ascii_lowercase())
 }
 
@@ -68,18 +72,21 @@ pub fn rank_candidates(raws: &[Raw], wifi_devices: &[String]) -> Vec<Candidate> 
     list
 }
 
-/// The addresses a pairing QR code carries, best first: the person's choice
-/// when it is still present, then up to two other LAN candidates, then the
-/// computer's `.local` name so a phone can follow a changed DHCP address.
-pub fn advertised_hosts(candidates: &[Candidate], preferred: Option<&str>, local_name: Option<&str>) -> Vec<String> {
-    let mut hosts: Vec<String> = Vec::new();
-    if let Some(p) = preferred.filter(|p| candidates.iter().any(|c| c.address == *p)) { hosts.push(p.to_owned()); }
-    for c in candidates {
-        if hosts.len() >= 3 { break; }
-        if !hosts.contains(&c.address) { hosts.push(c.address.clone()); }
-    }
+/// The addresses a pairing QR code carries, best first: up to three LAN
+/// candidates, the virtual-LAN address if there is one, then the computer's
+/// `.local` name so a phone can follow a changed DHCP address. The browser
+/// tries them all at once and keeps the first that answers, so nobody has to
+/// pick a network.
+pub fn advertised_hosts(candidates: &[Candidate], local_name: Option<&str>) -> Vec<String> {
+    let mut hosts: Vec<String> = candidates.iter().filter(|c| c.kind != Kind::Mesh).take(3).map(|c| c.address.clone()).collect();
+    hosts.extend(remote_host(candidates));
     if let Some(name) = local_name.filter(|_| !hosts.is_empty()) { hosts.push(name.to_owned()); }
     hosts
+}
+
+/// The address to use away from home: the first virtual-LAN one.
+pub fn remote_host(candidates: &[Candidate]) -> Option<String> {
+    candidates.iter().find(|c| c.kind == Kind::Mesh).map(|c| c.address.clone())
 }
 
 /// Wi-Fi device names on macOS (`en0`, …), which `en*` alone cannot tell apart from Ethernet.

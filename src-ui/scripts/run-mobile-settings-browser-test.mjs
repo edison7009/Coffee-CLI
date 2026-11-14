@@ -1,4 +1,4 @@
-// Settings → Mobile against a scripted native boundary: enabling, the pairing QR code, a phone pairing, and removal.
+// Settings → Devices against a scripted native boundary: enabling, the pairing card, a device pairing, and removal.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -23,16 +23,15 @@ window.mount();
     : args.path === 'event' ? `export async function listen(name,handler){window.listeners[name]=handler;return()=>{delete window.listeners[name]}}`
     : `
 window.calls=[];window.listeners={};
-window.mobile={enabled:false,port:47391,publicKey:'ab'.repeat(32),devices:[],connected:[],host:'192.168.1.8',hosts:['192.168.1.8','10.0.0.2'],addresses:[{address:'192.168.1.8',interface:'en0',kind:'wifi'},{address:'10.0.0.2',interface:'en7',kind:'ethernet'},{address:'100.101.1.2',interface:'utun9',kind:'tailscale'}],preferredAddress:null,clients:0,protocol:0};
+window.mobile={enabled:false,port:47391,publicKey:'ab'.repeat(32),devices:[],connected:[],host:'192.168.1.8',hosts:['192.168.1.8','10.0.0.2'],clients:0,protocol:0};
 window.firewall='blocked';
 const copy=()=>JSON.parse(JSON.stringify(window.mobile));
 export const isTauri=true;
 export const commands={
   async mobileRpcStatus(){return copy()},
   async mobileRpcSetEnabled(enabled){window.calls.push(['enable',enabled]);window.mobile.enabled=enabled;return copy()},
-  async mobileRpcBeginPairing(){window.calls.push(['pair']);if(!window.mobile.enabled)throw Error('Enable mobile access first');return {uri:'coffeecli://pair?v=0&host=192.168.1.8&port=47391&pk='+window.mobile.publicKey+'&code=c0ffee',host:'192.168.1.8',port:47391,publicKey:window.mobile.publicKey,code:'c0ffee',expiresAt:Date.now()+300000}},
+  async mobileRpcBeginPairing(){window.calls.push(['pair']);if(!window.mobile.enabled)throw Error('Enable mobile access first');return {uri:'coffeecli://pair?v=0&host=192.168.1.8&port=47391&pk='+window.mobile.publicKey+'&code=c0ffee',host:'192.168.1.8',port:47391,publicKey:window.mobile.publicKey,code:'c0ffee',remoteHost:window.pairRemote??null,expiresAt:Date.now()+300000}},
   async mobileRpcCancelPairing(){window.calls.push(['cancel'])},
-  async mobileRpcSetAddress(address){window.calls.push(['address',address]);window.mobile.preferredAddress=address;window.mobile.host=address??window.mobile.addresses[0].address;return copy()},
   async mobileRpcFirewallStatus(){return {state:window.firewall}},
   async mobileRpcFirewallAllow(){window.calls.push(['firewall']);window.firewall='open';return {state:'open'}},
   async mobileRpcRevokeDevice(key){window.calls.push(['revoke',key]);window.mobile.devices=window.mobile.devices.filter(d=>d.publicKey!==key);window.mobile.connected=window.mobile.connected.filter(k=>k!==key);return copy()},
@@ -69,10 +68,9 @@ try {
   await page.getByRole('button', { name: '允许', exact: true }).click();
   await page.getByText('Windows 防火墙拦截了手机连接').waitFor({ state: 'detached' });
   assert.deepEqual(await page.evaluate(() => window.calls.at(-1)), ['firewall']);
-  assert.equal(await page.getByRole('combobox').count(), 0, 'the network choice belongs to the pairing card');
   await page.evaluate(() => { window.calls.length = 0; window.calls.push(['enable', true]); });
 
-  // One card: the QR code, the address once (it copies the link), the countdown and the network.
+  // One card: the QR code, the address once (it copies the link), and the countdown.
   await pair.click();
   const qr = page.getByRole('img', { name: '访问二维码' });
   await qr.waitFor();
@@ -80,27 +78,27 @@ try {
   await page.getByText('扫码配对新设备', { exact: true }).waitFor();
   assert.equal(await page.getByText('192.168.1.8').count(), 1, 'the address shows once');
   await page.getByRole('button', { name: 'http://192.168.1.8:47391', exact: true }).waitFor();
-  await page.getByText(/^(5:00|4:59) 后失效 · 电脑上会请你确认$/).waitFor();
+  await page.getByText(/^(5:00|4:59) 后失效$/).waitFor();
+  await page.getByText('新设备连接需重新请求，不能沿用老设备的地址', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('combobox').count(), 0, 'nobody has to pick a network');
+  await page.getByText(/^小技巧：想在外面也能用/).waitFor();
+  assert.equal(await page.getByText('在外面用', { exact: true }).count(), 0, 'no virtual LAN, no second address');
   await page.screenshot({ path: join(directory, 'mobile-pairing.png') });
-
-  // Network: named without its address; picking another one shows a fresh code in place.
-  const picker = page.getByRole('combobox', { name: '连接地址', exact: true });
-  await picker.getByText('自动（Wi-Fi）', { exact: true }).waitFor();
-  await picker.click();
-  assert.deepEqual(await page.getByRole('option').allInnerTexts(), ['自动（Wi-Fi）', 'Wi-Fi', '有线', 'Tailscale']);
-  await page.getByRole('option', { name: 'Tailscale', exact: true }).click();
-  await picker.getByText('Tailscale', { exact: true }).waitFor();
-  await page.waitForFunction(() => window.calls.length === 4);
-  assert.deepEqual(await page.evaluate(() => window.calls.slice(2)), [['address', '100.101.1.2'], ['pair']]);
-  await qr.waitFor();
-  await picker.click();
-  await page.getByRole('option', { name: '自动（Wi-Fi）', exact: true }).click();
-  await page.waitForFunction(() => window.calls.length === 6);
-  assert.deepEqual(await page.evaluate(() => window.calls.slice(4)), [['address', null], ['pair']]);
 
   await page.getByRole('button', { name: '取消', exact: true }).click();
   await qr.waitFor({ state: 'detached' });
-  assert.deepEqual(await page.evaluate(() => window.calls.map(c => c[0])), ['enable', 'pair', 'address', 'pair', 'address', 'pair', 'cancel']);
+  assert.deepEqual(await page.evaluate(() => window.calls.map(c => c[0])), ['enable', 'pair', 'cancel']);
+
+  // With a virtual LAN (Tailscale, ZeroTier…) the card adds the away-from-home address and the tip goes.
+  await page.evaluate(() => { window.mobile.remoteHost = '100.88.2.4'; window.listeners['mobile-rpc-devices']({ payload: JSON.parse(JSON.stringify(window.mobile)) }); window.pairRemote = '100.88.2.4'; });
+  await page.getByText(/^小技巧：/).waitFor({ state: 'detached' });
+  await pair.click();
+  await page.getByText('在外面用', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'http://100.88.2.4:47391', exact: true }).waitFor();
+  await page.screenshot({ path: join(directory, 'mobile-pairing-remote.png') });
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  await qr.waitFor({ state: 'detached' });
+  await page.evaluate(() => { delete window.mobile.remoteHost; window.pairRemote = null; window.calls.length = 0; window.calls.push(['enable', true]); });
 
   // A phone pairing closes the QR code and appears, connected.
   await pair.click();

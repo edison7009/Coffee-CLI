@@ -588,15 +588,15 @@ async fn gui_with_timeout(method: &str, params: Value, timeout: Duration) -> Res
 
 // ─── Tauri commands ───────────────────────────────────────
 
-fn advertised(settings: &config::Settings) -> (Vec<network::Candidate>, Vec<String>) {
+/// The pairing addresses, and the one that works away from home.
+fn advertised() -> (Vec<String>, Option<String>) {
     let candidates = network::candidates();
-    let hosts = network::advertised_hosts(&candidates, settings.preferred_address.as_deref(), network::local_name().as_deref());
-    (candidates, hosts)
+    (network::advertised_hosts(&candidates, network::local_name().as_deref()), network::remote_host(&candidates))
 }
 
 fn status_value() -> Value {
     let settings = config::load();
-    let (candidates, hosts) = advertised(&settings);
+    let (hosts, remote) = advertised();
     json!({
         "enabled": active(),
         "port": settings.port,
@@ -605,8 +605,7 @@ fn status_value() -> Value {
         "connected": hub().clients.lock().unwrap().values().map(|c| c.device.clone()).collect::<HashSet<_>>(),
         "host": hosts.first(),
         "hosts": hosts,
-        "addresses": candidates,
-        "preferredAddress": settings.preferred_address,
+        "remoteHost": remote,
         "clients": hub().clients.lock().unwrap().len(),
         "protocol": PROTOCOL,
     })
@@ -635,7 +634,7 @@ pub fn mobile_rpc_set_enabled(enabled: bool) -> Result<Value, String> {
 pub fn mobile_rpc_begin_pairing() -> Result<Value, String> {
     if !active() { return Err("Enable mobile access first".into()); }
     let settings = config::load();
-    let (_, hosts) = advertised(&settings);
+    let (hosts, remote) = advertised();
     if hosts.is_empty() { return Err("No network connection".into()); }
     let code = config::new_pairing_code();
     *hub().pairing.lock().unwrap() = Some((code.clone(), Instant::now() + PAIRING_TTL));
@@ -644,26 +643,12 @@ pub fn mobile_rpc_begin_pairing() -> Result<Value, String> {
         "uri": format!("coffeecli://pair?v={PROTOCOL}&hosts={}&port={}&pk={}&code={code}", hosts.join(","), settings.port, settings.public_key),
         "host": hosts[0],
         "hosts": hosts,
+        "remoteHost": remote,
         "port": settings.port,
         "publicKey": settings.public_key,
         "code": code,
         "expiresAt": expires_at,
     }))
-}
-
-/// Pins the address pairing advertises first; `None` returns to the automatic choice.
-#[tauri::command]
-pub fn mobile_rpc_set_address(address: Option<String>) -> Result<Value, String> {
-    {
-        let _guard = hub().config_lock.lock().unwrap();
-        let mut settings = config::load();
-        if let Some(address) = &address {
-            if !network::candidates().iter().any(|c| &c.address == address) { return Err("That address is no longer available".into()); }
-        }
-        settings.preferred_address = address;
-        config::save(&settings)?;
-    }
-    Ok(status_value())
 }
 
 /// Whether Windows Firewall lets phones in. Slow on Windows (PowerShell), so
