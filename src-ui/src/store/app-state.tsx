@@ -794,7 +794,7 @@ const VALID_ICON_THEMES: IconTheme[] = [
 function getInitialState(): AppState {
   // Keep theme/shape defaults in sync with index.html's pre-paint script.
   // Saved preferences take priority for returning users.
-  let theme: ThemeColor = 'oat';
+  let theme: ThemeColor = 'obsidian';
   let themeMode: ThemeMode = 'dark';
   let shape: ThemeShape = 'basalt';
   let iconTheme: IconTheme = 'devicon';

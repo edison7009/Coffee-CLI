@@ -304,7 +304,7 @@ await test('saved Basalt selection gets Carbon chrome and its own backdrop befor
   assert.equal(attributes['data-background'], 'basalt');
 });
 
-await test('first launch defaults to Oat, dark mode and Basalt before React starts', async () => {
+await test('first launch defaults to Graphite, dark mode and Basalt before React starts', async () => {
   const html = await readFile(`${root}/index.html`, 'utf8');
   const attributes = {};
   runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], {
@@ -312,12 +312,12 @@ await test('first launch defaults to Oat, dark mode and Basalt before React star
     window: { matchMedia: () => ({ matches: false }) },
     document: { documentElement: { setAttribute: (name, value) => { attributes[name] = value; } } },
   });
-  assert.equal(attributes['data-theme'], 'oat');
+  assert.equal(attributes['data-theme'], 'obsidian');
   assert.equal(attributes['data-mode'], 'dark');
   assert.equal(attributes['data-shape'], 'carbon');
   assert.equal(attributes['data-background'], 'basalt');
   const state = await readFile(`${root}/src/store/app-state.tsx`, 'utf8');
-  assert.match(state, /let theme: ThemeColor = 'oat';/);
+  assert.match(state, /let theme: ThemeColor = 'obsidian';/);
   assert.match(state, /let themeMode: ThemeMode = 'dark';/);
   assert.match(state, /let shape: ThemeShape = 'basalt';/);
 });
