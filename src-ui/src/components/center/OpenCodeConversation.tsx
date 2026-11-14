@@ -171,7 +171,12 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && s.busy && !(e.target as HTMLElement)?.closest('[role="dialog"]')) { e.preventDefault(); void interruptOpenCode(sessionId); } };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
   }, [isActive, s.busy, sessionId]);
-  const pause = () => { anchor.current = null; pinned.current = false; setScrolled(true); };
+  // Moving away from the latest message; a thread too short to scroll has nowhere to go (a swipe on a phone is not a read-back).
+  const pause = () => {
+    const node = scroll.current;
+    if (node && node.scrollHeight - node.clientHeight <= 2) return;
+    anchor.current = null; pinned.current = false; setScrolled(true);
+  };
   const jumpToTurn = (item: ConversationNavigationItem) => {
     pause();
     virtual.scrollToIndex(item.messageIndex, 'instant');

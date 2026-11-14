@@ -545,4 +545,10 @@
 :root[data-width="xs"] .gambit-footer { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 :root[data-width="xs"] .gambit-footer::-webkit-scrollbar { display: none; }
 :root[data-width="xs"] .gambit-footer > * { flex-shrink: 0; }
+/* The tools' own control groups take their natural width too, so every button keeps its size and the row overflows to scroll. */
+:root[data-width="xs"] .gambit-footer .claude-composer-controls { flex: 0 0 auto; min-width: max-content; }
+:root[data-width="xs"] .gambit-footer .claude-composer-controls > * { flex-shrink: 0; }
+/* With room to scroll, the quota stays on the bar instead of hiding at narrow widths. */
+:root[data-width="xs"] .gambit-footer .usage-meter { display: inline-flex; flex-shrink: 0; }
+:root[data-width="xs"] .gambit-footer .usage-meter-item + .usage-meter-item { display: inline-flex; }
 :root[data-width="xs"] .gambit-footer > .gambit-send { position: sticky; right: 0; z-index: 1; box-shadow: -10px 0 10px -4px var(--bg-panel, var(--bg-app)); }
