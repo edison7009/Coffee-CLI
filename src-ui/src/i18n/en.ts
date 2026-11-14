@@ -252,7 +252,6 @@ export const en = {
   'history.git.unavailable': 'PR status unavailable',
   'history.search_hint': '↑↓ Select · Enter Open · Esc Close',
   'history.close_search': 'Close search',
-  'explorer.workspace.select-dir': 'Click to select working directory',
 
   // Context Menu
   'menu.copy_abs': 'Copy Absolute Path',
@@ -276,7 +275,6 @@ export const en = {
   // Tools
   'tool.terminal': 'Terminal',
   'tool.remote': 'Remote Terminal',
-  'sentinel.protocol': 'Sentinel Protocol',
   'tool_config.command': 'Launch command',
   'tool_config.presets': 'Command presets',
   'tool_config.extra_args': 'Extra arguments',
@@ -396,23 +394,17 @@ export const en = {
   'settings.wallpaper': 'Wallpaper',
   'settings.terminal': 'Terminal',
   'settings.language': 'Language',
-  'settings.sound': 'Sound',
   'settings.sound.done': 'Task complete chime',
   'settings.sound.wait': 'Permission prompt chime',
-  'settings.sound.on': 'On',
-  'settings.sound.off': 'Off',
   'settings.sound.preview': 'Preview',
-  'settings.sound.custom': 'Custom',
   'settings.sound.remove': 'Remove custom sound',
   'settings.sound.failed': 'This file can\'t be used. Choose an MP3 or WAV up to 20 MB',
   'settings.sound.default': "Default sound",
   'settings.sound.change': "Change",
-  'settings.sound.disabled': "Off",
   'interaction.permission': 'Permission required',
   'interaction.question': 'Input required',
   'interaction.custom_placeholder': 'Add your own answer…',
   'interaction.submit': 'Submit',
-  'interaction.failed': 'The terminal is not ready. Switch to Terminal view and answer there.',
   'settings.feedback': 'Bug / Feedback',
   'settings.feedback.desc': 'Found a bug or have a suggestion? Click below to submit your issue:',
   'settings.wallpaper.pick': 'Choose image or video',
@@ -427,16 +419,11 @@ export const en = {
   'settings.font.monospace': 'Monospace',
   'settings.font.other': 'Other fonts',
   'settings.font.search': 'Search fonts…',
-  'settings.gambit': 'Shortcuts',
   'settings.send.title': 'Send message',
   'settings.send.newline': 'for a new line',
   'settings.gambit.hotkey': 'Toggle shortcut',
   'settings.gambit.hotkey_hint': "Show or hide: {left} left sidebar · {gambit} input box · {right} right sidebar",
   // Titlebar panel-toggle display mode (settings → 快捷键)
-  'settings.titlebar.toggle': 'Titlebar toggles',
-  'settings.titlebar.toggle.icon-hotkey': 'Icon + shortcut',
-  'settings.titlebar.toggle.icon': 'Icon only',
-  'settings.titlebar.toggle.hidden': 'Hidden',
   // Task board form (to-do list vs sticky notes)
   'settings.tasks': 'Pre-input',
   'settings.pre_input_button': 'Save to pre-input button',
@@ -508,7 +495,6 @@ export const en = {
   'theme.color.orchid': "Orchid",
 
   // Gambit — floating compose window. Chess term for a calculated opening move.
-  'gambit.title': 'Gambit',
   'gambit.send': 'Send',
   'gambit.stop': 'Stop',
   "gambit.placeholder_short": "Message…",
@@ -612,7 +598,6 @@ export const en = {
   'settings.voice.test.sub': 'Speak and watch the bar move',
   'settings.voice.test.start': 'Start test',
   'settings.voice.test.stop': 'Stop',
-  'settings.voice.level': 'Microphone level',
 
   // Conversation display and annual activity.
   'conversation.reasoning': 'Thinking process',
@@ -620,7 +605,6 @@ export const en = {
   'conversation.restoring': 'Returning to the conversation…',
   'conversation.tool_missing': "{tool} is not installed, so this conversation cannot start. Install it, then reconnect.",
   'conversation.in_use': 'This conversation is open somewhere else, such as the ChatGPT app, another terminal, an editor extension or another tab. Close it there, then reconnect.',
-  'conversation.executing': 'Executing…',
   'conversation.copied': 'Copied',
   'conversation.copy_message': 'Copy message',
   'conversation.navigation': 'Conversation navigation',
@@ -646,14 +630,6 @@ export const en = {
   'heatmap.tooltip_none': 'No activity on {date}',
 
   // Coffee Agent
-  'claude.launch.choose_directory': 'Select directory',
-  'claude.launch.conversation_short': 'Desktop',
-  'claude.launch.terminal_short': 'Terminal',
-  'claude.launch.mode': 'Claude Code launch mode',
-  'claude.launch.conversation': 'Desktop chat',
-  'claude.launch.terminal': 'Native terminal',
-  'claude.launch.conversation_description': 'Coffee interface with tool cards and diffs',
-  'claude.launch.terminal_description': 'Original interactive Claude Code terminal',
 
   'claude.permission.bypass': 'Bypass permissions',
   'claude.permission.bypass_description': 'Skip routine permission checks; Claude safeguards still apply',
@@ -774,7 +750,6 @@ export const en = {
   'claude.status.brewing': 'Brewing',
   'claude.status.considering': 'Considering',
   'claude.status.working': 'Working',
-  'claude.status.background': 'Background task running',
   'claude.status.background_count': '{count} background tasks running',
   'claude.status.background_short': '{count} background',
   'claude.status.crafting': 'Crafting',

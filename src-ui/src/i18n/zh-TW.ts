@@ -253,7 +253,6 @@ export const zhTW = {
   'history.git.unavailable': 'PR 狀態暫不可用',
   'history.search_hint': '↑↓ 選擇 · Enter 開啟 · Esc 關閉',
   'history.close_search': '關閉搜尋',
-  'explorer.workspace.select-dir': '點擊選擇工作目錄',
 
   // Context Menu
   'menu.copy_abs': '複製絕對路徑',
@@ -277,7 +276,6 @@ export const zhTW = {
   // Tools
   'tool.terminal': '終端機',
   'tool.remote': '遠端終端機',
-  'sentinel.protocol': '哨兵協議',
   'tool_config.command': '啟動命令',
   'tool_config.presets': '預設啟動命令',
   'tool_config.extra_args': '額外參數',
@@ -396,23 +394,17 @@ export const zhTW = {
   'settings.wallpaper': '桌布',
   'settings.terminal': '終端',
   'settings.language': '語言',
-  'settings.sound': '聲音',
   'settings.sound.done': '任務完成提示音',
   'settings.sound.wait': '等待權限提示音',
-  'settings.sound.on': '開',
-  'settings.sound.off': '關',
   'settings.sound.preview': '試聽',
-  'settings.sound.custom': '自訂',
   'settings.sound.remove': '移除自訂提示音',
   'settings.sound.failed': '這個檔案無法使用，請選擇 20 MB 以內的 MP3 或 WAV',
   'settings.sound.default': "預設聲音",
   'settings.sound.change': "更換",
-  'settings.sound.disabled': "已關閉",
   'interaction.permission': '需要確認權限',
   'interaction.question': '需要你的回答',
   'interaction.custom_placeholder': '輸入你的補充說明…',
   'interaction.submit': '提交',
-  'interaction.failed': '終端尚未就緒，請切換到終端介面回答。',
   'settings.feedback': 'BUG / 建議',
   'settings.feedback.desc': '遇到 BUG 或建議，點擊下方提交你的問題：',
   'settings.wallpaper.pick': '選擇圖片或影片',
@@ -427,16 +419,11 @@ export const zhTW = {
   'settings.font.monospace': '等寬',
   'settings.font.other': '其他字型',
   'settings.font.search': '搜尋字型…',
-  'settings.gambit': '快捷鍵',
   'settings.send.title': '發送訊息',
   'settings.send.newline': '換行',
   'settings.gambit.hotkey': '開關快捷鍵',
   'settings.gambit.hotkey_hint': "顯示 / 隱藏：{left} 左側欄 · {gambit} 輸入框 · {right} 右側欄",
   // 頂部快捷開關顯示模式(設定 → 快捷鍵)
-  'settings.titlebar.toggle': '頂部快捷開關',
-  'settings.titlebar.toggle.icon-hotkey': '圖示 + 快捷鍵',
-  'settings.titlebar.toggle.icon': '僅圖示',
-  'settings.titlebar.toggle.hidden': '隱藏',
   'settings.tasks': '預輸入',
   'settings.pre_input_button': '輸入框的「儲存到預輸入」按鈕',
   'settings.pre_input_button.sub': '在輸入框上方顯示，點擊後存入右側預輸入',
@@ -506,7 +493,6 @@ export const zhTW = {
   'theme.color.orchid': "紫水晶",
 
   // Gambit · 妙手
-  'gambit.title': '妙手',
   'gambit.send': '傳送',
   'gambit.stop': '停止',
   "gambit.placeholder_short": "輸入訊息…",
@@ -610,7 +596,6 @@ export const zhTW = {
   'settings.voice.test.sub': '對著麥克風說話，看看音量條是否跳動',
   'settings.voice.test.start': '開始測試',
   'settings.voice.test.stop': '停止',
-  'settings.voice.level': '麥克風音量',
 
 
   'conversation.reasoning': '思考過程',
@@ -618,7 +603,6 @@ export const zhTW = {
   'conversation.restoring': '正在回到對話中…',
   'conversation.tool_missing': "沒有找到 {tool}，對話無法啟動。請先安裝，再點「重新連線」。",
   'conversation.in_use': '這段對話正在其他地方開啟（例如 ChatGPT 桌面端、另一個終端、編輯器外掛或另一個分頁），請先在那邊關閉，再重新連線。',
-  'conversation.executing': '正在執行中…',
   'conversation.copied': '已複製',
   'conversation.copy_message': '複製訊息',
   'conversation.navigation': '對話快速定位',
@@ -644,14 +628,6 @@ export const zhTW = {
   'heatmap.tooltip_none': '{date} · 沒有活動',
 
   // Coffee Agent
-  'claude.launch.choose_directory': '選擇目錄',
-  'claude.launch.conversation_short': '桌面',
-  'claude.launch.terminal_short': '終端',
-  'claude.launch.mode': 'Claude Code 啟動模式',
-  'claude.launch.conversation': '桌面對話',
-  'claude.launch.terminal': '原生終端',
-  'claude.launch.conversation_description': 'Coffee 介面，顯示工具卡片與差異',
-  'claude.launch.terminal_description': '原生互動式 Claude Code 終端',
 
   'claude.permission.bypass': '略過權限確認',
   'claude.permission.bypass_description': '略過一般權限檢查；Claude 的強制規則仍有效',
@@ -772,7 +748,6 @@ export const zhTW = {
   'claude.status.brewing': '醞釀中',
   'claude.status.considering': '斟酌中',
   'claude.status.working': '工作中',
-  'claude.status.background': '子任務執行中',
   'claude.status.background_count': '{count} 個子任務執行中',
   'claude.status.background_short': '子任務 {count}',
   'claude.status.crafting': '構思中',

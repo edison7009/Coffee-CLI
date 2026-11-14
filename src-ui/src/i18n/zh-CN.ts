@@ -253,7 +253,6 @@ export const zhCN = {
   'history.git.unavailable': 'PR 状态暂不可用',
   'history.search_hint': '↑↓ 选择 · Enter 打开 · Esc 关闭',
   'history.close_search': '关闭搜索',
-  'explorer.workspace.select-dir': '点击选择工作目录',
 
   // Context Menu
   'menu.copy_abs': '复制绝对路径',
@@ -277,7 +276,6 @@ export const zhCN = {
   // Tools
   'tool.terminal': '终端',
   'tool.remote': '远程终端',
-  'sentinel.protocol': '哨兵协议',
   'tool_config.command': '启动命令',
   'tool_config.presets': '预设启动命令',
   'tool_config.extra_args': '额外参数',
@@ -396,23 +394,17 @@ export const zhCN = {
   'settings.wallpaper': '壁纸',
   'settings.terminal': '终端',
   'settings.language': '语言',
-  'settings.sound': '声音',
   'settings.sound.done': '任务完成提示音',
   'settings.sound.wait': '等待权限提示音',
-  'settings.sound.on': '开',
-  'settings.sound.off': '关',
   'settings.sound.preview': '试听',
-  'settings.sound.custom': '自定义',
   'settings.sound.remove': '移除自定义提示音',
   'settings.sound.failed': '这个文件无法使用，请选择 20 MB 以内的 MP3 或 WAV',
   'settings.sound.default': "默认声音",
   'settings.sound.change': "更换",
-  'settings.sound.disabled': "已关闭",
   'interaction.permission': '需要确认权限',
   'interaction.question': '需要你的回答',
   'interaction.custom_placeholder': '输入你的补充说明…',
   'interaction.submit': '提交',
-  'interaction.failed': '终端尚未就绪，请切换到终端界面回答。',
   'settings.feedback': 'BUG / 建议',
   'settings.feedback.desc': '遇到 BUG 或建议，点击下方提交你的问题：',
   'settings.wallpaper.pick': '选择图片或视频',
@@ -427,16 +419,11 @@ export const zhCN = {
   'settings.font.monospace': '等宽',
   'settings.font.other': '其他字体',
   'settings.font.search': '搜索字体…',
-  'settings.gambit': '快捷键',
   'settings.send.title': '发送消息',
   'settings.send.newline': '换行',
   'settings.gambit.hotkey': '开关快捷键',
   'settings.gambit.hotkey_hint': "显示 / 隐藏：{left} 左侧栏 · {gambit} 输入框 · {right} 右侧栏",
   // 顶部快捷开关显示模式(设置 → 快捷键)
-  'settings.titlebar.toggle': '顶部快捷开关',
-  'settings.titlebar.toggle.icon-hotkey': '图标 + 快捷键',
-  'settings.titlebar.toggle.icon': '仅图标',
-  'settings.titlebar.toggle.hidden': '隐藏',
   'settings.tasks': '预输入',
   'settings.pre_input_button': '输入框的“保存到预输入”按钮',
   'settings.pre_input_button.sub': '在输入框上方显示，点击后存入右侧预输入',
@@ -506,7 +493,6 @@ export const zhCN = {
   'theme.color.orchid': "紫水晶",
 
   // Gambit · 妙手
-  'gambit.title': '妙手',
   'gambit.send': '发送',
   'gambit.stop': '停止',
   "gambit.placeholder_short": "输入消息…",
@@ -610,7 +596,6 @@ export const zhCN = {
   'settings.voice.test.sub': '对着麦克风说话，看看电平条是否跳动',
   'settings.voice.test.start': '开始测试',
   'settings.voice.test.stop': '停止',
-  'settings.voice.level': '麦克风电平',
 
 
   // 贡献热力图（桌面 Launchpad 上的 6 张卡片上方）
@@ -619,7 +604,6 @@ export const zhCN = {
   'conversation.restoring': '正在回到对话中…',
   'conversation.tool_missing': "没有找到 {tool}，对话无法启动。请先安装，再点“重新连接”。",
   'conversation.in_use': '这段对话正在其他地方打开（例如 ChatGPT 桌面端、另一个终端、编辑器插件或另一个标签页），请先在那边关闭，再重新连接。',
-  'conversation.executing': '正在执行中…',
   'conversation.copied': '已复制',
   'conversation.copy_message': '复制消息',
   'conversation.navigation': '对话快速定位',
@@ -645,14 +629,6 @@ export const zhCN = {
   'heatmap.tooltip_none': '{date} · 没有活动',
 
   // Coffee Agent
-  'claude.launch.choose_directory': '选择目录',
-  'claude.launch.conversation_short': '桌面',
-  'claude.launch.terminal_short': '终端',
-  'claude.launch.mode': 'Claude Code 启动模式',
-  'claude.launch.conversation': '桌面对话',
-  'claude.launch.terminal': '原生终端',
-  'claude.launch.conversation_description': 'Coffee 界面，展示工具卡片与差异',
-  'claude.launch.terminal_description': '原生交互式 Claude Code 终端',
 
   'claude.permission.bypass': '跳过权限确认',
   'claude.permission.bypass_description': '跳过常规权限检查；Claude 的强制规则仍有效',
@@ -773,7 +749,6 @@ export const zhCN = {
   'claude.status.brewing': '酝酿中',
   'claude.status.considering': '斟酌中',
   'claude.status.working': '工作中',
-  'claude.status.background': '子任务运行中',
   'claude.status.background_count': '{count} 个子任务运行中',
   'claude.status.background_short': '子任务 {count}',
   'claude.status.crafting': '构思中',
