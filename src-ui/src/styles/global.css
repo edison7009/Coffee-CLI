@@ -3200,9 +3200,33 @@ html.is-windows[data-frost="frost"] #root {
 [data-mode="light"][data-background="basalt"] #root {
     background: url('/backgrounds/basalt-light.png') center / cover no-repeat, var(--bg-app);
 }
-[data-background="basalt"] #root::before,
 [data-background="basalt"] #root::after {
     display: none;
+}
+/* The stone layer is mostly dark pores: on a near-black theme they vanish,
+   and on a light one its pale grain vanishes. A second pass of the same
+   grain, inverted for dark, keeps the material visible on every palette. */
+[data-background="basalt"] #root::before {
+    background: url('/backgrounds/basalt-dark.png') center / cover no-repeat;
+    -webkit-mask-image: none;
+            mask-image: none;
+    filter: invert(1);
+    opacity: var(--basalt-grain, .45);
+}
+[data-mode="light"][data-background="basalt"] #root::before {
+    filter: none;
+    opacity: var(--basalt-grain, .55);
+}
+/* Graphite on stone: lifted from near-black to charcoal, or the stone reads
+   as a black hole and loses its material. */
+[data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) {
+    --bg-app: #1a1a1a;
+    --bg-panel: #1f1f1f;
+    --bg-input: #222222;
+    --bg-input-focus: #272727;
+    --border: #2a2a2a;
+    --border-input: #333333;
+    --bg-terminal: #1a1a1a;
 }
 
 .character-background,
