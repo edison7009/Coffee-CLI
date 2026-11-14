@@ -15,6 +15,3 @@ export interface TaskItem {
   height?: number;
 }
 
-// Vertical order: 进行中 (top) → 待办 → 已完成, with no section headers — the
-// per-card status dots carry the grouping signal instead.
-export const STATUS_ORDER: TaskStatus[] = ['working', 'todo', 'done'];

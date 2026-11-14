@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import type { AgentStatus, ToolType } from '../store/app-state';
 import { supportsEnhancedTool } from './chat-tools';
@@ -75,14 +74,8 @@ export interface ScreenLine {
   bold: boolean;
 }
 
-type Listener = () => void;
-
+/** The prompt each terminal is showing right now, read by the terminal's own key handling. */
 const snapshots = new Map<string, TerminalInteraction>();
-const listeners = new Map<string, Set<Listener>>();
-
-function emit(sessionId: string): void {
-  listeners.get(sessionId)?.forEach(listener => listener());
-}
 
 export function setTerminalInteraction(
   sessionId: string,
@@ -92,7 +85,6 @@ export function setTerminalInteraction(
   if (!interaction) {
     if (!previous) return;
     snapshots.delete(sessionId);
-    emit(sessionId);
     return;
   }
   if (
@@ -100,7 +92,6 @@ export function setTerminalInteraction(
     && previous.focusedPosition === interaction.focusedPosition
   ) return;
   snapshots.set(sessionId, interaction);
-  emit(sessionId);
 }
 
 export function clearTerminalInteraction(sessionId: string): void {
@@ -113,28 +104,6 @@ export function hasTerminalInteraction(sessionId: string): boolean {
 
 export function getTerminalInteraction(sessionId: string): TerminalInteraction | null {
   return snapshots.get(sessionId) ?? null;
-}
-
-export function subscribeTerminalInteraction(sessionId: string, listener: Listener): () => void {
-  let sessionListeners = listeners.get(sessionId);
-  if (!sessionListeners) {
-    sessionListeners = new Set();
-    listeners.set(sessionId, sessionListeners);
-  }
-  sessionListeners.add(listener);
-  return () => {
-    const current = listeners.get(sessionId);
-    current?.delete(listener);
-    if (current?.size === 0) listeners.delete(sessionId);
-  };
-}
-
-export function useTerminalInteraction(sessionId: string): TerminalInteraction | null {
-  return useSyncExternalStore(
-    listener => subscribeTerminalInteraction(sessionId, listener),
-    () => getTerminalInteraction(sessionId),
-    () => null,
-  );
 }
 
 export function supportsTerminalInteraction(tool: ToolType): boolean {
