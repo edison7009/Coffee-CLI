@@ -29,7 +29,6 @@ import { RightPanel } from './components/right/Compiler';
 import { GitStatusProvider } from './lib/git-status';
 import './styles/global.css';
 import { AppCloseHost } from './components/common/AppCloseHost';
-import { IS_MACOS } from './lib/platform';
 
 // CSS transition duration on .panel-left / .panel-right in global.css.
 // Bumping this here = bump the matching --panel-slide-ms variable too,
@@ -518,8 +517,8 @@ export function App() {
       {!REMOTE && <AgentBridge />}
       {REMOTE && <RemoteMirror />}
       <FolderPickerHost />
-      {/* Closing the window asks, keeps Coffee CLI running or quits; macOS hides to the Dock instead. */}
-      {!REMOTE && !IS_MACOS && <AppCloseHost />}
+      {/* Closing the window asks, keeps Coffee CLI running or quits; a browser has no window of its own to close. */}
+      {!REMOTE && <AppCloseHost />}
       {/* Automations run on the desktop; a browser showing it must not run them a second time. */}
       {!REMOTE && <AutomationRunner />}
 

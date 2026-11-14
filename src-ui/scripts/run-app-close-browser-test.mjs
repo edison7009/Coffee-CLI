@@ -39,6 +39,10 @@ const server = http.createServer(async (req, res) => {
   try { const name = req.url.slice(1); if (!['fixture.js', 'fixture.css'].includes(name)) throw Error(); res.setHeader('Content-Type', name.endsWith('.js') ? 'text/javascript' : 'text/css'); res.end(await readFile(join(directory, name))); } catch { res.writeHead(404).end(); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+// The native side asks every desktop platform (macOS included) what closing means; an app that does not mount the
+// host never answers and quits after the grace period instead of asking or keeping running.
+const app = await readFile(join(project, 'src/App.tsx'), 'utf8');
+assert.match(app, /\{!REMOTE && <AppCloseHost \/>\}/, 'App mounts the close host on every desktop platform');
 const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_CHROMIUM_EXECUTABLE ? { executablePath: process.env.COFFEE_CHROMIUM_EXECUTABLE } : {}) });
 try {
   const page = await browser.newPage({ viewport: { width: 900, height: 700 } }), errors = [];
