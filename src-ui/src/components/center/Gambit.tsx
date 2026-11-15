@@ -18,6 +18,8 @@ import { usePhone } from '../../lib/viewport';
 import { isWorktreePending } from '../../lib/worktree-pending';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
+import { canSharePrompt, sharePrompt } from '../../lib/prompt-link';
+import { useHoverTip } from '../common/HoverTip';
 import { subscribeGambitHistory, getGambitHistorySnapshot, pushGambitHistory } from '../../lib/gambit-history';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
@@ -125,26 +127,26 @@ function wrapImagePathsForSend(text: string): string {
 // mirroring how VS Code's bottom panel works.
 const DOCK_MIN_HEIGHT = 120;
 const DOCK_MAX_HEIGHT_RATIO = 0.7; // never let the dock eat more than 70% of viewport height
-/** "Save to pre-input": flips up from face down when there is text, and flips back down when the text is sent or cleared. */
-const PRE_INPUT_FLIP_OUT_MS = 450;
-function PreInputSave({ shown, label, clearLabel, onSave, onClear }: { shown: boolean; label: string; clearLabel: string; onSave: () => void; onClear: () => void }) {
-  const [leaving, setLeaving] = useState(false);
-  // Adjusted during render (not in an effect): the moment the text goes, it starts leaving; text back cancels that.
-  const [prevShown, setPrevShown] = useState(shown);
-  if (prevShown !== shown) { setPrevShown(shown); setLeaving(!shown); }
-  useEffect(() => {
-    if (!leaving) return;
-    const timer = window.setTimeout(() => setLeaving(false), PRE_INPUT_FLIP_OUT_MS);
-    return () => window.clearTimeout(timer);
-  }, [leaving]);
-  if (!shown && !leaving) return null;
-  const leave = shown ? '' : ' is-leaving';
-  return <span className="gambit-pre-input-ground">
-    <button type="button" className={`gambit-pre-input-save${leave}`} tabIndex={shown ? undefined : -1} aria-hidden={shown ? undefined : true} onMouseDown={e => e.preventDefault()} onClick={shown ? onSave : undefined}><span className="gambit-pre-input-face">{label}</span></button>
-    {/* Empties the draft in one click; it flips in step with Save. */}
-    <button type="button" className={`gambit-pre-input-save gambit-pre-input-clear${leave}`} tabIndex={shown ? undefined : -1} aria-hidden={shown ? undefined : true} aria-label={clearLabel} onMouseDown={e => e.preventDefault()} onClick={shown ? onClear : undefined}>
-      <span className="gambit-pre-input-face"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /></svg></span>
-    </button>
+/** The draft's actions on the composer's top edge: save to pre-input, copy a share link, clear.
+ *  Always there while the setting is on; darker (still solid) and inert while the draft is empty. */
+function DraftActions({ enabled, canShare, label, shareLabel, clearLabel, tips, onSave, onShare, onClear }: {
+  enabled: boolean; canShare: boolean; label: string; shareLabel: string; clearLabel: string;
+  /** Hover tips that say what each does; Clear only empties the box, unlike Delete in the pre-input list. */
+  tips: { save: string; share: string; clear: string };
+  onSave: () => void; onShare: () => void; onClear: () => void;
+}) {
+  const keepFocus = (e: React.MouseEvent) => e.preventDefault();
+  const { tipFor, tip } = useHoverTip();
+  // Disabled buttons get no mouse events, so each tip rides on a wrapper that always does.
+  return <span className="gambit-draft-actions" data-enabled={enabled || undefined}>
+    <span className="gambit-draft-slot" {...tipFor(tips.save)}><button type="button" className="gambit-draft-action gambit-draft-save" disabled={!enabled} onMouseDown={keepFocus} onClick={onSave}>{label}</button></span>
+    <span className="gambit-draft-slot" {...tipFor(tips.share)}><button type="button" className="gambit-draft-action gambit-draft-icon" disabled={!enabled || !canShare} aria-label={shareLabel} onMouseDown={keepFocus} onClick={onShare}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
+    </button></span>
+    <span className="gambit-draft-slot" {...tipFor(tips.clear)}><button type="button" className="gambit-draft-action gambit-draft-icon" disabled={!enabled} aria-label={clearLabel} onMouseDown={keepFocus} onClick={onClear}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /></svg>
+    </button></span>
+    {tip}
   </span>;
 }
 
@@ -196,6 +198,8 @@ function GambitImpl({
   const meter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
   const usageMeter = <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot>;
   const suggestion = draft ? undefined : offered;
+  // Whether the draft can go out as a prompt link (some text, within the link limit).
+  const canShare = canSharePrompt(draft);
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // When the IME composition ended, for the Enter that confirms a candidate (see onKeyDown).
@@ -836,7 +840,13 @@ function GambitImpl({
       <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />
 
       {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
-      <PreInputSave shown={appState.preInputButton && !!draft.trim()} label={t('gambit.save_pre_input')} clearLabel={t('gambit.clear_draft')} onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }} onClear={() => onDraftChange('')} />
+      {appState.preInputButton && <DraftActions
+        enabled={!!draft.trim()} canShare={canShare}
+        label={t('gambit.save_pre_input')} shareLabel={t('prompt_link.copy')} clearLabel={t('gambit.clear_draft')}
+        tips={{ save: t('pre_input.tip_save'), share: t('pre_input.tip_share_draft'), clear: t('pre_input.tip_clear') }}
+        onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }}
+        onShare={() => { void sharePrompt(draft, t('prompt_link.copied')); }}
+        onClear={() => onDraftChange('')} />}
 
       {attachments.length > 0 && <div className="gambit-attachments">
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>
@@ -917,6 +927,7 @@ function GambitImpl({
             {t('gambit.send_empty_hint')}
           </span>
         )}
+
 
         <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool ?? ''} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />
 

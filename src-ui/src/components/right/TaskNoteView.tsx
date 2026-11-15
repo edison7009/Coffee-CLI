@@ -8,6 +8,8 @@
 
 import { useRef, useState } from 'react';
 import { useT } from '../../i18n/useT';
+import { canSharePrompt, sharePrompt } from '../../lib/prompt-link';
+import { useHoverTip } from '../common/HoverTip';
 import { TaskEmptyState } from './TaskEmptyState';
 import type { TaskItem } from './task-types';
 import './TaskNoteView.css';
@@ -149,6 +151,12 @@ export function TaskNoteView({
     window.addEventListener('pointerup', onUp);
   };
 
+  const { tipFor, tip } = useHoverTip();
+  // A saved line goes out as a prompt link; whoever opens it picks a tool.
+  const shareNote = (text: string) => {
+    void sharePrompt(text, t('prompt_link.copied'));
+  };
+
   if (ordered.length === 0) {
     return (
       <div className="task-note-list task-note-list--empty">
@@ -179,7 +187,14 @@ export function TaskNoteView({
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSend(task); } }}
           >{task.title}</div>
           <span className="task-note-quick">
-            <button type="button" className="task-note-btn task-note-delete" aria-label={t('pre_input.delete')} onClick={() => onRemove(task.id)}>
+            <button type="button" className="task-note-btn task-note-share" aria-label={t('prompt_link.copy')} disabled={!canSharePrompt(task.title)} onClick={() => shareNote(task.title)} {...tipFor(t('pre_input.tip_share_note'))}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            </button>
+            <button type="button" className="task-note-btn task-note-delete" aria-label={t('pre_input.delete')} onClick={() => onRemove(task.id)} {...tipFor(t('pre_input.tip_delete'))}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6" />
@@ -190,6 +205,7 @@ export function TaskNoteView({
           </span>
         </div>
       ))}
+      {tip}
     </div>
   );
 }

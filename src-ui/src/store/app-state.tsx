@@ -358,6 +358,8 @@ export type Action =
   | { type: 'SET_HOTKEY_SCHEME'; value: HotkeyScheme }
   | { type: 'SET_TITLEBAR_TOGGLE_DISPLAY'; value: TitlebarToggleDisplay }
   | { type: 'SET_GAMBIT_DRAFT'; id: string; draft: string; fromOtherScreen?: boolean }
+  /** A prompt link's text becomes the tab's draft (never sent) and the composer opens. */
+  | { type: 'APPLY_PROMPT_LINK'; id: string; text: string }
   | { type: 'MIRROR_DRAFTS'; drafts: Record<string, string> }
   | { type: 'APPEND_GAMBIT_DRAFT'; id: string; text: string }
   | { type: 'SET_SESSION_TOKEN'; id: string; token: string }
@@ -703,6 +705,14 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         terminals: state.terminals.map(t => t.id === action.id ? { ...t, gambitDraft: action.draft } : t)
+      };
+    case 'APPLY_PROMPT_LINK':
+      return {
+        ...state,
+        gambitOpen: true,
+        terminals: state.terminals.map(t => t.id === action.id
+          ? { ...t, gambitDraft: action.text }
+          : t),
       };
     case 'APPEND_GAMBIT_DRAFT':
       return {

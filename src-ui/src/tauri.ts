@@ -20,6 +20,8 @@ export const isTauri =
 export type VoiceInputEvent = { kind: 'ready' } | { kind: 'processing' } | { kind: 'text'; text: string; done: boolean } | { kind: 'error'; message: string } | { kind: 'level'; level: number };
 export type VoiceInputSource = { id: string; name: string; accountId?: string | null; issue?: string | null; transcriptionMode?: 'streaming' | 'batch' };
 
+/** An external launch (src/launch.rs): `launch --tool …` argv or a `coffeecli://` prompt link. */
+export interface LaunchRequest { tool?: string; cwd?: string; prompt?: string; promptHadHidden?: boolean }
 export interface CliUpdateStatus { tool: string; current: string | null; latest: string | null; available: boolean }
 
 // Resolve the invoke function across Tauri v1 / v2
@@ -306,11 +308,12 @@ export const commands = {
   checkToolsInstalled: () =>
     invoke<Record<string, boolean>>('check_tools_installed'),
 
-  // External launch request (`launch --tool <id> [--cwd <dir>]`) handed to
-  // the GUI at cold start. Drained exactly once by CenterPanel on mount —
-  // warm-start requests arrive as 'launch-request' events instead.
+  // External launch request (`launch --tool <id> [--cwd <dir>]` or a
+  // `coffeecli://` prompt link) that arrived before the GUI listened. Drained
+  // exactly once by CenterPanel after it subscribes — later requests arrive
+  // as 'launch-request' events instead.
   takePendingLaunch: () =>
-    invoke<{ tool: string; cwd?: string } | null>('take_pending_launch'),
+    invoke<LaunchRequest | null>('take_pending_launch'),
 
   /** Probed availability of optional shells (pwsh / Git Bash / wsl on
    *  Windows; zsh/bash/fish/sh on Unix). Fed to the SettingsModal shell

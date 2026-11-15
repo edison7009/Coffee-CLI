@@ -117,6 +117,9 @@ panic = "abort"
 codegen-units = 1
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+# Registers the `coffeecli://` scheme for prompt links (see launch.rs). Windows
+# and Linux deliver the URL as argv; macOS delivers it through this plugin.
+tauri-plugin-deep-link = "2"
 tauri-plugin-global-shortcut = "2"
 # Prevents two Coffee CLI processes from running side-by-side. Without this,
 # launching twice spawns two WebView2 instances that fight over the OS IME
@@ -169,7 +172,7 @@ windows = { version = "0.58", features = [
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 window-vibrancy = "0.6"
 # Closing the main window can keep Coffee CLI running in the notification area (Windows) or the menu bar (macOS); see src/app_close.rs.
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "tray-icon"] }
 
 # `libc::kill(pid, 0)` for process-liveness probe in cli::mcp_status.
 [target.'cfg(unix)'.dependencies]

@@ -21,6 +21,7 @@ import { CharacterBackground } from './components/common/CharacterBackground';
 import { Explorer } from './components/left/Explorer';
 import { CenterPanel } from './components/center/CenterPanel';
 import { ActiveGambit } from './components/center/ActiveGambit';
+import { Toast } from './components/common/Toast';
 import { AgentBridge } from './components/agent/AgentBridge';
 import { REMOTE } from './remote/bridge';
 import { RemoteMirror } from './remote/RemoteMirror';
@@ -586,6 +587,9 @@ export function App() {
           status events, etc.) and can be dragged freely across the whole
           app window. Internally reads the active tab's gambit state. */}
       <ActiveGambit />
+
+      {/* App-wide toast (lib/toast.ts): short confirmations at the top center. */}
+      <Toast />
 
       {/* Personalization settings — centered modal opened by the titlebar
           gear. App-level overlay (gated on state.settingsOpen) so it floats

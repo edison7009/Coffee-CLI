@@ -254,9 +254,10 @@ fn main() -> Result<()> {
     // with a known subcommand. This is opt-in; double-clicking the
     // executable still gets the GUI (no argv).
     let args: Vec<String> = std::env::args().collect();
-    // `launch --tool <id> [--cwd <dir>]` doesn't short-circuit: the GUI
-    // starts as usual, but the request rides along and the frontend drains
-    // it on mount (see launch.rs for the cold/warm delivery paths).
+    // `launch --tool <id> [--cwd <dir>]` and a `coffeecli://` prompt link
+    // (Windows/Linux pass it as argv) don't short-circuit: the GUI starts as
+    // usual, but the request rides along and the frontend drains it on mount
+    // (see launch.rs for the cold/warm delivery paths).
     let pending_launch = launch::parse_launch_args(&args);
     if let Some(sub) = args.get(1) {
         match sub.as_str() {

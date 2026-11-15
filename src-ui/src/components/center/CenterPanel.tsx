@@ -133,12 +133,13 @@ interface RemoteHistoryItem {
   port: string;
   user: string;
 }
-import { isTauri, commands } from '../../tauri';
+import { isTauri, commands, type LaunchRequest } from '../../tauri';
 import { titlebarPxPerClientPx } from '../../lib/ui-scale';
 import { NewSessionTabButton } from './NewSessionTabButton';
 import { homeShortPath } from '../../lib/home-short-path';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { useT } from '../../i18n/useT';
+import { showToast } from '../../lib/toast';
 import './CenterPanel.css';
 
 // Tool icon assets bundled inline by Vite. PNGs use ?inline → base64 data URI;
@@ -812,57 +813,64 @@ export function CenterPanel() {
     return () => window.removeEventListener('coffee-new-session', openNewSession);
   }, [terminals, dispatch]);
 
-  // External launch (`coffee-cli launch --tool <id> [--cwd <dir>]`) — reached
-  // from the cold-start drain (takePendingLaunch) and the warm-start
-  // single-instance forward ('launch-request' event). Reuses an idle
+  // External launch (`coffee-cli launch --tool <id> [--cwd <dir>]` or a
+  // `coffeecli://new?prompt=…` link) — reached from the cold-start drain
+  // (takePendingLaunch) and later 'launch-request' events. Reuses an idle
   // launchpad tab when one exists so the agent never hijacks a tab that
   // already runs a session; otherwise opens a fresh session without a cap.
-  const launchCtxRef = useRef({ terminals, activeTerminalId });
-  const coldLaunchRef = useRef<ReturnType<typeof commands.takePendingLaunch> | null>(null);
-  useEffect(() => { launchCtxRef.current = { terminals, activeTerminalId }; });
-  const applyLaunchRequest = (tool: ToolType, cwd?: string) => {
-    if (!BUILTIN_AI_CLI_FALLBACK.some(item => item.key === tool)) return;
-    const { terminals: terms, activeTerminalId: activeId } = launchCtxRef.current;
+  // A link's prompt only becomes that tab's draft; without a tool, the user
+  // picks one on the launchpad and the draft stays.
+  const launchCtxRef = useRef({ terminals, activeTerminalId, t });
+  useEffect(() => { launchCtxRef.current = { terminals, activeTerminalId, t }; });
+  const applyLaunchRequest = (req: LaunchRequest) => {
+    const tool = req.tool && BUILTIN_AI_CLI_FALLBACK.some(item => item.key === req.tool) ? req.tool as ToolType : undefined;
+    if (!tool && !req.prompt) return;
+    const { terminals: terms, activeTerminalId: activeId, t: tr } = launchCtxRef.current;
+    // Never overwrite something the user already typed in an idle tab.
+    const free = (t: typeof terms[number]) => t.tool === null && (!req.prompt || !t.gambitDraft?.trim());
     const current = terms.find(t => t.id === activeId);
     let id: string;
-    if (current && current.tool === null) {
+    if (current && free(current)) {
       id = current.id;
     } else {
-      const idle = terms.find(t => t.tool === null);
+      const idle = terms.find(free);
       if (idle) {
         id = idle.id;
         dispatch({ type: 'SET_ACTIVE_TERMINAL', id });
       } else {
         id = crypto.randomUUID();
-        dispatch({ type: 'ADD_TERMINAL', session: { id, tool: null, folderPath: cwd ?? null } });
+        dispatch({ type: 'ADD_TERMINAL', session: { id, tool: null, folderPath: req.cwd ?? null } });
       }
     }
-    if (cwd) {
-      dispatch({ type: 'SET_FOLDER', path: cwd });
-      rememberFolder(tool, cwd);
+    if (req.cwd && tool) {
+      dispatch({ type: 'SET_FOLDER', path: req.cwd });
+      rememberFolder(tool, req.cwd);
     }
-    dispatch({ type: 'SET_TERMINAL_TOOL', id, tool });
+    if (req.prompt) {
+      dispatch({ type: 'APPLY_PROMPT_LINK', id, text: req.prompt });
+      showToast(tr(req.promptHadHidden ? 'prompt_link.hidden_removed' : 'prompt_link.pick_tool'), 4000);
+    }
+    if (tool) dispatch({ type: 'SET_TERMINAL_TOOL', id, tool });
   };
 
-  // Drain the cold-start launch request once on mount, then keep listening
-  // for warm-start forwards emitted by the single-instance plugin (second
-  // process invoked as `launch …` — the running instance never restarts).
+  // Subscribe first, then drain: the desktop parks requests until the drain
+  // and emits them afterwards, so nothing falls between the two.
   useEffect(() => {
     if (!isTauri) return;
     let cancelled = false;
-    (coldLaunchRef.current ??= commands.takePendingLaunch())
-      .then(req => { if (!cancelled && req) applyLaunchRequest(req.tool as ToolType, req.cwd); })
-      .catch(() => {});
     let unlisten: (() => void) | undefined;
     (async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
         if (cancelled) return;
-        const handle = await listen<{ tool: string; cwd?: string }>('launch-request', e => {
-          if (!cancelled) applyLaunchRequest(e.payload.tool as ToolType, e.payload.cwd);
+        const handle = await listen<LaunchRequest>('launch-request', e => {
+          if (!cancelled) applyLaunchRequest(e.payload);
         });
-        if (cancelled) handle(); else unlisten = handle;
+        if (cancelled) { handle(); return; }
+        unlisten = handle;
       } catch { /* event bridge unavailable (e.g. browser dev) — ignore */ }
+      const req = await commands.takePendingLaunch().catch(() => null);
+      if (!cancelled && req) applyLaunchRequest(req);
     })();
     return () => { cancelled = true; unlisten?.(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

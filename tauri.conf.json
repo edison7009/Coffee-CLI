@@ -36,6 +36,11 @@
       }
     }
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["coffeecli"] }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["deb", "rpm", "dmg", "app", "msi", "nsis"],

@@ -141,7 +141,8 @@ try {
   const leftGlow = await glowAt();
   await page.mouse.move(restCard.x + restCard.width - 120, restCard.y + restCard.height / 2);
   assert.ok(parseInt(await glowAt()) > parseInt(leftGlow) + 100, `the glow follows the pointer (${leftGlow} -> ${await glowAt()})`);
-  assert.deepEqual(await tabCard.locator('.task-note-quick button').evaluateAll(els => els.map(el => el.classList.contains('task-note-delete'))), [true], 'the trash is the only hover icon');
+  assert.deepEqual(await tabCard.locator('.task-note-quick button').evaluateAll(els => els.map(el => el.classList.contains('task-note-share') ? 'share' : el.classList.contains('task-note-delete') ? 'delete' : el.className)), ['share', 'delete'], 'share then trash are the hover icons');
+  assert.equal(await tabCard.locator('.task-note-share').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'share is a plain icon like the trash');
   const del = await tabCard.locator('.task-note-delete').boundingBox();
   assert.ok(del.x + del.width <= restCard.x + restCard.width, 'the trash sits at the right end');
   assert.equal(await tabCard.locator('.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'a plain icon until aimed at');

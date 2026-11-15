@@ -13,11 +13,11 @@ pub struct AppState {
     /// workspace folder is open; None otherwise. Swapping this Mutex'd
     /// Option replaces the watcher atomically on folder switch.
     pub fs_watcher: Mutex<Option<crate::fs_watcher::FsWatcher>>,
-    /// External launch request passed via `launch --tool … [--cwd …]` argv.
-    /// Drained exactly once by the frontend (`take_pending_launch`) on mount;
-    /// warm-start requests skip this slot and arrive as `launch-request`
-    /// events from the single-instance callback instead (see launch.rs).
-    pub pending_launch: Mutex<Option<crate::launch::LaunchRequest>>,
+    /// External launch requests (`launch --tool …` argv or a `coffeecli://`
+    /// prompt link). Parked until the frontend drains it on mount
+    /// (`take_pending_launch`); later ones are emitted as `launch-request`
+    /// events instead (see launch.rs).
+    pub pending_launch: Mutex<crate::launch::LaunchInbox>,
 }
 
 
@@ -242,10 +242,10 @@ async fn maintain_tool_integration(tool: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || crate::hook_installer::maintain_for_tool(&tool)).await.map_err(|e| e.to_string())
 }
 
-/// Drain the cold-start external launch request (`launch --tool … --cwd …`),
-/// if any. Exactly-once semantics — the first caller gets the request, every
-/// later caller gets `None`. Warm-start requests don't pass through here;
-/// they arrive as `launch-request` events from the single-instance callback.
+/// Drain the external launch request that arrived before the frontend was
+/// listening, if any. Exactly-once semantics — the first caller gets the
+/// request, every later caller gets `None`, and every later request arrives
+/// as a `launch-request` event instead. Call it after subscribing.
 #[tauri::command]
 fn take_pending_launch(state: State<'_, AppState>) -> Option<crate::launch::LaunchRequest> {
     state.pending_launch.lock().ok()?.take()
@@ -1748,17 +1748,17 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             let _ = w.show();
             let _ = w.set_focus();
         }
-        // A second instance invoked as `launch --tool … --cwd …` forwards
-        // its argv here — re-parse and hand the request to the frontend of
-        // the ALREADY-RUNNING instance, so the launcher works without
-        // restarting the app or touching existing tabs (see launch.rs).
+        // A second instance invoked as `launch --tool … --cwd …`, or opened
+        // from a `coffeecli://` link on Windows/Linux, forwards its argv here —
+        // re-parse and hand the request to the ALREADY-RUNNING instance, so
+        // nothing restarts and existing tabs are untouched (see launch.rs).
         if let Some(req) = crate::launch::parse_launch_args(&args) {
-            use tauri::Emitter;
-            let _ = app.emit("launch-request", req);
+            crate::launch::deliver(app, req);
         }
     }));
 
     builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -1776,7 +1776,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         .manage(AppState {
             terminal_session,
             fs_watcher: Mutex::new(None),
-            pending_launch: Mutex::new(pending_launch),
+            pending_launch: Mutex::new(crate::launch::LaunchInbox::new(pending_launch)),
         })
         .invoke_handler(tauri::generate_handler![
             crate::app_close::app_close_ack,
@@ -1923,6 +1923,25 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         ])
         .setup(|app| {
             crate::mobile_rpc::init(app.handle());
+            // macOS hands `coffeecli://` links to the app through the deep-link
+            // plugin, both the one that launched it and later ones; Windows and
+            // Linux pass them as argv (main.rs and the single-instance callback).
+            #[cfg(target_os = "macos")]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let deliver_urls = |handle: &tauri::AppHandle, urls: Vec<url::Url>| {
+                    for url in urls {
+                        if let Some(req) = crate::launch::parse_prompt_link(url.as_str()) {
+                            crate::launch::deliver(handle, req);
+                        }
+                    }
+                };
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| deliver_urls(&handle, event.urls()));
+                if let Ok(Some(urls)) = app.deep_link().get_current() {
+                    deliver_urls(app.handle(), urls);
+                }
+            }
             // macOS keeps a menu bar icon from launch (open, running tabs, quit).
             #[cfg(target_os = "macos")]
             crate::app_close::install_menu_bar(app.handle());
