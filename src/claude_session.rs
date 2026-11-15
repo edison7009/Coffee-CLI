@@ -211,9 +211,11 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
         let mut map = sessions.0.lock().unwrap();
         if map.get(&watcher_id).is_some_and(|live| Arc::ptr_eq(live, &s)) { map.remove(&watcher_id); }
     });
-    // Disable speculative follow-up generation, which can consume tokens after the requested turn.
-    // Older CLIs ignore the initialize field without rejecting an unknown command-line flag.
-    let initialized = session.request(json!({"subtype":"initialize","promptSuggestions":false}));
+    // Claude's predicted next prompt, shown greyed in the composer. Asked for here, not with
+    // --prompt-suggestions: a CLI without the feature ignores the field, but an unknown flag would
+    // stop the tab from starting. A worker tab has no one to offer a prediction to. (Turned off in
+    // 98a0df1c over a suspected token cost; that usage turned out to be Claude's own.)
+    let initialized = session.request(json!({"subtype":"initialize","promptSuggestions":!crate::orchestration::is_worker(&id)}));
     // Read at startup, and it can quote the previous conversation.
     if let Some(path) = prompt_file { let _ = std::fs::remove_file(path); }
     match initialized {
