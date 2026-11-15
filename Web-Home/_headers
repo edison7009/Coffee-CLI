@@ -25,6 +25,10 @@
   Cache-Control: public, max-age=0, must-revalidate
 /courses/*
   Cache-Control: public, max-age=0, must-revalidate
+/p
+  Cache-Control: public, max-age=0, must-revalidate
+/p.html
+  Cache-Control: public, max-age=0, must-revalidate
 /zh/*
   Cache-Control: public, max-age=0, must-revalidate
 /zh-hant/*
