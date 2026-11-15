@@ -5,96 +5,199 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <title>Shared prompt — Coffee CLI</title>
+  <meta property="og:site_name" content="Coffee CLI">
   <meta property="og:title" content="A prompt shared from Coffee CLI">
   <meta property="og:description" content="Open it in Coffee CLI or copy it. Nothing runs until you press Send.">
   <link rel="icon" type="image/x-icon" href="/icons/icon.ico">
-  <!-- Prompt links (src-ui/src/lib/prompt-link.ts → coffeecli://new, parsed in src/launch.rs).
-       Self-contained on purpose: no /css or /js file, so no ?v= to bump. The prompt only ever
-       becomes a draft; this page never sends or runs anything. -->
+  <link rel="preload" href="/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- The homepage's own stylesheet and version (navbar, footer, buttons, light/dark), so this page
+       looks like the site and adds no new /css or /js file to cache. Prompt links come from
+       src-ui/src/lib/prompt-link.ts; coffeecli://new is parsed in src/launch.rs. The prompt only
+       ever becomes a draft: nothing runs from this page. -->
+  <link rel="stylesheet" href="/css/style.css?v=0.8.3">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("coffee-cli-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
   <style>
-    :root { color-scheme: light dark; --fg: #18181a; --muted: #71717a; --bg: #fafaf9; --card: #fff; --line: rgba(127,127,127,0.25);
-      --brand: #c4956a; --brand-fg: #fff; --warn: #b45309; --warn-bg: rgba(245,158,11,0.12); }
-    @media (prefers-color-scheme: dark) { :root { --fg: #ebebeb; --muted: #8a8a8f; --bg: #0e0e0f; --card: #17171a; --warn: #fbbf24; } }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); padding: 48px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
-    main { max-width: 680px; margin: 0 auto; }
-    header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
-    header img { width: 28px; height: 28px; }
-    header a { color: var(--fg); text-decoration: none; font-weight: 600; }
-    h1 { font-size: 1.4rem; margin: 0 0 6px; letter-spacing: -0.01em; }
-    .sub { color: var(--muted); margin: 0 0 20px; line-height: 1.6; font-size: 0.95rem; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-    .tool { display: inline-block; font-size: 0.8rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
-      padding: 2px 10px; margin-bottom: 10px; }
-    pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 0.92rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      max-height: 50vh; overflow: auto; }
-    .note { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; font-size: 0.88rem; line-height: 1.6; background: var(--warn-bg); color: var(--warn); }
-    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-    button, .btn { font: inherit; font-size: 0.95rem; cursor: pointer; border-radius: 8px; padding: 10px 18px; text-decoration: none;
-      border: 1px solid var(--line); background: transparent; color: var(--fg); }
-    button:hover, .btn:hover { border-color: var(--brand); color: var(--brand); }
-    button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
-    button.primary:hover { filter: brightness(1.06); color: var(--brand-fg); }
-    .hint { color: var(--muted); font-size: 0.85rem; line-height: 1.6; margin: 14px 0 0; min-height: 1.4em; }
+    .share-main { position: relative; z-index: 10; flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: clamp(1.5rem, 6vh, 4rem) 16px 0; }
+    .share-kicker { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand-color); margin-bottom: 0.7rem; }
+    .share-title { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; color: var(--text-highlight); }
+    .share-sub { margin-top: 0.8rem; font-size: 1rem; line-height: 1.7; color: var(--text-secondary); }
+    /* The prompt sits in the homepage's terminal frame: a title bar and a mono body. */
+    .share-term { margin-top: 2rem; border: 1px solid var(--glass-border); border-radius: 10px; overflow: hidden; background: var(--glass-bg); box-shadow: var(--terminal-box-shadow); }
+    .share-term-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--terminal-bar-bg); border-bottom: 1px solid var(--glass-border); }
+    .share-term-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--glass-border); }
+    .share-term-bar span { margin-left: 8px; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); }
+    .share-prompt { margin: 0; padding: 1.1rem 1.25rem 1.3rem; max-height: 50vh; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: 0.92rem; line-height: 1.7; color: var(--text-primary); }
+    .share-note { margin-top: 1rem; padding: 0.75rem 1rem; border: 1px solid color-mix(in srgb, var(--brand-color) 45%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--brand-color) 10%, transparent); color: var(--text-primary); font-size: 0.88rem; line-height: 1.6; }
+    /* Buttons in the sister site's (EchoBird) download style: a solid primary with a flowing
+       spectrum along its bottom edge and a soft glow under it, and borderless secondaries. */
+    .share-actions {
+      --spectrum: linear-gradient(90deg, #ff4d4d, #ffa24d, #ffe14d, #4dff88, #4dd2ff, #6b6bff, #d24dff, #ff4d4d, #ffa24d, #ffe14d, #4dff88, #4dd2ff, #6b6bff, #d24dff, #ff4d4d);
+      --btn-primary-bg: #1b1e1f; --btn-primary-ink: #f2f1ea;
+      --btn-bg: #ececea; --btn-ink: #1b1e1f; --btn-hover: #e2e2df;
+      display: flex; flex-wrap: wrap; gap: 12px; margin-top: 1.8rem;
+    }
+    html[data-theme='dark'] .share-actions {
+      --btn-primary-bg: #dededb; --btn-primary-ink: #1b1e1f;
+      --btn-bg: #252725; --btn-ink: #efede6; --btn-hover: #2e312e;
+    }
+    .share-btn {
+      position: relative; isolation: isolate;
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      min-height: 52px; padding: 15px 22px; border: 0; border-radius: 5px;
+      background: var(--btn-bg); color: var(--btn-ink);
+      font-family: Georgia, 'Times New Roman', 'Liberation Serif', 'PingFang SC', 'Microsoft YaHei', serif;
+      font-size: 16px; font-weight: 700; letter-spacing: -0.2px; line-height: 1;
+      text-decoration: none; cursor: pointer;
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+    .share-btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
+    .share-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .share-btn--primary { background: var(--btn-primary-bg); color: var(--btn-primary-ink); padding-inline: 24px; }
+    .share-btn--primary:hover { background: var(--btn-primary-bg); }
+    /* The spectrum edge, and the glow it casts. */
+    .share-btn--primary::after,
+    .share-btn--primary::before {
+      content: ''; position: absolute; z-index: -1; pointer-events: none;
+      background: var(--spectrum); background-size: 200% 100%;
+      animation: share-spectrum-flow 6s linear infinite;
+    }
+    .share-btn--primary::after {
+      left: 1px; right: 1px; bottom: -2px; height: 4px; border-radius: 0 0 4px 4px;
+      mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+    }
+    .share-btn--primary::before {
+      left: 12px; right: 12px; bottom: -6px; height: 12px; border-radius: 50%;
+      filter: blur(7px); opacity: 0.55;
+    }
+    @keyframes share-spectrum-flow { from { background-position: 0% 0; } to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .share-btn--primary::before, .share-btn--primary::after { animation: none; } }
+    @media (max-width: 600px) { .share-btn { flex: 1 1 auto; } .share-btn--primary { flex-basis: 100%; } }
+    .share-hint { min-height: 1.6em; margin-top: 1rem; font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); }
     [hidden] { display: none !important; }
   </style>
 </head>
 <body>
-  <main>
-    <header><img src="/icons/favicon.svg" alt=""><a href="/">Coffee CLI</a></header>
-    <h1 id="title"></h1>
-    <p class="sub" id="sub"></p>
-    <div class="card" id="card">
-      <span class="tool" id="tool" hidden></span>
-      <pre id="prompt"></pre>
+  <header class="navbar">
+    <a class="logo" href="/" style="text-decoration:none">
+      <svg class="dynamic-brand-logo" width="32" height="32" viewBox="0 0 24 24" overflow="visible" xmlns="http://www.w3.org/2000/svg">
+        <defs><mask id="SVG5AkzhcyZ"><path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"><animate attributeName="d" dur="3s" repeatCount="indefinite" values="M8 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 0c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4;M8 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M12 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4M16 -8c0 2 -2 2 -2 4s2 2 2 4s-2 2 -2 4s2 2 2 4"/></path><path d="M4 7h16v0h-16v12h16v-32h-16Z"><animate fill="freeze" attributeName="d" begin="1s" dur="0.6s" to="M4 2h16v5h-16v12h16v-24h-16Z"/></path></mask></defs><g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path fill="currentColor" fill-opacity="0" stroke-dasharray="48" d="M17 9v9c0 1.66 -1.34 3 -3 3h-6c-1.66 0 -3 -1.34 -3 -3v-9Z"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="48;0"/><animate fill="freeze" attributeName="fill-opacity" begin="1.6s" dur="0.4s" to="1"/></path><path fill="none" stroke-dasharray="16" stroke-dashoffset="16" d="M17 9h3c0.55 0 1 0.45 1 1v3c0 0.55 -0.45 1 -1 1h-3"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" to="0"/></path></g><path fill="currentColor" d="M0 0h24v24H0z" mask="url(#SVG5AkzhcyZ)"/>
+      </svg>
+      <span>Coffee CLI</span>
+    </a>
+    <nav class="nav-links">
+      <a class="feedback-btn nav-docs" href="/docs/" id="docs-link">Docs</a>
+      <a class="feedback-btn nav-101" href="/courses/claude-code.html">Coffee 101</a>
+      <a class="icon-switch" href="https://github.com/edison7009/Coffee-CLI" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1-.02-1.97-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.05 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.18-1.49 3.14-1.18 3.14-1.18.62 1.59.23 2.76.11 3.05.74.8 1.18 1.82 1.18 3.08 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.13 0 1.54-.01 2.78-.01 3.16 0 .31.21.68.8.56C20.21 21.39 23.5 17.07 23.5 12 23.5 5.65 18.35.5 12 .5Z"/></svg>
+      </a>
+      <button class="icon-switch" id="theme-toggle" type="button" aria-label="Toggle Theme">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="share-main">
+    <p class="share-kicker" id="kicker"></p>
+    <h1 class="share-title" id="title"></h1>
+    <p class="share-sub" id="sub"></p>
+    <div class="share-term" id="card">
+      <div class="share-term-bar" aria-hidden="true"><i></i><i></i><i></i><span>prompt</span></div>
+      <pre class="share-prompt" id="prompt"></pre>
     </div>
-    <p class="note" id="note" hidden></p>
-    <div class="actions" id="actions">
-      <button class="primary" id="open" type="button"></button>
-      <button id="copy" type="button"></button>
-      <a class="btn" id="download" href="/"></a>
+    <p class="share-note" id="note" hidden></p>
+    <div class="share-actions">
+      <button class="share-btn share-btn--primary" id="open" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg><span id="open-label"></span>
+      </button>
+      <button class="share-btn" id="copy" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span id="copy-label"></span>
+      </button>
+      <a class="share-btn" id="download" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="download-label"></span>
+      </a>
     </div>
-    <p class="hint" id="hint" role="status"></p>
+    <p class="share-hint" id="hint" role="status"></p>
   </main>
+
+  <footer class="site-footer">
+    <div class="sf-inner">
+      <div class="sf-top">
+        <div class="sf-brand">
+          <span class="sf-name">Coffee CLI</span>
+          <a class="sf-mail" href="mailto:hi@coffeecli.com">hi@coffeecli.com</a>
+        </div>
+        <nav class="sf-links" aria-label="Footer">
+          <a href="https://github.com/edison7009/Coffee-CLI" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/edison7009/Coffee-CLI/issues" target="_blank" rel="noopener" id="feedback-link">Feedback</a>
+          <a href="/courses/claude-code.html">Coffee 101</a>
+        </nav>
+      </div>
+      <div class="sf-legal">
+        <p>
+          &copy; 2026 <a href="https://github.com/edison7009" target="_blank" rel="noopener">edison7009</a>
+          <span class="sf-sep" aria-hidden="true">·</span>
+          <a href="https://github.com/edison7009/Coffee-CLI/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
   <script>
     (function () {
-      var zh = /^zh/i.test(navigator.language || '');
-      var tw = /^zh-(tw|hk|mo|hant)/i.test(navigator.language || '');
+      var lang = navigator.language || '';
+      var zh = /^zh/i.test(lang);
+      var tw = /^zh-(tw|hk|mo|hant)/i.test(lang);
       var S = zh ? (tw ? {
-        title: '有人和你分享了一段提示詞', sub: '在 Coffee CLI 中開啟後，它會出現在輸入框裡。你確認後按傳送才會執行。',
-        open: '在 Coffee CLI 中開啟', copy: '複製提示詞', copied: '已複製', download: '下載 Coffee CLI', tool: '建議工具：',
+        kicker: '分享的提示詞', title: '有人和你分享了一段提示詞', sub: '在 Coffee CLI 中開啟後，它會出現在輸入框裡，你選好工具、確認後按傳送才會執行。',
+        open: '在 Coffee CLI 中開啟', copy: '複製提示詞', copied: '已複製', download: '下載 Coffee CLI', docs: '文件', feedback: '問題回饋',
         hidden: '這段提示詞裡有看不見的字元，已經移除。這類字元可能藏著指令，請先讀一遍再用。',
         inapp: '目前的 App 不能直接開啟 Coffee CLI。點右上角「…」選擇在瀏覽器開啟，或者先複製提示詞。',
         noApp: '沒有反應？可能還沒安裝 Coffee CLI，或版本太舊。請下載或更新到最新版，也可以直接複製提示詞。',
         bad: '這個連結沒有可用的提示詞', badSub: '連結可能不完整，或提示詞超過 8000 字。'
       } : {
-        title: '有人和你分享了一段提示词', sub: '在 Coffee CLI 中打开后，它会出现在输入框里。你确认后按发送才会执行。',
-        open: '在 Coffee CLI 中打开', copy: '复制提示词', copied: '已复制', download: '下载 Coffee CLI', tool: '建议工具：',
+        kicker: '分享的提示词', title: '有人和你分享了一段提示词', sub: '在 Coffee CLI 中打开后，它会出现在输入框里，你选好工具、确认后按发送才会执行。',
+        open: '在 Coffee CLI 中打开', copy: '复制提示词', copied: '已复制', download: '下载 Coffee CLI', docs: '文档', feedback: '问题反馈',
         hidden: '这段提示词里有看不见的字符，已经移除。这类字符可能藏着指令，请先读一遍再用。',
         inapp: '当前 App 不能直接打开 Coffee CLI。点右上角「…」选择在浏览器打开，或者先复制提示词。',
         noApp: '没有反应？可能还没安装 Coffee CLI，或版本太旧。请下载或更新到最新版，也可以直接复制提示词。',
         bad: '这个链接没有可用的提示词', badSub: '链接可能不完整，或提示词超过 8000 字。'
       }) : {
-        title: 'Someone shared a prompt with you', sub: 'Open it in Coffee CLI and it appears in the input box. Nothing runs until you press Send.',
-        open: 'Open in Coffee CLI', copy: 'Copy prompt', copied: 'Copied', download: 'Download Coffee CLI', tool: 'Suggested tool: ',
+        kicker: 'Shared prompt', title: 'Someone shared a prompt with you', sub: 'Open it in Coffee CLI and it appears in the input box. Pick a tool; nothing runs until you press Send.',
+        open: 'Open in Coffee CLI', copy: 'Copy prompt', copied: 'Copied', download: 'Download Coffee CLI', docs: 'Docs', feedback: 'Feedback',
         hidden: 'This prompt contained invisible characters, which were removed. They can hide instructions, so read it before you use it.',
         inapp: "This app can't open Coffee CLI. Use the … menu to open the page in your browser, or copy the prompt.",
         noApp: "Nothing happened? Coffee CLI may not be installed, or it's out of date. Download or update it, or copy the prompt.",
         bad: 'This link has no usable prompt', badSub: 'The link may be cut off, or the prompt is longer than 8,000 characters.'
       };
-      if (zh) document.documentElement.lang = tw ? 'zh-Hant' : 'zh-CN';
       var $ = function (id) { return document.getElementById(id); };
+      if (zh) {
+        document.documentElement.lang = tw ? 'zh-Hant' : 'zh-Hans';
+        $('docs-link').href = tw ? '/zh-hant/docs/' : '/zh/docs/';
+        $('download').href = tw ? '/zh-hant/' : '/zh/';
+      }
+      $('docs-link').textContent = S.docs;
+      $('feedback-link').textContent = S.feedback;
+      $('download-label').textContent = S.download;
+
+      $('theme-toggle').addEventListener('click', function () {
+        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('coffee-cli-theme', next); } catch (e) {}
+      });
 
       // Same rule as src/launch.rs and src-ui/src/lib/prompt-link.ts.
       var HIDDEN = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B\u200C\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF0-\uFFFB\u{1D173}-\u{1D17A}\u{E0000}-\u{E0FFF}\u0000-\u0008\u000B-\u001F\u007F-\u009F]/gu;
-      var params = new URLSearchParams(location.search);
-      var raw = (params.get('prompt') || '').replace(/\r\n/g, '\n');
+      var raw = (new URLSearchParams(location.search).get('prompt') || '').replace(/\r\n/g, '\n');
       var prompt = raw.replace(HIDDEN, '');
-      var tool = params.get('tool') || '';
-      if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(tool)) tool = '';
 
-      $('download').textContent = S.download;
       if (!prompt.trim() || Array.from(prompt).length > 8000) {
         $('title').textContent = S.bad;
         $('sub').textContent = S.badSub;
@@ -104,18 +207,18 @@
         return;
       }
       document.title = S.title + ' — Coffee CLI';
+      $('kicker').textContent = S.kicker;
       $('title').textContent = S.title;
       $('sub').textContent = S.sub;
       $('prompt').textContent = prompt;
-      if (tool) { $('tool').textContent = S.tool + tool; $('tool').hidden = false; }
       if (prompt !== raw) { $('note').textContent = S.hidden; $('note').hidden = false; }
-      $('open').textContent = S.open;
-      $('copy').textContent = S.copy;
+      $('open-label').textContent = S.open;
+      $('copy-label').textContent = S.copy;
 
       var inApp = /MicroMessenger|QQ\/|aweme|Weibo|DingTalk|Lark|XiaoHongShu|xhsdiscover|BytedanceWebview/i.test(navigator.userAgent);
       if (inApp) $('hint').textContent = S.inapp;
 
-      var link = 'coffeecli://new?prompt=' + encodeURIComponent(prompt) + (tool ? '&tool=' + encodeURIComponent(tool) : '');
+      var link = 'coffeecli://new?prompt=' + encodeURIComponent(prompt);
       $('open').addEventListener('click', function () {
         if (inApp) { $('hint').textContent = S.inapp; return; }
         var left = false;
@@ -127,7 +230,7 @@
       });
 
       $('copy').addEventListener('click', function () {
-        var done = function () { $('copy').textContent = S.copied; setTimeout(function () { $('copy').textContent = S.copy; }, 1800); };
+        var done = function () { $('copy-label').textContent = S.copied; setTimeout(function () { $('copy-label').textContent = S.copy; }, 1800); };
         var fallback = function () {
           var ta = document.createElement('textarea');
           ta.value = prompt; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
