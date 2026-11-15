@@ -24,7 +24,8 @@
     })();
   </script>
   <style>
-    .share-main { position: relative; z-index: 10; flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: clamp(1.5rem, 6vh, 4rem) 16px 0; }
+    /* Fills the space between navbar and footer and centers the content in it. */
+    .share-main { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 760px; margin: 0 auto; padding: 2rem 16px; }
     .share-kicker { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand-color); margin-bottom: 0.7rem; }
     .share-title { font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; color: var(--text-highlight); }
     .share-sub { margin-top: 0.8rem; font-size: 1rem; line-height: 1.7; color: var(--text-secondary); }
@@ -59,6 +60,11 @@
     }
     .share-btn:hover { background: var(--btn-hover); transform: translateY(-1px); }
     .share-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    /* Copy and Copied share one cell, so the button keeps the longer label's width and never jumps. */
+    .share-swap { display: inline-grid; }
+    .share-swap > * { grid-area: 1 / 1; justify-self: center; }
+    .share-swap-done, .share-copy.is-copied .share-swap-idle { visibility: hidden; }
+    .share-copy.is-copied .share-swap-done { visibility: visible; }
     .share-btn--primary { background: var(--btn-primary-bg); color: var(--btn-primary-ink); padding-inline: 24px; }
     .share-btn--primary:hover { background: var(--btn-primary-bg); }
     /* The spectrum edge, and the glow it casts. */
@@ -117,8 +123,12 @@
       <button class="share-btn share-btn--primary" id="open" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg><span id="open-label"></span>
       </button>
-      <button class="share-btn" id="copy" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span id="copy-label"></span>
+      <button class="share-btn share-copy" id="copy" type="button">
+        <span class="share-swap" aria-hidden="true">
+          <svg class="share-swap-idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+          <svg class="share-swap-done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </span>
+        <span class="share-swap"><span class="share-swap-idle" id="copy-label"></span><span class="share-swap-done" id="copied-label"></span></span>
       </button>
       <a class="share-btn" id="download" href="/">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="download-label"></span>
@@ -214,6 +224,7 @@
       if (prompt !== raw) { $('note').textContent = S.hidden; $('note').hidden = false; }
       $('open-label').textContent = S.open;
       $('copy-label').textContent = S.copy;
+      $('copied-label').textContent = S.copied;
 
       var inApp = /MicroMessenger|QQ\/|aweme|Weibo|DingTalk|Lark|XiaoHongShu|xhsdiscover|BytedanceWebview/i.test(navigator.userAgent);
       if (inApp) $('hint').textContent = S.inapp;
@@ -230,7 +241,12 @@
       });
 
       $('copy').addEventListener('click', function () {
-        var done = function () { $('copy-label').textContent = S.copied; setTimeout(function () { $('copy-label').textContent = S.copy; }, 1800); };
+        var done = function () {
+          var btn = $('copy');
+          btn.classList.add('is-copied');
+          clearTimeout(btn._reset);
+          btn._reset = setTimeout(function () { btn.classList.remove('is-copied'); }, 1800);
+        };
         var fallback = function () {
           var ta = document.createElement('textarea');
           ta.value = prompt; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
