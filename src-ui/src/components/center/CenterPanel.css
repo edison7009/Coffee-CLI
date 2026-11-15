@@ -910,6 +910,9 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
    typed values are easy to read. Both modals are config-input
    forms — keeping their styling identical is the contract. */
 .tool-config-modal {
+  /* As a <dialog>, the browser centers it with auto margins; the global
+     `* { margin: 0 }` reset would otherwise pin it to the top-left. */
+  margin: auto;
   width: 380px;
   max-width: 92vw;
   max-height: 88vh;
@@ -1012,6 +1015,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   justify-content: flex-end;
   padding: 0 20px 20px;
 }
+
+.tool-config-btn:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
 
 .tool-config-btn {
   padding: 8px 16px;

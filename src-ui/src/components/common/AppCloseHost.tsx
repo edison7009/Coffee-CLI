@@ -68,8 +68,10 @@ export function AppCloseHost() {
 
 function AppCloseDialog({ sessions, label, onClose }: { sessions: TerminalSession[]; label: (session: TerminalSession) => string; onClose: () => void }) {
   const t = useT(), ref = useRef<HTMLDialogElement>(null), keep = useRef<HTMLButtonElement>(null);
+  // Enter keeps running (the choice that loses nothing), so that button holds focus from the start,
+  // but no focus ring shows until the keyboard actually moves between controls.
+  const [quietFocus, setQuietFocus] = useState(true);
   const [remember, setRemember] = useState(false);
-  // showModal focuses the first control (×); the choice that loses nothing takes focus instead.
   useEffect(() => { ref.current?.showModal(); keep.current?.focus(); }, []);
   const listed = sessions.slice(0, LISTED), more = sessions.length - listed.length;
   const choose = (behavior: 'keep' | 'quit') => {
@@ -78,7 +80,7 @@ function AppCloseDialog({ sessions, label, onClose }: { sessions: TerminalSessio
     if (behavior === 'keep') void commands.appKeepRunning().catch(() => {});
     else void commands.appQuit();
   };
-  return <dialog ref={ref} className="tool-config-modal app-close-dialog" aria-labelledby="app-close-title" aria-describedby="app-close-description" onCancel={event => { event.preventDefault(); onClose(); }}>
+  return <dialog ref={ref} className="tool-config-modal app-close-dialog" data-quiet-focus={quietFocus || undefined} onKeyDown={event => { if (event.key === 'Tab' || event.key.startsWith('Arrow')) setQuietFocus(false); }} aria-labelledby="app-close-title" aria-describedby="app-close-description" onCancel={event => { event.preventDefault(); onClose(); }}>
     <div className="tool-config-header"><span id="app-close-title">{t('app_close.title')}</span><button type="button" className="tool-config-close close-button" aria-label={t('app_close.cancel')} onClick={onClose}>×</button></div>
     <div className="tool-config-body">
       <p id="app-close-description">{t('app_close.running', { count: sessions.length })}</p>

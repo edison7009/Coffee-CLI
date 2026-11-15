@@ -11,7 +11,7 @@ const project = fileURLToPath(new URL('..', import.meta.url)), directory = await
 // The close host runs against a scripted native side: close requests and tray clicks are emitted by the test,
 // and every command the host sends is recorded.
 await build({ stdin: { loader: 'tsx', resolveDir: project, contents: `
-import { createRoot } from 'react-dom/client'; import { AppCloseHost } from './src/components/common/AppCloseHost'; import './src/styles/global.css';
+import { createRoot } from 'react-dom/client'; import { AppCloseHost } from './src/components/common/AppCloseHost'; import './src/styles/global.css'; import './src/components/center/CenterPanel.css';
 createRoot(document.getElementById('root')).render(<AppCloseHost />);` }, bundle: true, jsx: 'automatic', outfile: join(directory, 'fixture.js'), external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'], plugins: [{ name: 'native', setup(b) {
   b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'native', namespace: 'fixture' }));
   b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'store', namespace: 'fixture' }));
@@ -76,6 +76,25 @@ try {
   assert.equal(await dialog.locator('.is-working .app-close-status').textContent(), '工作中');
   assert.equal(await dialog.locator('.app-close-more').textContent(), '等另外 2 个');
   assert.equal(await page.evaluate(() => document.activeElement?.textContent), '最小化到托盘', 'the safe choice has focus');
+  // Centered in the window, despite the global margin reset.
+  const box = await dialog.boundingBox();
+  assert.ok(Math.abs(box.x + box.width / 2 - 450) < 2 && Math.abs(box.y + box.height / 2 - 350) < 2, `centered: ${JSON.stringify(box)}`);
+  // The safe choice holds focus without a ring until the keyboard moves; then the ring is the theme's.
+  const ring = () => page.evaluate(() => { const c = getComputedStyle(document.activeElement); return { style: c.outlineStyle, color: c.outlineColor }; });
+  assert.equal((await ring()).style, 'none', 'no focus ring when the dialog opens');
+  // Our own checkbox: no platform look, the theme's accent once ticked.
+  const box2 = dialog.getByRole('checkbox', { name: '记住我的选择' });
+  assert.equal(await box2.evaluate(el => getComputedStyle(el).appearance), 'none');
+  await box2.check();
+  const accent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
+  const toRgb = color => page.evaluate(c => { const el = document.createElement('i'); el.style.color = c; document.body.append(el); const v = getComputedStyle(el).color; el.remove(); return v; }, color);
+  const ticked = await toRgb(accent);
+  await page.waitForFunction(c => getComputedStyle(document.querySelector('.app-close-remember input')).backgroundColor === c, ticked, { timeout: 2000 });
+  await page.screenshot({ path: join(directory, 'app-close.png') });
+  await box2.uncheck();
+  await page.keyboard.press('Tab');
+  assert.notEqual((await ring()).style, 'none', 'Tab brings the focus ring back');
+  assert.equal((await ring()).color, await toRgb(accent), 'in the accent color');
   await close(3);
   assert.equal(await page.getByRole('dialog').count(), 1, 'a second close while asking does not stack dialogs');
   assert.deepEqual((await calls('appCloseAck')).map(call => call[1]), [2, 3]);
