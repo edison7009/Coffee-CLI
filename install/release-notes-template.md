@@ -1,74 +1,59 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v4.0.3 · 手机适配与关闭选项
+### Coffee CLI v4.0.4 · 分享提示词
 
-- **手机界面（全新）：** 用手机浏览器远程操控时，界面自动切换为手机布局：左右侧栏变成抽屉，所有标签收进一个菜单，启动页和设置也都适配了手机屏幕。
-- **手机输入更顺手：** 输入框下方那一排按钮可以左右滑动，安卓和 iPhone 都支持；点按钮不会弹出键盘，文件夹名完整显示，并避开 iPhone 底部的横条。
-- **窄窗口：** 电脑上把窗口拉窄到 1000px 以下时，左右侧栏同样变成抽屉。
-- **关闭窗口时（全新）：** 在「设置 → 通用」里选择关闭窗口时做什么：每次询问、保持后台运行或直接退出。后台运行时，Windows 收进通知区域，macOS 收进菜单栏，Linux 最小化。macOS 新增菜单栏图标，可以快速打开窗口或切到正在运行的标签。
-- **远程连接：** 配对地址旁新增复制按钮；断线重连时显示简洁的整页提示，不再压住顶部内容。
-- **修复：** 语言选择在各种界面语言下都更容易辨认；文件夹选择器只在窄窗口下全屏显示。
-- **其他：** 标签菜单和搜索弹窗改为不透明背景，更易阅读；清理了大量不再使用的旧代码。
+- **分享提示词（全新）：** 输入框上方新增「保存到预输入 · 分享 · 清空」一组按钮，右侧预输入列表的每一条也能分享。分享会复制一条链接，朋友打开后可以查看、复制这段提示词，或一键在 Coffee CLI 中打开；打开后只会填进输入框，确认后由他自己发送。
+- **Claude 猜你下一句：** 在 Claude 对话里，输入框会再次用灰字提示你可能想说的下一句。
+- **更清楚的提示：** 鼠标悬停在按钮上会显示简短说明，复制等操作的结果统一显示在窗口顶部。
+- **修复：** 关闭窗口时的确认框回到屏幕正中，「记住我的选择」勾选框与主题风格一致。
 
 </details>
 
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v4.0.3 · Phone Layout and Close Options
+### Coffee CLI v4.0.4 · Share Prompts
 
-- **Phone layout (new):** When you control Coffee CLI from a phone browser, the interface switches to a phone layout: the side panels become drawers, every tab is listed in one menu, and the launch page and Settings fit the phone screen.
-- **Easier typing on phones:** The row of buttons under the input box scrolls sideways on both Android and iPhone; tapping a button no longer brings up the keyboard, the folder name shows in full, and nothing sits under the iPhone home indicator.
-- **Narrow windows:** On a computer, the side panels also become drawers when the window is narrower than 1000px.
-- **When closing the window (new):** In Settings → General, choose what closing the window does: ask each time, keep running, or quit. Keeping running puts Coffee CLI in the notification area on Windows, in the menu bar on macOS, and minimizes it on Linux. macOS gains a menu bar icon for opening the window or jumping to a running tab.
-- **Remote connection:** A copy button sits beside the pairing address, and reconnecting now shows a clean full-page notice instead of covering the top of the screen.
-- **Fixes:** The language picker is easier to recognize in every interface language; the folder picker fills the screen only in narrow windows.
-- **Also:** The tab menu and the search popup have solid backgrounds for easier reading, and a large amount of unused old code has been removed.
+- **Share prompts (new):** A Save to Pre-input · Share · Clear group now sits above the input box, and every line in the Pre-input list on the right can be shared too. Share copies a link: your friend can read the prompt, copy it, or open it in Coffee CLI with one click. Opening it only fills the input box; they send it when they're ready.
+- **Claude's next prompt:** In Claude conversations, the input box once again suggests in grey what you might say next.
+- **Clearer feedback:** Hovering a button shows a short explanation, and results such as "copied" appear at the top of the window.
+- **Fixes:** The close-window confirmation is centered on screen again, and its "Remember my choice" checkbox matches your theme.
 
 </details>
 
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v4.0.3 · 手機介面與關閉選項
+### Coffee CLI v4.0.4 · 分享提示詞
 
-- **手機介面（全新）：** 用手機瀏覽器遠端操控時，介面自動切換為手機版面：左右側欄變成抽屜，所有分頁收進一個選單，啟動頁和設定也都適配了手機螢幕。
-- **手機輸入更順手：** 輸入框下方那一排按鈕可以左右滑動，Android 和 iPhone 都支援；點按鈕不會跳出鍵盤，資料夾名稱完整顯示，並避開 iPhone 底部的橫條。
-- **窄視窗：** 在電腦上把視窗拉窄到 1000px 以下時，左右側欄同樣變成抽屜。
-- **關閉視窗時（全新）：** 在「設定 → 一般」裡選擇關閉視窗時要做什麼：每次詢問、保持背景執行或直接結束。背景執行時，Windows 收進通知區域，macOS 收進選單列，Linux 最小化。macOS 新增選單列圖示，可以快速開啟視窗或切到正在執行的分頁。
-- **遠端連線：** 配對位址旁新增複製按鈕；斷線重連時顯示簡潔的整頁提示，不再壓住頂部內容。
-- **修正：** 語言選擇在各種介面語言下都更容易辨認；資料夾選擇器只在窄視窗下全螢幕顯示。
-- **其他：** 分頁選單和搜尋彈窗改為不透明背景，更易閱讀；清理了大量不再使用的舊程式碼。
+- **分享提示詞（全新）：** 輸入框上方新增「儲存到預輸入 · 分享 · 清空」一組按鈕，右側預輸入列表的每一則也能分享。分享會複製一個連結，朋友開啟後可以查看、複製這段提示詞，或一鍵在 Coffee CLI 中開啟；開啟後只會填進輸入框，確認後由他自己傳送。
+- **Claude 猜你下一句：** 在 Claude 對話裡，輸入框會再次用灰字提示你可能想說的下一句。
+- **更清楚的提示：** 滑鼠停在按鈕上會顯示簡短說明，複製等操作的結果統一顯示在視窗頂部。
+- **修正：** 關閉視窗時的確認框回到螢幕正中，「記住我的選擇」勾選框與主題風格一致。
 
 </details>
 
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v4.0.3 · スマートフォン対応と閉じるときの動作
+### Coffee CLI v4.0.4 · プロンプトの共有
 
-- **スマートフォン画面（新機能）：** スマートフォンのブラウザーから操作すると、画面がスマートフォン向けレイアウトに切り替わります。左右のパネルはドロワーになり、すべてのタブを 1 つのメニューにまとめ、起動ページと設定も画面に合わせて表示します。
-- **スマートフォンで入力しやすく：** 入力欄の下のボタン列を Android でも iPhone でも左右にスクロールできます。ボタンを押してもキーボードが出ず、フォルダー名を省略せずに表示し、iPhone 下部のバーにも重なりません。
-- **狭いウィンドウ：** コンピューターでもウィンドウ幅が 1000px 未満になると、左右のパネルがドロワーになります。
-- **ウィンドウを閉じるとき（新機能）：**「設定 → 一般」で、閉じるときの動作を選べます：毎回確認する、実行したままにする、終了する。実行したままにすると、Windows では通知領域、macOS ではメニューバーに入り、Linux では最小化します。macOS にはメニューバーアイコンが加わり、ウィンドウを開いたり実行中のタブに切り替えたりできます。
-- **リモート接続：** ペアリングアドレスの横にコピーボタンを追加しました。再接続中は画面上部に重ならない、シンプルな全画面表示になりました。
-- **修正：** 言語の選択がどの表示言語でも見分けやすくなりました。フォルダー選択画面は狭いウィンドウのときだけ全画面表示になります。
-- **その他：** タブメニューと検索ポップアップを不透明な背景にして読みやすくしました。使われなくなった古いコードを大幅に整理しました。
+- **プロンプトの共有（新機能）：** 入力欄の上に「事前入力に保存 · 共有 · クリア」のボタンが並び、右側の事前入力リストの各項目も共有できます。共有するとリンクがコピーされ、受け取った人はプロンプトを読んだりコピーしたり、ワンクリックで Coffee CLI で開いたりできます。開いても入力欄に入るだけで、送信は本人が確認してから行います。
+- **Claude の次の一言：** Claude の会話で、次に言いそうな一言が再び入力欄にグレーで表示されます。
+- **わかりやすい表示：** ボタンにカーソルを合わせると短い説明が出て、コピーなどの結果はウィンドウ上部に表示されます。
+- **修正：** ウィンドウを閉じるときの確認ダイアログが画面中央に戻り、「選択を記憶する」のチェックボックスがテーマに合ったデザインになりました。
 
 </details>
 
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v4.0.3 · 휴대폰 화면과 닫기 옵션
+### Coffee CLI v4.0.4 · 프롬프트 공유
 
-- **휴대폰 화면(신규):** 휴대폰 브라우저로 원격 제어하면 화면이 휴대폰 레이아웃으로 바뀝니다. 좌우 패널은 서랍이 되고, 모든 탭을 하나의 메뉴에 모으며, 시작 화면과 설정도 휴대폰 화면에 맞춰 표시됩니다.
-- **휴대폰에서 더 편한 입력:** 입력창 아래 버튼 줄을 Android와 iPhone 모두에서 좌우로 밀어 볼 수 있습니다. 버튼을 눌러도 키보드가 올라오지 않고, 폴더 이름을 줄이지 않고 표시하며, iPhone 하단 막대와도 겹치지 않습니다.
-- **좁은 창:** 컴퓨터에서도 창 너비가 1000px보다 좁아지면 좌우 패널이 서랍으로 바뀝니다.
-- **창을 닫을 때(신규):** "설정 → 일반"에서 창을 닫을 때의 동작을 고를 수 있습니다: 매번 묻기, 계속 실행, 종료. 계속 실행하면 Windows에서는 알림 영역, macOS에서는 메뉴 막대로 들어가고 Linux에서는 최소화됩니다. macOS에는 메뉴 막대 아이콘이 추가되어 창을 열거나 실행 중인 탭으로 바로 이동할 수 있습니다.
-- **원격 연결:** 페어링 주소 옆에 복사 버튼이 생겼고, 재연결 중에는 화면 위쪽을 가리지 않는 깔끔한 전체 화면 안내가 표시됩니다.
-- **수정:** 언어 선택이 모든 표시 언어에서 더 알아보기 쉬워졌습니다. 폴더 선택 화면은 좁은 창에서만 전체 화면으로 표시됩니다.
-- **기타:** 탭 메뉴와 검색 팝업의 배경을 불투명하게 바꿔 읽기 쉬워졌고, 더 이상 쓰지 않는 오래된 코드를 대거 정리했습니다.
+- **프롬프트 공유(신규):** 입력창 위에 "사전 입력에 저장 · 공유 · 지우기" 버튼 묶음이 생겼고, 오른쪽 사전 입력 목록의 각 항목도 공유할 수 있습니다. 공유하면 링크가 복사되며, 받은 사람은 프롬프트를 읽거나 복사하거나 클릭 한 번으로 Coffee CLI에서 열 수 있습니다. 열어도 입력창에 채워지기만 하고, 보내기는 본인이 확인한 뒤에 합니다.
+- **Claude의 다음 한마디:** Claude 대화에서 다음에 할 만한 말을 입력창에 다시 회색으로 보여 줍니다.
+- **더 알기 쉬운 안내:** 버튼에 마우스를 올리면 짧은 설명이 나오고, 복사 같은 작업 결과는 창 위쪽에 표시됩니다.
+- **수정:** 창을 닫을 때의 확인 창이 다시 화면 가운데에 나타나고, "선택 기억하기" 체크박스가 테마에 맞게 바뀌었습니다.
 
 </details>
