@@ -56,6 +56,10 @@
       "icons/icon.ico",
       "icons/icon.png"
     ],
+    "linux": {
+      "deb": { "desktopTemplate": "linux/main.desktop" },
+      "rpm": { "desktopTemplate": "linux/main.desktop" }
+    },
     "windows": {
       "nsis": {
         "template": "installer.nsi",
