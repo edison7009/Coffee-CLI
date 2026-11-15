@@ -171,21 +171,24 @@
         hidden: '這段提示詞裡有看不見的字元，已經移除。這類字元可能藏著指令，請先讀一遍再用。',
         inapp: '目前的 App 不能直接開啟 Coffee CLI。點右上角「…」選擇在瀏覽器開啟，或者先複製提示詞。',
         noApp: '沒有反應？可能還沒安裝 Coffee CLI，或版本太舊。請下載或更新到最新版，也可以直接複製提示詞。',
-        bad: '這個連結沒有可用的提示詞', badSub: '連結可能不完整，或提示詞超過 8000 字。'
+        bad: '這個連結沒有可用的提示詞', badSub: '連結可能不完整，或提示詞超過 8000 字。',
+        badBrowser: '這個瀏覽器打不開這個連結，請換用最新版的 Chrome、Edge 或 Safari。'
       } : {
         kicker: '分享的提示词', title: '有人和你分享了一段提示词', sub: '在 Coffee CLI 中打开后，它会出现在输入框里，你选好工具、确认后按发送才会执行。',
         open: '在 Coffee CLI 中打开', copy: '复制提示词', copied: '已复制', download: '下载 Coffee CLI', docs: '文档', feedback: '问题反馈',
         hidden: '这段提示词里有看不见的字符，已经移除。这类字符可能藏着指令，请先读一遍再用。',
         inapp: '当前 App 不能直接打开 Coffee CLI。点右上角「…」选择在浏览器打开，或者先复制提示词。',
         noApp: '没有反应？可能还没安装 Coffee CLI，或版本太旧。请下载或更新到最新版，也可以直接复制提示词。',
-        bad: '这个链接没有可用的提示词', badSub: '链接可能不完整，或提示词超过 8000 字。'
+        bad: '这个链接没有可用的提示词', badSub: '链接可能不完整，或提示词超过 8000 字。',
+        badBrowser: '这个浏览器打不开这个链接，请换用最新版的 Chrome、Edge 或 Safari。'
       }) : {
         kicker: 'Shared prompt', title: 'Someone shared a prompt with you', sub: 'Open it in Coffee CLI and it appears in the input box. Pick a tool; nothing runs until you press Send.',
         open: 'Open in Coffee CLI', copy: 'Copy prompt', copied: 'Copied', download: 'Download Coffee CLI', docs: 'Docs', feedback: 'Feedback',
         hidden: 'This prompt contained invisible characters, which were removed. They can hide instructions, so read it before you use it.',
         inapp: "This app can't open Coffee CLI. Use the … menu to open the page in your browser, or copy the prompt.",
         noApp: "Nothing happened? Coffee CLI may not be installed, or it's out of date. Download or update it, or copy the prompt.",
-        bad: 'This link has no usable prompt', badSub: 'The link may be cut off, or the prompt is longer than 8,000 characters.'
+        bad: 'This link has no usable prompt', badSub: 'The link may be cut off, or the prompt is longer than 8,000 characters.',
+        badBrowser: "This browser can't open this link. Try the latest Chrome, Edge or Safari."
       };
       var $ = function (id) { return document.getElementById(id); };
       if (zh) {
@@ -205,17 +208,55 @@
 
       // Same rule as src/launch.rs and src-ui/src/lib/prompt-link.ts.
       var HIDDEN = /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B\u200C\u200E\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\uFFF0-\uFFFB\u{1D173}-\u{1D17A}\u{E0000}-\u{E0FFF}\u0000-\u0008\u000B-\u001F\u007F-\u009F]/gu;
-      var raw = (new URLSearchParams(location.search).get('prompt') || '').replace(/\r\n/g, '\n');
-      var prompt = raw.replace(HIDDEN, '');
-
-      if (!prompt.trim() || Array.from(prompt).length > 8000) {
+      // The prompt rides in the fragment, which the browser never sends to the server: #z= is it
+      // deflated (raw) and base64url-encoded, #t= is it plain (from clients without compression).
+      // Links from before the fragment used ?prompt=. Nothing is stored anywhere.
+      var MAX_INFLATED = 64 * 1024; // same cap as src/launch.rs: a tiny link can't expand into a huge one
+      function fromBase64Url(text) {
+        var b64 = text.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        var bin = atob(b64), bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes;
+      }
+      function inflate(packed) {
+        if (typeof DecompressionStream === 'undefined') return Promise.reject(new Error('unsupported'));
+        var reader = new Blob([fromBase64Url(packed)]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+        var chunks = [], size = 0;
+        function pump() {
+          return reader.read().then(function (part) {
+            if (part.done) {
+              var all = new Uint8Array(size), at = 0;
+              chunks.forEach(function (c) { all.set(c, at); at += c.length; });
+              return new TextDecoder('utf-8', { fatal: true }).decode(all);
+            }
+            size += part.value.length;
+            if (size > MAX_INFLATED) { reader.cancel(); throw new Error('too large'); }
+            chunks.push(part.value);
+            return pump();
+          });
+        }
+        return pump();
+      }
+      function readPrompt() {
+        var hash = new URLSearchParams(location.hash.slice(1));
+        var packed = hash.get('z');
+        if (packed) return inflate(packed).then(function (text) { return { text: text, packed: packed }; });
+        return Promise.resolve({ text: hash.get('t') || new URLSearchParams(location.search).get('prompt') || '', packed: null });
+      }
+      function showBad(message) {
         $('title').textContent = S.bad;
-        $('sub').textContent = S.badSub;
+        $('sub').textContent = message;
         $('card').hidden = true;
         $('open').hidden = true;
         $('copy').hidden = true;
-        return;
       }
+      readPrompt().then(show, function (e) { showBad(e && e.message === 'unsupported' ? S.badBrowser : S.badSub); });
+
+      function show(found) {
+      var raw = found.text.replace(/\r\n/g, '\n');
+      var prompt = raw.replace(HIDDEN, '');
+      if (!prompt.trim() || Array.from(prompt).length > 8000) { showBad(S.badSub); return; }
       document.title = S.title + ' — Coffee CLI';
       $('kicker').textContent = S.kicker;
       $('title').textContent = S.title;
@@ -229,7 +270,8 @@
       var inApp = /MicroMessenger|QQ\/|aweme|Weibo|DingTalk|Lark|XiaoHongShu|xhsdiscover|BytedanceWebview/i.test(navigator.userAgent);
       if (inApp) $('hint').textContent = S.inapp;
 
-      var link = 'coffeecli://new?prompt=' + encodeURIComponent(prompt);
+      // The packed form keeps long prompts under Windows' 32K command-line limit; the desktop inflates it.
+      var link = found.packed ? 'coffeecli://new?z=' + found.packed : 'coffeecli://new?prompt=' + encodeURIComponent(prompt);
       $('open').addEventListener('click', function () {
         if (inApp) { $('hint').textContent = S.inapp; return; }
         var left = false;
@@ -257,6 +299,7 @@
         if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(prompt).then(done, fallback);
         else fallback();
       });
+      }
     })();
   </script>
 </body>
