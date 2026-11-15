@@ -1,7 +1,7 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v4.0.4 · 分享提示词
+### Coffee CLI v4.0.5 · 分享提示词
 
 - **分享提示词（全新）：** 输入框上方新增「保存到预输入 · 分享 · 清空」一组按钮，右侧预输入列表的每一条也能分享。分享会复制一条链接，朋友打开后可以查看、复制这段提示词，或一键在 Coffee CLI 中打开；打开后只会填进输入框，确认后由他自己发送。
 - **Claude 猜你下一句：** 在 Claude 对话里，输入框会再次用灰字提示你可能想说的下一句。
@@ -13,7 +13,7 @@
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v4.0.4 · Share Prompts
+### Coffee CLI v4.0.5 · Share Prompts
 
 - **Share prompts (new):** A Save to Pre-input · Share · Clear group now sits above the input box, and every line in the Pre-input list on the right can be shared too. Share copies a link: your friend can read the prompt, copy it, or open it in Coffee CLI with one click. Opening it only fills the input box; they send it when they're ready.
 - **Claude's next prompt:** In Claude conversations, the input box once again suggests in grey what you might say next.
@@ -25,7 +25,7 @@
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v4.0.4 · 分享提示詞
+### Coffee CLI v4.0.5 · 分享提示詞
 
 - **分享提示詞（全新）：** 輸入框上方新增「儲存到預輸入 · 分享 · 清空」一組按鈕，右側預輸入列表的每一則也能分享。分享會複製一個連結，朋友開啟後可以查看、複製這段提示詞，或一鍵在 Coffee CLI 中開啟；開啟後只會填進輸入框，確認後由他自己傳送。
 - **Claude 猜你下一句：** 在 Claude 對話裡，輸入框會再次用灰字提示你可能想說的下一句。
@@ -37,7 +37,7 @@
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v4.0.4 · プロンプトの共有
+### Coffee CLI v4.0.5 · プロンプトの共有
 
 - **プロンプトの共有（新機能）：** 入力欄の上に「事前入力に保存 · 共有 · クリア」のボタンが並び、右側の事前入力リストの各項目も共有できます。共有するとリンクがコピーされ、受け取った人はプロンプトを読んだりコピーしたり、ワンクリックで Coffee CLI で開いたりできます。開いても入力欄に入るだけで、送信は本人が確認してから行います。
 - **Claude の次の一言：** Claude の会話で、次に言いそうな一言が再び入力欄にグレーで表示されます。
@@ -49,7 +49,7 @@
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v4.0.4 · 프롬프트 공유
+### Coffee CLI v4.0.5 · 프롬프트 공유
 
 - **프롬프트 공유(신규):** 입력창 위에 "사전 입력에 저장 · 공유 · 지우기" 버튼 묶음이 생겼고, 오른쪽 사전 입력 목록의 각 항목도 공유할 수 있습니다. 공유하면 링크가 복사되며, 받은 사람은 프롬프트를 읽거나 복사하거나 클릭 한 번으로 Coffee CLI에서 열 수 있습니다. 열어도 입력창에 채워지기만 하고, 보내기는 본인이 확인한 뒤에 합니다.
 - **Claude의 다음 한마디:** Claude 대화에서 다음에 할 만한 말을 입력창에 다시 회색으로 보여 줍니다.
