@@ -10,7 +10,7 @@
 .app-close-remember { display:flex; align-items:center; gap:6px; margin-top:12px; color:var(--text-2); font-size:var(--type-caption); cursor:pointer; }
 .app-close-dialog[data-quiet-focus] :focus-visible { outline:none; }
 /* Our own box instead of the platform checkbox: theme colors, the shape setting's corners. */
-.app-close-remember input { appearance:none; -webkit-appearance:none; display:grid; place-items:center; flex:none; width:16px; height:16px; margin:0; border:1.5px solid var(--border-input, var(--border)); border-radius:max(3px, calc(var(--shape-radius-btn, 8px) - 4px)); background:transparent; cursor:pointer; transition:background 120ms, border-color 120ms; }
+.app-close-remember input { appearance:none; -webkit-appearance:none; display:grid; place-items:center; flex:none; width:16px; height:16px; margin:0; border:1.5px solid var(--border-input, var(--border)); border-radius:max(0px, calc(var(--shape-radius-btn, 8px) - 4px)); background:transparent; cursor:pointer; transition:background 120ms, border-color 120ms; }
 .app-close-remember input::after { content:''; width:9px; height:5px; margin-top:-2px; border:solid var(--bg-panel); border-width:0 0 2px 2px; transform:rotate(-45deg) scale(0); transition:transform 120ms; }
 .app-close-remember input:checked { border-color:var(--accent); background:var(--accent); }
 .app-close-remember input:checked::after { transform:rotate(-45deg) scale(1); }

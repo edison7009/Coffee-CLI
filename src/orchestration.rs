@@ -617,9 +617,9 @@ fn release_claim(state: &mut State, id: &str, delivery: Option<&str>) {
 pub(crate) fn worktree_paths() -> Vec<String> {
     hub().state.lock().map(|state| state.snapshot.tasks.iter().filter_map(|task| task.worktree.as_ref().map(|worktree| worktree.path.clone())).collect()).unwrap_or_default()
 }
-/// A tab driven by a coordinator rather than a person.
+/// A tab driven by a coordinator rather than a person. An unavailable hub counts as a person's tab.
 pub(crate) fn is_worker(id: &str) -> bool {
-    worker_session(&hub().state.lock().unwrap().snapshot, id)
+    hub().state.lock().map(|state| worker_session(&state.snapshot, id)).unwrap_or(false)
 }
 
 pub(crate) fn native_stop(id: &str, tool: &str, generation: &str) {

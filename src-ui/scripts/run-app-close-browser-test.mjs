@@ -91,6 +91,10 @@ try {
   const ticked = await toRgb(accent);
   await page.waitForFunction(c => getComputedStyle(document.querySelector('.app-close-remember input')).backgroundColor === c, ticked, { timeout: 2000 });
   await page.screenshot({ path: join(directory, 'app-close.png') });
+  // Corners follow the shape setting: square in the sharp shape.
+  await page.evaluate(() => document.documentElement.setAttribute('data-shape', 'sharp'));
+  assert.equal(await box2.evaluate(el => getComputedStyle(el).borderTopLeftRadius), '0px');
+  await page.evaluate(() => document.documentElement.removeAttribute('data-shape'));
   await box2.uncheck();
   await page.keyboard.press('Tab');
   assert.notEqual((await ring()).style, 'none', 'Tab brings the focus ring back');
