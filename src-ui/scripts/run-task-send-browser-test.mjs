@@ -143,6 +143,16 @@ try {
   assert.ok(parseInt(await glowAt()) > parseInt(leftGlow) + 100, `the glow follows the pointer (${leftGlow} -> ${await glowAt()})`);
   assert.deepEqual(await tabCard.locator('.task-note-quick button').evaluateAll(els => els.map(el => el.classList.contains('task-note-share') ? 'share' : el.classList.contains('task-note-delete') ? 'delete' : el.className)), ['share', 'delete'], 'share then trash are the hover icons');
   assert.equal(await tabCard.locator('.task-note-share').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'share is a plain icon like the trash');
+  // The text fades out before the first hover button, however many there are.
+  const fade = await tabCard.evaluate(card => {
+    const preview = card.querySelector('.task-note-preview').getBoundingClientRect();
+    const first = card.querySelector('.task-note-quick button').getBoundingClientRect();
+    const actions = parseFloat(getComputedStyle(card).getPropertyValue('--note-actions-w'));
+    return { clearAt: preview.right - actions + 8, firstButton: first.left, used: card.getBoundingClientRect().right - first.left, actions };
+  });
+  assert.ok(fade.used <= fade.actions, `the reserved width covers every hover button (${fade.used} > ${fade.actions})`);
+  assert.ok(fade.clearAt <= fade.firstButton, `the text is gone before the share button (${JSON.stringify(fade)})`);
+  await page.screenshot({ path: join(directory, 'note-hover.png') });
   const del = await tabCard.locator('.task-note-delete').boundingBox();
   assert.ok(del.x + del.width <= restCard.x + restCard.width, 'the trash sits at the right end');
   assert.equal(await tabCard.locator('.task-note-delete').evaluate(el => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)', 'a plain icon until aimed at');

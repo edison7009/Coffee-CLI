@@ -76,10 +76,14 @@
   -webkit-user-select: none;
 }
 .task-note-preview:focus-visible { outline: 1px solid var(--accent, #c4956a); outline-offset: 3px; border-radius: var(--radius-xs, 6px); }
+/* The hover buttons (share · delete: 2 × 28px, 6px from the edge) take 62px of the card;
+   the preview ends 12px short of it, so its text must be gone 50px before its own end,
+   with a short fade before that. Change --note-actions-w with the number of buttons. */
+.task-note-card { --note-actions-w: 62px; }
 .task-note-card:hover .task-note-preview,
 .task-note-card:focus-within .task-note-preview {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 52px), transparent calc(100% - 26px));
-  mask-image: linear-gradient(to right, #000 calc(100% - 52px), transparent calc(100% - 26px));
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--note-actions-w) - 22px), transparent calc(100% - var(--note-actions-w) + 8px));
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--note-actions-w) - 22px), transparent calc(100% - var(--note-actions-w) + 8px));
 }
 
 .task-note-quick {
