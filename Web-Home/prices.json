@@ -451,7 +451,7 @@
   },
   "gemini-2.5-flash-image": {
    "input": 0.3,
-   "output": 30,
+   "output": 2.5,
    "cache_read": 0.075
   },
   "gemini-2.5-flash-lite": {
@@ -487,11 +487,11 @@
   },
   "gemini-3-pro-image": {
    "input": 2,
-   "output": 120
+   "output": 12
   },
   "gemini-3.1-flash-image": {
    "input": 0.5,
-   "output": 60
+   "output": 3
   },
   "gemini-3.1-flash-lite": {
    "input": 0.25,
@@ -500,7 +500,7 @@
   },
   "gemini-3.1-flash-lite-image": {
    "input": 0.25,
-   "output": 30
+   "output": 1.5
   },
   "gemini-3.1-flash-lite-preview": {
    "input": 0.25,
@@ -602,6 +602,10 @@
    "input": 0.3,
    "output": 2.5,
    "cache_read": 0.03
+  },
+  "gemini-omni-flash-preview": {
+   "input": 1.5,
+   "output": 17.5
   },
   "gemini-pro-latest": {
    "input": 2,
@@ -1122,11 +1126,6 @@
   "gpt-image-1.5": {
    "input": 5,
    "output": 10,
-   "cache_read": 1.25
-  },
-  "gpt-image-2": {
-   "input": 5,
-   "output": 30,
    "cache_read": 1.25
   },
   "gpt-realtime-2.1": {
