@@ -592,7 +592,9 @@
 @media (prefers-reduced-motion: reduce) { .ctx-menu.sidebar-web-menu { animation: none; } }
 /* Opaque on every shape: the glass menu wash lets the session list show through and the rows become unreadable. */
 .ctx-menu.sidebar-web-menu, [data-shape] .ctx-menu.sidebar-web-menu { background-color: var(--bg-app) !important; background-image: none !important; border: 1px solid var(--border) !important; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 2px 6px rgba(0, 0, 0, .25), 0 12px 32px rgba(0, 0, 0, .35); }
-@keyframes sidebar-web-rise { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: none; } }
+/* Rise and fade only: macOS WebKit keeps text rasterized at an animated scale until the next repaint,
+   so a scale here left the labels small until the first hover redrew them. */
+@keyframes sidebar-web-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .sidebar-web-menu .ctx-menu-item:disabled { cursor: default; opacity: .5; }
 .sidebar-web-menu .ctx-menu-item:disabled:hover { background: transparent; color: var(--text-2); }
 .sidebar-web-error { padding: 6px 10px; color: var(--danger, #e5484d); font-size: var(--type-label); white-space: normal; }
