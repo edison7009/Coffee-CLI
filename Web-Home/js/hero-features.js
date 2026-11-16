@@ -21,12 +21,12 @@
     zh: {
       "hx-eyebrow": "免费开源 · Windows / macOS / Linux",
       "hx-title": L("让终端里的 AI Agent", "丝滑又<em>美得不可方物</em>"),
-      "hx-lead": "Claude Code、Codex、OpenCode、Pi 等这些 Agent，在 Coffee CLI 不仅是终端体验，也可以是完美的桌面端：全中文界面、拖拽分屏、多智能体编排、额度显示、多种配色和形态组合上百种个性界面、开发者改动 / 对比 / PR、ToDo 式预输入…"
+      "hx-lead": "Claude Code、Codex、OpenCode、Pi 等这些 Agent，在 Coffee CLI 不仅是终端体验，也可以是完美的桌面端：全中文界面、拖拽分屏、多智能体编排、额度显示、多种配色和风格组合上百种个性界面、开发者改动 / 对比 / PR、ToDo 式预输入…"
     },
     "zh-TW": {
       "hx-eyebrow": "免費開源 · Windows / macOS / Linux",
       "hx-title": L("讓終端機裡的 AI Agent", "絲滑又<em>美得不可方物</em>"),
-      "hx-lead": "Claude Code、Codex、OpenCode、Pi 等這些 Agent，在 Coffee CLI 不只是終端機體驗，也可以是完美的桌面端：全繁體中文介面、拖曳分割、多智能體編排、額度顯示、多種配色和形態組合上百種個性介面、開發者改動 / 對比 / PR、ToDo 式預輸入…"
+      "hx-lead": "Claude Code、Codex、OpenCode、Pi 等這些 Agent，在 Coffee CLI 不只是終端機體驗，也可以是完美的桌面端：全繁體中文介面、拖曳分割、多智能體編排、額度顯示、多種配色和風格組合上百種個性介面、開發者改動 / 對比 / PR、ToDo 式預輸入…"
     },
     ja: {
       "hx-eyebrow": "無料・オープンソース · Windows / macOS / Linux",
@@ -94,7 +94,7 @@
       split: ["拖拽分屏，最多四个会话同屏", "把侧栏里的会话直接拖到中间，就能左右或上下分屏。两个、三个、四个会话一起看，谁在干活一眼就知道。"],
       agents: ["一个主管，带一群帮手", "Claude Code 把大任务拆成几块，交给 DeepSeek Harness 等帮手同时去做。侧栏实时显示每个帮手的进度，做完自动打勾。"],
       usage: ["额度和余额，随时看得到", "输入框旁边直接显示当前工具还剩多少：Claude、Codex 的 5 小时和每周额度，DeepSeek 等服务商的账户余额，不用再去网页上查。"],
-      themes: ["配色 × 形态，上百种个性界面", "12 种配色，白天、夜晚或跟随系统，再配上多种界面形态，组合出上百种样子。在设置里点一下，立刻生效。"],
+      themes: ["配色 × 风格，上百种个性界面", "12 种配色，白天、夜晚或跟随系统，再配上多种界面风格，组合出上百种样子。在设置里点一下，立刻生效。"],
       modes: ["桌面模式，或者终端模式", "Claude Code、Codex、OpenCode、Pi 在启动卡片上一键切换：喜欢聊天窗口就用桌面模式，习惯命令行就回到原生终端。"],
       changes: ["改了什么，一目了然", "右侧面板列出 AI 改过的每个文件，点开逐行对比：绿色是新增，红色是删除。侧栏还会用颜色标出每个会话的 PR 状态。"],
       tasks: ["ToDo 式预输入，一键发给 AI", "想到要做的事，先写进右侧的任务列表，等 AI 忙完，点一下就发过去。常用的提示词也能提前存好。"]
@@ -103,7 +103,7 @@
       split: ["拖曳分割，最多四個會話同畫面", "把側欄裡的會話直接拖到中間，就能左右或上下分割。兩個、三個、四個會話一起看，誰在工作一眼就知道。"],
       agents: ["一個主管，帶一群幫手", "Claude Code 把大任務拆成幾塊，交給 DeepSeek Harness 等幫手同時去做。側欄即時顯示每個幫手的進度，完成自動打勾。"],
       usage: ["額度和餘額，隨時看得到", "輸入框旁邊直接顯示目前工具還剩多少：Claude、Codex 的 5 小時與每週額度，DeepSeek 等服務商的帳戶餘額，不用再上網頁查。"],
-      themes: ["配色 × 形態，上百種個性介面", "12 種配色，白天、夜晚或跟隨系統，再搭配多種介面形態，組合出上百種樣子。在設定裡點一下，立即生效。"],
+      themes: ["配色 × 風格，上百種個性介面", "12 種配色，白天、夜晚或跟隨系統，再搭配多種介面風格，組合出上百種樣子。在設定裡點一下，立即生效。"],
       modes: ["桌面模式，或是終端機模式", "Claude Code、Codex、OpenCode、Pi 在啟動卡片上一鍵切換：喜歡聊天視窗就用桌面模式，習慣命令列就回到原生終端機。"],
       changes: ["改了什麼，一目了然", "右側面板列出 AI 改過的每個檔案，點開逐行比對：綠色是新增，紅色是刪除。側欄還會用顏色標出每個會話的 PR 狀態。"],
       tasks: ["ToDo 式預輸入，一鍵送給 AI", "想到要做的事，先寫進右側的任務清單，等 AI 忙完，點一下就送過去。常用的提示詞也能預先存好。"]
@@ -281,8 +281,8 @@
   // One short label per clip.
   const LABELS = {
     en: { split: "Split view", agents: "Multi-agent", usage: "Usage", themes: "Themes", modes: "Desktop mode", changes: "Diffs & PRs", tasks: "To-dos" },
-    zh: { split: "拖拽分屏", agents: "多智能体编排", usage: "额度显示", themes: "配色与形态", modes: "桌面或终端", changes: "改动对比", tasks: "ToDo 预输入" },
-    "zh-TW": { split: "拖曳分割", agents: "多智能體編排", usage: "額度顯示", themes: "配色與形態", modes: "桌面或終端機", changes: "改動對比", tasks: "ToDo 預輸入" },
+    zh: { split: "拖拽分屏", agents: "多智能体编排", usage: "额度显示", themes: "配色与风格", modes: "桌面或终端", changes: "改动对比", tasks: "ToDo 预输入" },
+    "zh-TW": { split: "拖曳分割", agents: "多智能體編排", usage: "額度顯示", themes: "配色與風格", modes: "桌面或終端機", changes: "改動對比", tasks: "ToDo 預輸入" },
     ja: { split: "画面分割", agents: "マルチエージェント", usage: "利用枠", themes: "テーマ", modes: "デスクトップ", changes: "差分と PR", tasks: "ToDo" },
     ko: { split: "화면 분할", agents: "멀티 에이전트", usage: "사용량", themes: "테마", modes: "데스크톱 모드", changes: "변경 비교", tasks: "할 일" },
     es: { split: "Pantalla dividida", agents: "Multiagente", usage: "Uso", themes: "Temas", modes: "Modo escritorio", changes: "Cambios y PR", tasks: "Tareas" },
