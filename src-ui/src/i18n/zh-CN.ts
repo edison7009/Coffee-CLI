@@ -456,7 +456,7 @@ export const zhCN = {
 
   // Theme Menu
   'theme.section.color': '配色',
-  'theme.section.shape': '形态',
+  'theme.section.shape': '风格',
   'theme.shape.soft': '柔和',
   'theme.shape.slab': '石板',
   'theme.shape.sharp': '锐角',
@@ -471,7 +471,7 @@ export const zhCN = {
   // 主题风格（在“配色”右侧切换白天/夜晚/跟随系统）
   'theme.mode.light': '明亮',
   'theme.mode.dark': '夜晚',
-  'theme.mode.system': '跟随主题',
+  'theme.mode.system': '跟随系统',
   'theme.color.light': '雾灰',
   'theme.color.dark': '拿铁',
   'theme.color.sakura': '樱花',

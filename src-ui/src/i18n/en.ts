@@ -458,7 +458,7 @@ export const en = {
 
   // Theme Menu
   'theme.section.color': 'Colors',
-  'theme.section.shape': 'Shape',
+  'theme.section.shape': 'Style',
   'theme.shape.soft': 'Soft',
   'theme.shape.slab': 'Slab',
   'theme.shape.sharp': 'Sharp',

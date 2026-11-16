@@ -456,7 +456,7 @@ export const zhTW = {
 
   // Theme Menu
   'theme.section.color': '配色',
-  'theme.section.shape': '形態',
+  'theme.section.shape': '風格',
   'theme.shape.soft': '柔和',
   'theme.shape.slab': '石板',
   'theme.shape.sharp': '銳角',
@@ -471,7 +471,7 @@ export const zhTW = {
   // 主題風格（在「配色」右側切換明亮/夜晚/跟隨系統）
   'theme.mode.light': '明亮',
   'theme.mode.dark': '夜晚',
-  'theme.mode.system': '跟隨主題',
+  'theme.mode.system': '跟隨系統',
   'theme.color.light': '霧灰',
   'theme.color.dark': '拿鐵',
   'theme.color.sakura': '櫻花',

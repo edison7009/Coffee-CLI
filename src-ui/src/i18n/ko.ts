@@ -455,7 +455,7 @@ export const ko = {
 
   // Theme Menu
   'theme.section.color': '색상',
-  'theme.section.shape': '형태',
+  'theme.section.shape': '스타일',
   'theme.shape.soft': '부드러움',
   'theme.shape.slab': '석판',
   'theme.shape.sharp': '각진 모서리',

@@ -455,7 +455,7 @@ export const de = {
 
   // Theme Menu
   'theme.section.color': 'Farben',
-  'theme.section.shape': 'Form',
+  'theme.section.shape': 'Stil',
   'theme.shape.soft': 'Weich',
   'theme.shape.slab': 'Platte',
   'theme.shape.sharp': 'Kantig',

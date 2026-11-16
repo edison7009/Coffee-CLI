@@ -455,7 +455,7 @@ export const pt = {
 
   // Theme Menu
   'theme.section.color': 'Cores',
-  'theme.section.shape': 'Forma',
+  'theme.section.shape': 'Estilo',
   'theme.shape.soft': 'Suave',
   'theme.shape.slab': 'Placa',
   'theme.shape.sharp': 'Angular',

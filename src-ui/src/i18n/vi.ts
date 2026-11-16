@@ -457,7 +457,7 @@ export const vi = {
 
   // Theme Menu
   'theme.section.color': 'Màu sắc',
-  'theme.section.shape': 'Hình dạng',
+  'theme.section.shape': 'Phong cách',
   'theme.shape.soft': 'Mềm mại',
   'theme.shape.slab': 'Phiến đá',
   'theme.shape.sharp': 'Góc cạnh',

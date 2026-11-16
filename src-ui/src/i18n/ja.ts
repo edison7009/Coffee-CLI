@@ -455,7 +455,7 @@ export const ja = {
 
   // Theme Menu
   'theme.section.color': 'カラー',
-  'theme.section.shape': 'シェイプ',
+  'theme.section.shape': 'スタイル',
   'theme.shape.soft': 'ソフト',
   'theme.shape.slab': 'スラブ',
   'theme.shape.sharp': 'シャープ',

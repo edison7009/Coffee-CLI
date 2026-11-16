@@ -455,7 +455,7 @@ export const ru = {
 
   // Theme Menu
   'theme.section.color': 'Цвета',
-  'theme.section.shape': 'Форма',
+  'theme.section.shape': 'Стиль',
   'theme.shape.soft': 'Мягкие углы',
   'theme.shape.slab': 'Плита',
   'theme.shape.sharp': 'Острые углы',
