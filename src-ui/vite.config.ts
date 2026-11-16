@@ -50,16 +50,45 @@ function patchXtermWebglAtlasPlugin(): Plugin {
   };
 }
 
+// A window that controls another computer runs this app's own UI against that computer's data
+// (src/remote_window.rs, src/remote/bridge.ts). Its Tauri IPC object is locked, so the remote bridge
+// cannot take its place; instead every read of it — in @tauri-apps/* and in our own code — goes
+// through `globalThis.__COFFEE_TAURI__` first, which only the bridge sets. Elsewhere it is undefined
+// and the reads behave exactly as before.
+export const TAURI_GLOBALS: Record<string, string> = {
+  'window.__TAURI_INTERNALS__': '(globalThis.__COFFEE_TAURI__ ?? window.__TAURI_INTERNALS__)',
+  'window.__TAURI_EVENT_PLUGIN_INTERNALS__': '(globalThis.__COFFEE_TAURI_EVENTS__ ?? window.__TAURI_EVENT_PLUGIN_INTERNALS__)',
+};
+export function routeTauriGlobals(code: string): string {
+  let out = code;
+  for (const [from, to] of Object.entries(TAURI_GLOBALS)) out = out.split(from).join(to);
+  return out;
+}
+function routeTauriGlobalsPlugin(): Plugin {
+  return {
+    name: 'coffee-cli:route-tauri-globals',
+    enforce: 'pre',
+    transform(code, id) {
+      // The bridge itself reads and sets the real objects; everything else is routed.
+      if (id.includes('/src/remote/bridge.ts') || id.includes('@tauri-apps/api/mocks')) return null;
+      if (!id.includes('@tauri-apps/') && !id.includes('/src-ui/src/')) return null;
+      if (!code.includes('__TAURI_INTERNALS__') && !code.includes('__TAURI_EVENT_PLUGIN_INTERNALS__')) return null;
+      return { code: routeTauriGlobals(code), map: null };
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), patchXtermWebglBgFlags(), patchXtermWebglAtlasPlugin()],
+  plugins: [routeTauriGlobalsPlugin(), react(), patchXtermWebglBgFlags(), patchXtermWebglAtlasPlugin()],
   // The patch plugin above runs as a Vite transform — but Vite's dev
   // server pre-bundles node_modules with esbuild *before* plugin
   // transforms run, so the addon would ship un-patched in `tauri dev`.
   // Excluding it forces Vite to load it as raw ESM and apply our
   // transform on every dev import. Build mode is unaffected.
+  // @tauri-apps/* likewise, so routeTauriGlobalsPlugin reaches them in dev.
   optimizeDeps: {
-    exclude: ['@xterm/addon-webgl'],
+    exclude: ['@xterm/addon-webgl', '@tauri-apps/api', '@tauri-apps/plugin-clipboard-manager', '@tauri-apps/plugin-dialog'],
   },
   // Tauri dev server
   server: {

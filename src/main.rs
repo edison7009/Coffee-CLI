@@ -28,6 +28,8 @@ mod mobile_rpc;
 mod folder_picker;
 mod worker_worktree;
 mod notify_sound;
+mod remote_link;
+mod remote_window;
 mod tools;
 mod update_sources;
 mod usage_stats;

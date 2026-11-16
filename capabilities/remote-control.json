@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "remote-control",
+  "description": "Windows controlling another computer (src/remote_window.rs) show that computer's data, so they get only what runs on this computer: its events, app version and clipboard text. Everything else goes to the other computer.",
+  "windows": [
+    "remote-*"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:app:allow-version",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text"
+  ]
+}

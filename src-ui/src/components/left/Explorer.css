@@ -566,6 +566,25 @@
 .sidebar-web-device-kind { flex-shrink: 0; color: var(--text-3); }
 .sidebar-web-device-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sidebar-web-chevron { flex-shrink: 0; width: 14px; height: 14px; margin-left: -2px; opacity: .6; }
+/* Device menu sections: a quiet heading, then rows that name a computer with a close/forget button. */
+.sidebar-web-section { padding: 6px 10px 2px; color: var(--text-3); font-size: var(--type-caption); font-weight: 500; letter-spacing: .02em; }
+.sidebar-web-remote { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.sidebar-web-remote-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.sidebar-web-remote-name span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-web-remote-name i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); opacity: .5; }
+.sidebar-web-remote-name[data-live] i { background: #4caf7a; opacity: 1; }
+.sidebar-web-remote-x { display: grid; place-items: center; flex-shrink: 0; width: 26px; height: 26px; margin-right: 4px; padding: 0; border: 0; border-radius: var(--shape-radius-btn, 6px); color: var(--text-3); background: transparent; cursor: pointer; }
+.sidebar-web-remote-x:hover { color: var(--text-1); background: var(--bg-hover); }
+.sidebar-web-remote-x:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.sidebar-web-remote-x svg { width: 13px; height: 13px; }
+/* Paste-an-address dialog for controlling another computer. */
+.remote-control-dialog { padding: 0; width: min(440px, calc(100vw - 32px)); }
+.remote-control-dialog::backdrop { background: #0008; backdrop-filter: blur(4px); }
+.remote-control-hint { margin: 0 0 12px; color: var(--text-2); font-size: var(--type-label); line-height: 1.6; }
+.remote-control-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border-input, var(--border)); border-radius: var(--shape-radius-btn, 8px); background: var(--bg-input, transparent); color: var(--text-1); font: var(--type-body) var(--font-mono, ui-monospace, monospace); outline: none; }
+.remote-control-input:focus { border-color: var(--border-focus, var(--accent)); }
+.remote-control-error { margin: 8px 0 0; color: var(--error, #d66); font-size: var(--type-label); }
+.remote-control-dialog .tool-config-buttons { padding: 16px 0 0; }
 /* As wide as its longest row in each language. */
 .ctx-menu.sidebar-web-menu { width: max-content; min-width: 168px; max-width: min(320px, calc(100vw - 16px)); transform-origin: bottom left; animation: sidebar-web-rise .16s cubic-bezier(.2, .8, .2, 1); }
 @media (prefers-reduced-motion: reduce) { .ctx-menu.sidebar-web-menu { animation: none; } }

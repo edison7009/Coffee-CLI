@@ -41,7 +41,8 @@ const DENIED: [&str; 26] = [
     // The desktop's launch queue and orchestration hub.
     "take_pending_launch", "orchestration_sync", "orchestration_pending", "orchestration_resolve",
 ];
-const DENIED_PREFIXES: [&str; 3] = ["mobile_rpc_", "voice_", "plugin:"];
+// `remote_`: windows here that control other computers, and their connections, are this desktop's own.
+const DENIED_PREFIXES: [&str; 4] = ["mobile_rpc_", "voice_", "plugin:", "remote_"];
 
 const TOOLS: [&str; 5] = ["claude", "codex", "opencode", "pi", "dsh"];
 

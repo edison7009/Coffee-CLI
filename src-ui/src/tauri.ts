@@ -27,7 +27,8 @@ export interface CliUpdateStatus { tool: string; current: string | null; latest:
 // Resolve the invoke function across Tauri v1 / v2
 function resolveInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
   const w = window as unknown as Record<string, unknown>;
-  const internals = w.__TAURI_INTERNALS__ as Record<string, unknown> | undefined;
+  // A window that controls another computer routes through the remote bridge (see vite.config.ts TAURI_GLOBALS).
+  const internals = (w.__COFFEE_TAURI__ ?? w.__TAURI_INTERNALS__) as Record<string, unknown> | undefined;
   if (internals && typeof internals.invoke === 'function') return internals.invoke as never;
   const tauri = w.__TAURI__ as Record<string, unknown> | undefined;
   if (tauri) {
@@ -202,6 +203,11 @@ export const commands = {
   orchestrationPending: (requestId: string) => invoke<boolean>('orchestration_pending', { requestId }),
   orchestrationResolve: (requestId: string, result: unknown) => invoke<void>('orchestration_resolve', { requestId, result }),
   mobileRpcStatus: () => invoke<MobileRpcStatus>('mobile_rpc_status'),
+  // Windows that control other computers (src/remote_window.rs).
+  remoteWindowOpen: (address: string, prefix: string) => invoke<import('./lib/remote-control').RemoteWindow>('remote_window_open', { address, prefix }),
+  remoteWindowList: () => invoke<import('./lib/remote-control').RemoteWindow[]>('remote_window_list'),
+  remoteWindowFocus: (label: string) => invoke<void>('remote_window_focus', { label }),
+  remoteWindowClose: (label: string) => invoke<void>('remote_window_close', { label }),
   mobileRpcSetEnabled: (enabled: boolean) => invoke<MobileRpcStatus>('mobile_rpc_set_enabled', { enabled }),
   mobileRpcBeginPairing: () => invoke<MobileRpcPairing>('mobile_rpc_begin_pairing'),
   mobileRpcCancelPairing: () => invoke<void>('mobile_rpc_cancel_pairing'),

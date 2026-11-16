@@ -14,6 +14,8 @@ const PER_SCREEN = new Set([
   // Caches each side fills on its own.
   'cc-history-cache-v1', 'cc-heatmap-year-cache', 'cc-usage-snapshots-v1', 'cc-project-git-status-v1', 'cc-release-notes',
   'cc-release-notes-seen', 'cc-tool-skills-v1', 'cc-bg-init', 'cc-cli-updates-v1',
+  // The computers this one controls are its own business, not its remote devices'.
+  'cc-remote-recent',
   // Remote-terminal profiles may hold passwords.
   'coffee_remote_cfg',
 ]);

@@ -1,7 +1,7 @@
 // main.tsx — Entry point
 
 // Must stay the first import: in remote mode it provides the Tauri bridge before `isTauri` is read.
-import { REMOTE } from './remote/bridge';
+import { CONTROL, prepareControl, REMOTE } from './remote/bridge';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { AppProvider } from './store/app-state';
@@ -36,11 +36,16 @@ shareDesktopStorage();
 // show_main_window fires below, so the ~10ms wait is invisible.
 const uiScaleReady = REMOTE ? Promise.resolve() : initializeUiScale();
 if (REMOTE) {
-  // The desktop UI on a phone or another browser: its own shell, none of the window plumbing below.
+  // The desktop UI away from its computer (a phone, a browser, or a window here controlling another
+  // computer): its own shell, none of the window plumbing below.
   document.documentElement.classList.add('is-remote');
-  void import('./remote/RemoteApp').then(({ RemoteApp }) => ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode><AppProvider><RemoteApp /></AppProvider></React.StrictMode>
-  ));
+  if (CONTROL) document.documentElement.classList.add('is-control');
+  // A control window first takes back the key it saved for its computer and the link it was opened with.
+  void prepareControl().catch(error => console.error('[control window]', error))
+    .then(() => import('./remote/RemoteApp'))
+    .then(({ RemoteApp }) => ReactDOM.createRoot(document.getElementById('root')!).render(
+      <React.StrictMode><AppProvider><RemoteApp /></AppProvider></React.StrictMode>
+    ));
 } else void Promise.all([loadToolInfo(), uiScaleReady]).finally(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

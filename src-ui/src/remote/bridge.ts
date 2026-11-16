@@ -1,15 +1,31 @@
-// Remote mode (`?remote`): the desktop UI running on a phone or another browser.
+// Remote mode (`?remote`): the desktop UI running somewhere other than its own computer —
+// a phone or another browser, or a Coffee CLI window controlling another computer.
 //
-// The UI talks to its backend only through `window.__TAURI_INTERNALS__`. Here
-// that object is provided by an encrypted connection to the paired desktop:
-// commands go to `ui.invoke` (the desktop decides what is allowed and runs it)
-// and desktop events arrive as `tauri.event`. Sessions this page starts are its
-// own; the desktop's tabs stay the desktop's.
+// The UI talks to its backend only through Tauri's IPC object. Here that object is provided by an
+// encrypted connection to the paired desktop: commands go to `ui.invoke` (the desktop decides what
+// is allowed and runs it) and desktop events arrive as `tauri.event`. Sessions this page starts
+// are its own; the desktop's tabs stay the desktop's.
 //
 // This module must be imported before anything that reads `isTauri`.
-import { CoffeeClient, RpcError, fromHex, toHex, generateKeyPair, type Desktop, type PairingLink, type RpcEvent } from './protocol';
+import { CoffeeClient, RpcError, fromHex, toHex, generateKeyPair, type Desktop, type Hello, type PairingLink, type RpcEvent } from './protocol';
 
-export const REMOTE = typeof window !== 'undefined' && !window.__TAURI_INTERNALS__ && /[?&]remote(?:[=&]|$)/.test(window.location?.search ?? '');
+const SEARCH = typeof window !== 'undefined' ? window.location?.search ?? '' : '';
+const REMOTE_PAGE = /[?&]remote(?:[=&]|$)/.test(SEARCH);
+
+/**
+ * A Coffee CLI window controlling another computer (src/remote_window.rs): this app's own UI on
+ * that computer's data, nothing loaded from it. Tauri's IPC object here is locked, so the bridge
+ * cannot replace it; vite.config.ts routes every read of it through `__COFFEE_TAURI__` instead.
+ */
+export const CONTROL = REMOTE_PAGE && /[?&]control(?:[=&]|$)/.test(SEARCH) && !!window.__TAURI_INTERNALS__;
+export const REMOTE = REMOTE_PAGE && (CONTROL || !window.__TAURI_INTERNALS__);
+
+type LocalIpc = { invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown>; transformCallback(callback: (payload: unknown) => void, once?: boolean): number };
+/** This computer's own IPC, for what stays local in a control window: clipboard, links, the relayed connection, saved keys. */
+const LOCAL = CONTROL ? (window.__TAURI_INTERNALS__ as unknown as LocalIpc) : null;
+function local<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T> {
+  return LOCAL ? (LOCAL.invoke(cmd, args) as Promise<T>) : Promise.reject(new Error('not a control window'));
+}
 
 /**
  * A page opened as http://<computer's LAN address> is not a secure context, so
@@ -35,7 +51,32 @@ export function loadRemotePairing(): RemotePairing | null {
 }
 function saveRemotePairing(pairing: RemotePairing | null) {
   try { if (pairing) localStorage.setItem(STORAGE_KEY, JSON.stringify(pairing)); else localStorage.removeItem(STORAGE_KEY); } catch { /* private mode */ }
+  // A control window's storage is private and ends with it; the key is kept by this computer.
+  if (CONTROL) void local('remote_pairing_save', { pairing }).catch(error => console.error('[remote pairing]', error));
 }
+
+let controlLink: string | null = null;
+/**
+ * Before a control window's UI starts: the pairing link it was opened with, or else the saved key
+ * for its computer. A pasted link means pairing again (the window reloads for it), so it wins over
+ * a saved key; that key is replaced once the new pairing succeeds.
+ */
+export async function prepareControl(): Promise<void> {
+  if (!CONTROL) return;
+  const info = await local<{ pairing: RemotePairing | null; pairLink: string | null }>('remote_control_info');
+  controlLink = info.pairLink;
+  try {
+    if (controlLink) localStorage.removeItem(STORAGE_KEY);
+    else if (info.pairing) localStorage.setItem(STORAGE_KEY, JSON.stringify(info.pairing));
+  } catch { /* private mode */ }
+}
+export function controlPairLink() { return controlLink; }
+/** Names the control window after its computer once connected. */
+export function setControlName(name: string) {
+  if (CONTROL && name) void local('remote_window_set_name', { name }).catch(() => {});
+}
+/** This computer's own app version, to compare with the controlled one's. */
+export function localVersion(): Promise<string> { return local<string>('plugin:app|version'); }
 
 type Callback = (payload: unknown) => void;
 const callbacks = new Map<number, Callback>();
@@ -46,7 +87,8 @@ let waiters: (() => void)[] = [];
 const statusListeners = new Set<(status: RemoteStatus) => void>();
 const eventListeners = new Set<(event: RpcEvent) => void>();
 
-export type RemoteStatus = 'unpaired' | 'connecting' | 'connected' | 'offline' | 'revoked';
+/** `unsupported`: the computer's Coffee CLI predates running the desktop UI remotely (before v4.0.2). */
+export type RemoteStatus = 'unpaired' | 'connecting' | 'connected' | 'offline' | 'revoked' | 'unsupported';
 let status: RemoteStatus = 'unpaired';
 function setStatus(next: RemoteStatus) { status = next; for (const listener of statusListeners) listener(next); }
 export function remoteStatus() { return status; }
@@ -74,8 +116,8 @@ async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<
     }
     case 'plugin:event|unlisten': listeners.get(String(args.event))?.delete(Number(args.eventId)); return null;
     case 'plugin:event|emit': case 'plugin:event|emit_to': dispatch(String(args.event), args.payload); return null;
-    // Links open on the phone itself.
-    case 'open_url': window.open(String(args.url), '_blank', 'noopener'); return null;
+    // Links open on this device: the phone's browser, or this computer's for a control window.
+    case 'open_url': if (CONTROL) return local('open_url', args); window.open(String(args.url), '_blank', 'noopener'); return null;
     // The file tree's folder is watched on the computer by a watcher of this browser's own.
     case 'start_fs_watcher': return (await connected()).request('ui.watch', { path: String(args.path ?? '') });
     case 'stop_fs_watcher': return (await connected()).request('ui.watch', { path: null });
@@ -85,6 +127,8 @@ async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<
       return uploadBase64(`pasted-${Date.now()}.${ext}`, String(args.dataBase64 ?? ''));
     }
   }
+  // A control window copies and pastes with this computer's clipboard.
+  if (CONTROL && cmd.startsWith('plugin:clipboard-manager|')) return local(cmd, args);
   if (cmd.startsWith('plugin:')) throw new Error(`${cmd} is not available on a phone`);
   const c = await connected();
   return c.request('ui.invoke', { cmd, args });
@@ -105,16 +149,80 @@ export function installRemoteBridge() {
     metadata: { currentWindow: { label: 'main' }, currentWebview: { windowLabel: 'main', label: 'main' } },
     plugins: { path: { sep: '/', delimiter: ':' } },
   };
-  Object.assign(window, {
-    __TAURI_INTERNALS__: internals,
-    __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener: (event: string, id: number) => { listeners.get(event)?.delete(id); } },
-  });
+  const events = { unregisterListener: (event: string, id: number) => { listeners.get(event)?.delete(id); } };
+  // Every read of Tauri's objects looks here first (vite.config.ts TAURI_GLOBALS).
+  Object.assign(globalThis, { __COFFEE_TAURI__: internals, __COFFEE_TAURI_EVENTS__: events });
+  // In a browser there is nothing to collide with; a control window's own objects are locked and stay as they are.
+  if (!CONTROL) Object.assign(window, { __TAURI_INTERNALS__: internals, __TAURI_EVENT_PLUGIN_INTERNALS__: events });
 }
+
+// ─── A control window's connection, made by this computer (src/remote_link.rs) ───
+// The page cannot open sockets to the LAN itself everywhere (WebView security rules); this
+// computer opens it and passes the encrypted frames through unchanged.
+
+type LinkEvent = { id: string; kind: 'open' | 'message' | 'close'; data?: string };
+const relays = new Map<string, RelaySocket>();
+let linkEvents: Promise<unknown> | null = null;
+function listenLinks() {
+  linkEvents ??= local('plugin:event|listen', {
+    event: 'remote-link', target: { kind: 'Any' },
+    handler: LOCAL!.transformCallback(event => {
+      const { id, kind, data } = (event as { payload: LinkEvent }).payload;
+      const socket = relays.get(id);
+      if (!socket) return;
+      if (kind === 'open') socket.onopen?.();
+      else if (kind === 'message' && data !== undefined) socket.onmessage?.({ data: base64ToBuffer(data) });
+      else if (kind === 'close') socket.finish();
+    }),
+  });
+  return linkEvents;
+}
+function base64ToBuffer(text: string): ArrayBuffer {
+  const binary = atob(text), bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+class RelaySocket {
+  binaryType = 'arraybuffer';
+  onmessage: ((e: { data: unknown }) => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onopen: (() => void) | null = null;
+  private readonly id = crypto.randomUUID();
+  private closed = false;
+  constructor(url: string) {
+    relays.set(this.id, this);
+    // Closed before the listener was ready: never dial, or the link would stay open with nobody on it.
+    void listenLinks().then(() => this.closed ? undefined : local('remote_link_open', { id: this.id, url })).catch(() => this.fail());
+  }
+  send(data: Uint8Array) {
+    if (!this.closed) void local('remote_link_send', { id: this.id, data: bytesToBase64(data) }).catch(() => this.fail());
+  }
+  close() {
+    if (this.closed) return;
+    this.closed = true; relays.delete(this.id);
+    void local('remote_link_close', { id: this.id }).catch(() => {});
+  }
+  private fail() { if (!this.closed) this.onerror?.(); this.finish(); }
+  finish() {
+    if (this.closed) return;
+    this.closed = true; relays.delete(this.id);
+    this.onclose?.();
+  }
+}
+const createSocket = CONTROL ? (url: string) => new RelaySocket(url) : undefined;
 
 const BACKOFF = [1000, 2000, 5000, 10_000];
 let attempt = 0, retry: ReturnType<typeof setTimeout> | undefined;
 
+let hello: Hello | null = null;
+/** What the connected computer said about itself (version, capabilities). */
+export function remoteHello() { return hello; }
+
 function attach(next: CoffeeClient, pairing: RemotePairing) {
+  hello = next.hello;
+  // Before v4.0.2 a computer could not run the desktop UI remotely; say so instead of waiting forever.
+  if (!next.hello.capabilities?.includes('ui')) { next.close(); setStatus('unsupported'); return; }
   client = next; attempt = 0;
   const ready = waiters; waiters = [];
   next.onEvent(event => {
@@ -140,7 +248,7 @@ export async function connectRemote(pairing = loadRemotePairing()): Promise<void
   if (!pairing) { setStatus('unpaired'); return; }
   setStatus('connecting');
   try {
-    const next = await CoffeeClient.connect({ desktop: pairing.desktop, keys: { privateKey: fromHex(pairing.privateKey), publicKey: fromHex(pairing.publicKey) }, deviceName: pairing.deviceName, platform: 'web', appVersion: 'remote', timeoutMs: 15_000 });
+    const next = await CoffeeClient.connect({ desktop: pairing.desktop, keys: { privateKey: fromHex(pairing.privateKey), publicKey: fromHex(pairing.publicKey) }, deviceName: pairing.deviceName, platform: 'web', appVersion: 'remote', timeoutMs: 15_000, createSocket });
     attach(next, pairing);
   } catch (error) {
     if (error instanceof RpcError && error.code === 'unauthorized') { setStatus('revoked'); return; }
@@ -156,7 +264,7 @@ export async function pairRemote(link: PairingLink, deviceName: string): Promise
   const desktop = { hosts: link.hosts, port: link.port, publicKey: link.publicKey };
   setStatus('connecting');
   try {
-    const next = await CoffeeClient.connect({ desktop, keys, pairingCode: link.code, deviceName, platform: 'web', appVersion: 'remote' });
+    const next = await CoffeeClient.connect({ desktop, keys, pairingCode: link.code, deviceName, platform: 'web', appVersion: 'remote', createSocket });
     const pairing: RemotePairing = { desktop, computerName: next.hello.computerName, deviceName, privateKey: toHex(keys.privateKey), publicKey: toHex(keys.publicKey) };
     saveRemotePairing(pairing);
     attach(next, pairing);

@@ -18,7 +18,8 @@ async function prepare(recent, statuses = {}, realViews = false) {
     return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;` });
   });
   await page.route(/\/src\/lib\/folder-picker\.ts/,route=>route.fulfill({contentType:'text/javascript',body:'export async function pickFolder(){window.pickCount=(window.pickCount??0)+1;return window.pickedFolder??null} export async function pickFiles(){return null} export function useFolderPickerRequest(){return null} export const crumbs=()=>[], parentOf=()=>null, normalizeTypedPath=p=>p, isHiddenFolder=()=>false;'}));
-  await page.route(/@tauri-apps_api_event/, route => route.fulfill({ contentType: 'text/javascript', body: 'export async function listen(){return ()=>{}} export async function emit(){}' }));
+  // @tauri-apps/* is served unbundled (vite.config.ts routes its Tauri globals), so match its own path too.
+  await page.route(/@tauri-apps_api_event|\/@tauri-apps\/api\/event\.js/, route => route.fulfill({ contentType: 'text/javascript', body: 'export async function listen(){return ()=>{}} export async function emit(){}' }));
   await page.route(/\/src\/tauri\.ts(?:\?|$)/, async route => {
     const response = await route.fetch(), source = await response.text();
     const body = source.replace('async function invoke(cmd, args) {', `async function invoke(cmd, args) {

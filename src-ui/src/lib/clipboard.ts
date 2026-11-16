@@ -12,14 +12,15 @@
 
 import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { commands } from '../tauri';
-import { REMOTE } from '../remote/bridge';
+import { CONTROL, REMOTE } from '../remote/bridge';
 
 /** Write text to the system clipboard. Silently swallows failures
  *  because clipboard writes are always best-effort UX glue — we never
  *  want a rejected promise to break the caller. */
 export function clipboardWrite(text: string): Promise<void> {
   // Web 端: the desktop's clipboard is not this device's; use the browser's own.
-  if (REMOTE) return webClipboardWrite(text);
+  // A window here controlling another computer still has this computer's clipboard plugin (routed by the bridge).
+  if (REMOTE && !CONTROL) return webClipboardWrite(text);
   return writeText(text).catch(() => {});
 }
 
@@ -28,7 +29,7 @@ export function clipboardWrite(text: string): Promise<void> {
  *  do a simple `if (text)` check without try/catch boilerplate. */
 export function clipboardRead(): Promise<string> {
   // Reading needs a secure context; over http://<LAN address> there is no way to read.
-  if (REMOTE) return navigator.clipboard?.readText().catch(() => '') ?? Promise.resolve('');
+  if (REMOTE && !CONTROL) return navigator.clipboard?.readText().catch(() => '') ?? Promise.resolve('');
   return readText().then(t => t ?? '').catch(() => '');
 }
 

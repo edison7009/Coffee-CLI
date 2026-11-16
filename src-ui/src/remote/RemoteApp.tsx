@@ -1,17 +1,19 @@
 // Web 端 shell: pair once, then the full desktop UI, connected to the desktop.
-import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '../styles/global.css';
 import './RemoteApp.css';
 import { loadToolInfo } from '../lib/tool-info';
 import { followDesktopStorage } from '../lib/storage-mirror';
-import { connectRemote, forgetRemote, installWebFileDrop, onRemoteStatus, pairRemote, remoteComputerName, remoteStatus, takePairingLinkFromAddress } from './bridge';
+import { connectRemote, CONTROL, controlPairLink, forgetRemote, loadRemotePairing, installWebFileDrop, localVersion, onRemoteStatus, pairRemote, remoteComputerName, remoteHello, remoteStatus, setControlName, takePairingLinkFromAddress } from './bridge';
+import { showToast } from '../lib/toast';
+import { olderThan } from '../lib/remote-control';
 import { routeFileDrop } from '../lib/file-drop';
 import { parsePairingLink, RpcError } from './protocol';
 
 const App = lazy(() => import('../App').then(m => ({ default: m.App })));
 const useStatus = () => useSyncExternalStore(onRemoteStatus, remoteStatus);
 // Read before anything renders, so the link leaves the address bar at once.
-const linkFromAddress = takePairingLinkFromAddress();
+const linkFromAddress = takePairingLinkFromAddress() ?? controlPairLink();
 // Files dropped from this device are uploaded, then reach the same drop targets (composer, terminal) as desktop drops.
 installWebFileDrop(routeFileDrop);
 
@@ -27,7 +29,26 @@ export function RemoteApp() {
     void Promise.all([loadToolInfo().catch(() => {}), storage]).finally(() => setReady(true));
   }, [status, ready]);
 
-  if (status === 'unpaired') return <RemotePair initialLink={linkFromAddress ?? ''} />;
+  // A Coffee CLI window controlling this computer: named after it, and told when it runs an older version
+  // (this window's UI is newer, so some of its features may not be there).
+  // The name comes from the computer each time it connects, so a renamed computer shows its new name;
+  // the version notice is shown once per window, not on every reconnect.
+  const warned = useRef(false);
+  useEffect(() => {
+    if (!CONTROL || status !== 'connected') return;
+    const name = remoteHello()?.computerName || remoteComputerName();
+    setControlName(name);
+    if (warned.current) return;
+    warned.current = true;
+    const theirs = remoteHello()?.desktopVersion ?? '';
+    void localVersion().then(ours => {
+      if (theirs && olderThan(theirs, ours)) showToast(`${name || '对方电脑'} 是 v${theirs}，比本机旧，部分新功能可能用不了，建议升级。`, 8000);
+    }).catch(() => {});
+  }, [status]);
+
+  // Pairing keeps its form up while it waits, so a refusal or an unreachable computer is explained there.
+  if (status === 'unpaired' || (status === 'connecting' && !loadRemotePairing())) return <RemotePair initialLink={linkFromAddress ?? ''} />;
+  if (status === 'unsupported') return <div className="remote-pair remote-pair-status"><p>{remoteHello()?.computerName || '对方电脑'} 上的 Coffee CLI 版本太旧（{remoteHello()?.desktopVersion ? `v${remoteHello()?.desktopVersion}` : '未知版本'}），不支持被操控。请把它升级到 v4.0.2 或更新的版本。</p></div>;
   if (!ready) return <div className="remote-pair remote-pair-status"><p>{status === 'revoked' ? '这台设备已在电脑上被移除。' : '正在连接电脑…'}</p>{status === 'revoked' && <button type="button" onClick={forgetRemote}>重新配对</button>}</div>;
   return <>
     {/* Covers the whole page, so it never sits on the title bar; the desktop UI comes back once connected. */}
@@ -44,7 +65,7 @@ export function RemoteApp() {
 
 function RemotePair({ initialLink }: { initialLink: string }) {
   const [link, setLink] = useState(initialLink);
-  const [name, setName] = useState(() => /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.platform) ? 'Mac 浏览器' : '浏览器');
+  const [name, setName] = useState(() => CONTROL ? 'Coffee CLI 客户端' : /iPad/.test(navigator.userAgent) ? 'iPad' : /iPhone/.test(navigator.userAgent) ? 'iPhone' : /Android/.test(navigator.userAgent) ? 'Android' : /Mac/.test(navigator.platform) ? 'Mac 浏览器' : '浏览器');
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState('');
   const submit = async () => {

@@ -1780,6 +1780,16 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         })
         .invoke_handler(tauri::generate_handler![
             crate::app_close::app_close_ack,
+            crate::remote_window::remote_window_open,
+            crate::remote_window::remote_window_list,
+            crate::remote_window::remote_window_focus,
+            crate::remote_window::remote_window_close,
+            crate::remote_window::remote_control_info,
+            crate::remote_window::remote_pairing_save,
+            crate::remote_window::remote_window_set_name,
+            crate::remote_link::remote_link_open,
+            crate::remote_link::remote_link_send,
+            crate::remote_link::remote_link_close,
             crate::app_close::app_quit,
             crate::app_close::app_keep_running,
             crate::app_close::app_tray_menu,
