@@ -1934,6 +1934,34 @@ html.is-macos .titlebar-left-slot .brand span {
 .titlebar-left-slot.is-collapsed {
     width: 0;
 }
+/* A short hairline between the brand and the tabs, on the same x as the column
+   seam below, floating clear of the bar's top and bottom (Panel: none, below). */
+.titlebar-left-slot {
+    position: relative;
+}
+.titlebar-left-slot::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 1px;
+    height: 16px;
+    transform: translateY(-50%);
+    background: var(--border);
+    pointer-events: none;
+}
+/* macOS un-zooms the titlebar (see above), so match the seam below, which is
+   drawn at 1px × --ui-scale in the zoomed panels. */
+html.is-macos .titlebar-left-slot::after {
+    width: calc(1px * var(--ui-scale));
+}
+.titlebar-left-slot.is-collapsed::after {
+    display: none;
+}
+/* Panel frames the columns with full borders and needs no extra mark here. */
+[data-shape="panel"] .titlebar-left-slot::after {
+    display: none;
+}
 /* macOS EDGE CASE: when the left panel is hidden this slot would collapse to 0
    and the tabs would slide under the native traffic lights (top-left). Keep a
    fixed inset so the tabs stay pushed right of them. The lights start at
@@ -2202,6 +2230,32 @@ body.resizing-panels .pane-resizer {
     width: 0;
     min-width: 0;
 }
+
+/* Hairline seams between the three columns, as desktop chat apps draw them.
+   Every shape but Panel, which frames the center with its own borders
+   (.main-content). Drawn as an overlay on the panel's inner edge so it takes no
+   width, sits above content that paints its own background, and is clipped
+   away with the panel when it slides shut (overflow: hidden, width 0). */
+/* Compact drawers keep their own absolute positioning. */
+:root:not([data-shape="panel"]) .app-layout:not(.is-compact) > .panel-left,
+:root:not([data-shape="panel"]) .app-layout:not(.is-compact) > .panel-right {
+    position: relative;
+}
+/* Only the layout's own columns: Explorer's root also carries .panel-left, and a
+   second seam on top of the first doubled its strength. */
+:root:not([data-shape="panel"]) .app-layout > .panel-left::after,
+:root:not([data-shape="panel"]) .app-layout > .panel-right::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    z-index: 11;
+    background: var(--border);
+    pointer-events: none;
+}
+:root:not([data-shape="panel"]) .app-layout > .panel-left::after { right: 0; }
+:root:not([data-shape="panel"]) .app-layout > .panel-right::after { left: 0; }
 
 /* Explorer panel-content: overflow hidden so welcome state flex-center works */
 .explorer-content {
