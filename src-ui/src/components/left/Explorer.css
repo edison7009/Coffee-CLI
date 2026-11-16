@@ -513,14 +513,16 @@
 .update-ring {
   display: block;
 }
-/* Themed state tip above the button (no native title tooltips). */
+/* Themed state tip above the button (no native title tooltips). The button sits
+   near the sidebar's right edge, which clips anything past it, so the tip ends at
+   the button's right and grows leftward into the sidebar. */
 .update-check-btn[data-tip]:hover::after,
 .update-check-btn[data-tip]:focus-visible::after {
   content: attr(data-tip);
   position: absolute;
   z-index: 100;
   bottom: calc(100% + 8px);
-  left: 0;
+  right: 0;
   width: max-content;
   max-width: min(240px, 70vw);
   padding: 6px 10px;

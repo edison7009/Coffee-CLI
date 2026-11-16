@@ -12,7 +12,7 @@ await server.listen();
 const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core');
 const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_CHROMIUM_EXECUTABLE ? { executablePath: process.env.COFFEE_CHROMIUM_EXECUTABLE } : {}) });
 
-async function open({ connected }) {
+async function open({ connected, manifest = false }) {
   const page = await browser.newPage({ viewport: { width: 1300, height: 820 } });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -20,8 +20,12 @@ async function open({ connected }) {
     const name = route.request().url().match(/\/([A-Za-z]+)\.tsx/)[1];
     return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;` });
   });
+  // Release manifests answer with a newer version only when asked; otherwise no update shows.
+  await page.route(/manifest\.json|version\.json/, route => manifest
+    ? route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: '9.9.9' }) })
+    : route.fulfill({ status: 404, body: '' }));
   await page.addInitScript(connected => {
-    for (const [k, v] of Object.entries({ 'cc-lang': 'zh-CN', 'cc-theme': 'dark', 'cc-mode': 'dark', 'cc-shape': 'soft', 'cc-tasks-seeded': '1' })) localStorage.setItem(k, v);
+    for (const [k, v] of Object.entries({ 'cc-lang': 'zh-CN', 'cc-theme': 'dark', 'cc-mode': 'dark', 'cc-shape': 'soft', 'cc-tasks-seeded': '1', 'cc-release-notes-seen': '4.0.0' })) localStorage.setItem(k, v);
     window.calls = []; window.listeners = {}; window.remotes = [];
     let callback = 0; const callbacks = {};
     const status = { enabled: connected, port: 47321, publicKey: 'p', host: null, hosts: [], clients: 0, protocol: 0,
@@ -42,6 +46,7 @@ async function open({ connected }) {
         }
         if (name === 'remote_window_close') { window.remotes = []; window.emit('remote-windows-changed', []); return null; }
         if (name === 'check_tools_installed') return {};
+        if (name === 'plugin:app|version') return '4.0.0';
         if (name.startsWith('orchestration_')) return { enabled: false, agents: [], coordinators: [], tasks: [], revision: 0 };
         return null;
       },
@@ -122,6 +127,27 @@ try {
     assert.deepEqual(errors, []);
     await page.close();
     console.log('OK devices connected to this computer keep their own section');
+  }
+
+  // The update download sits near the sidebar's right edge, which clips what passes it: its tip
+  // grows leftward into the sidebar instead (it used to run under the center column).
+  {
+    const { page: withUpdate, errors } = await open({ connected: false, manifest: true });
+    const update = withUpdate.locator('.update-check-btn.update-available');
+    await update.waitFor({ timeout: 60_000 });
+    await update.hover();
+    const { tip, panel } = await update.evaluate(button => {
+      const box = button.getBoundingClientRect(), after = getComputedStyle(button, '::after');
+      const right = box.right - parseFloat(after.right), width = parseFloat(after.width);
+      const sidebar = button.closest('.panel-left').getBoundingClientRect();
+      return { tip: { left: right - width, right, text: after.content }, panel: { left: sidebar.left, right: sidebar.right } };
+    });
+    assert.equal(tip.text, '"下载更新 v9.9.9"');
+    assert.ok(tip.right <= panel.right && tip.left >= panel.left, `the tip stays inside the sidebar: ${JSON.stringify({ tip, panel })}`);
+    await withUpdate.screenshot({ path: join(directory, 'update-tip.png'), clip: { x: panel.left, y: 700, width: panel.right - panel.left + 80, height: 120 } });
+    assert.deepEqual(errors, []);
+    await withUpdate.close();
+    console.log(`OK the update tip stays inside the sidebar (screenshot: ${join(directory, 'update-tip.png')})`);
   }
 } finally {
   await browser.close();
