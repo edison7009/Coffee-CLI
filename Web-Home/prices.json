@@ -585,6 +585,11 @@
    "output": 7.5,
    "cache_read": 0.075
   },
+  "gemini-4-neon": {
+   "input": 3,
+   "output": 15,
+   "cache_read": 0.15
+  },
   "gemini-embedding-001": {
    "input": 0.15,
    "output": 0
@@ -1099,6 +1104,36 @@
      "output": 7.5,
      "cache_read": 0.1,
      "cache_write": 2.5
+    }
+   ]
+  },
+  "gpt-6.2-astra": {
+   "input": 8,
+   "output": 40,
+   "cache_read": 0.4,
+   "cache_write": 10,
+   "tiers": [
+    {
+     "size": 272000,
+     "input": 16,
+     "output": 60,
+     "cache_read": 0.8,
+     "cache_write": 20
+    }
+   ]
+  },
+  "gpt-6.2-sol": {
+   "input": 2,
+   "output": 10,
+   "cache_read": 0.1,
+   "cache_write": 2.5,
+   "tiers": [
+    {
+     "size": 272000,
+     "input": 4,
+     "output": 15,
+     "cache_read": 0.2,
+     "cache_write": 5
     }
    ]
   },
