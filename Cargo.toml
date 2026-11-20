@@ -24,7 +24,10 @@ tempfile = "3"
 portable-pty = "0.9"
 # Local Agent and message-channel tasks run on Tauri's async runtime.
 tokio = { version = "1", features = ["rt", "sync", "time", "macros", "process", "net"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "system-proxy", "http2", "stream", "multipart"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "query", "rustls-no-provider", "system-proxy", "http2", "stream", "multipart"] }
+# reqwest's own "rustls" feature would pull aws-lc-rs (a C/cmake build on every
+# release platform); keep the ring provider that tokio-tungstenite already uses.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 uuid = { version = "1", features = ["v4"] }
 
 # Regex (used by terminal.rs for ANSI strip)
@@ -128,9 +131,8 @@ tauri-plugin-global-shortcut = "2"
 # duplicate. Multi-window users still get there via the existing tab-detach
 # path (same process, no IME conflict).
 tauri-plugin-single-instance = "2"
-# Remembers the main window's size and position. Pinned: 2.4.1+ needs Tauri 2.12, which
-# would pull a WebView (wry/tao) upgrade along with it.
-tauri-plugin-window-state = "=2.4.0"
+# Remembers the main window's size and position.
+tauri-plugin-window-state = "2"
 
 # Win32 bindings:
 #   - DWM: force square window corners on Windows 11 (otherwise rounds
@@ -170,7 +172,7 @@ windows = { version = "0.58", features = [
 # transparent WebView2 window). Windows: Acrylic + DWMWCP_ROUND. macOS:
 # NSVisualEffectView vibrancy. Both driven by set_frosted_backdrop.
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
-window-vibrancy = "0.6"
+window-vibrancy = "0.8"
 # Closing the main window can keep Coffee CLI running in the notification area (Windows) or the menu bar (macOS); see src/app_close.rs.
 tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "tray-icon"] }
 
@@ -194,4 +196,6 @@ wayland-scanner = "0.31"
 x11-dl = "2.21"
 
 [dev-dependencies]
+# Installs the same ring TLS provider as main() before any unit test builds a reqwest Client.
+ctor = "1"
 axum = { version = "0.8", features = ["ws", "http2"] }

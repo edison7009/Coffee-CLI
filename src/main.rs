@@ -46,7 +46,17 @@ mod windows_path;
 
 use anyhow::Result;
 
+/// Unit tests never run main(), so give the test binary the same TLS provider at load time.
+#[cfg(test)]
+#[ctor::ctor(unsafe)]
+fn install_test_tls_provider() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
 fn main() -> Result<()> {
+    // reqwest is built with "rustls-no-provider": pin the process-wide TLS
+    // backend to ring before any HTTPS or WSS client is created.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     // These helpers run inside a visible Coffee Terminal, before single-instance GUI routing.
     let helper_args: Vec<String> = std::env::args().collect();
     if matches!(helper_args.get(1).map(String::as_str), Some("__team_mcp" | "__team_worker")) {
