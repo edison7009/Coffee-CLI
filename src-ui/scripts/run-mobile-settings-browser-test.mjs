@@ -26,11 +26,13 @@ window.mount();
     : `
 window.calls=[];window.listeners={};
 window.mobile={enabled:false,port:47391,publicKey:'ab'.repeat(32),devices:[],connected:[],host:'192.168.1.8',hosts:['192.168.1.8','10.0.0.2'],clients:0,protocol:0};
-window.firewall='blocked';
+window.firewall='blocked';window.aiControl=false;
 const copy=()=>JSON.parse(JSON.stringify(window.mobile));
 export const isTauri=true;
 export const commands={
   async mobileRpcStatus(){return copy()},
+  async windowControlEnabled(){return window.aiControl},
+  async windowControlSetEnabled(enabled){window.calls.push(['ai',enabled]);window.aiControl=enabled},
   async mobileRpcSetEnabled(enabled){window.calls.push(['enable',enabled]);window.mobile.enabled=enabled;return copy()},
   async mobileRpcBeginPairing(){window.calls.push(['pair']);if(!window.mobile.enabled)throw Error('Enable mobile access first');return {uri:'coffeecli://pair?v=0&host=192.168.1.8&port=47391&pk='+window.mobile.publicKey+'&code=c0ffee',host:'192.168.1.8',port:47391,publicKey:window.mobile.publicKey,code:'c0ffee',remoteHost:window.pairRemote??null,expiresAt:Date.now()+300000}},
   async mobileRpcCancelPairing(){window.calls.push(['cancel'])},
@@ -144,9 +146,22 @@ try {
   await page.getByText('没有检测到网络连接，请连上 Wi-Fi 或网线后再配对。').waitFor();
   assert.equal(await pair.isDisabled(), true);
 
+  // Letting this computer's AI operate remote windows is its own switch, off until turned on.
+  const ai = page.getByRole('switch', { name: '允许本机 AI 操作远程电脑窗口', exact: true });
+  assert.equal(await ai.getAttribute('aria-checked'), 'false');
+  const aiCalls = await page.evaluate(() => window.calls.length);
+  await ai.click();
+  await page.waitForFunction(() => window.aiControl === true);
+  await page.waitForFunction(() => document.querySelector('[aria-label="允许本机 AI 操作远程电脑窗口"]')?.getAttribute('aria-checked') === 'true');
+  assert.deepEqual(await page.evaluate(n => window.calls.slice(n), aiCalls), [['ai', true]]);
+  await ai.click();
+  await page.waitForFunction(() => window.aiControl === false);
+
   // Leaving the page withdraws any pairing code.
   const before = await page.evaluate(() => window.calls.length);
   await page.evaluate(() => window.unmount());
+  // root.render(null) unmounts on React's next render, not within this call.
+  await page.waitForFunction(n => window.calls.length > n, before);
   assert.deepEqual(await page.evaluate(n => window.calls.slice(n), before), [['cancel']]);
 
   assert.deepEqual(errors, []);
