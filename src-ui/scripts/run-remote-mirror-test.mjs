@@ -1,7 +1,7 @@
 // Browser mirror of the desktop's terminals: the tab strip follows the desktop's list.
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -16,7 +16,7 @@ const compiled = await build({
 const out = `${root}node_modules/.cache/remote-mirror-test.mjs`;
 await mkdir(`${root}node_modules/.cache`, { recursive: true });
 await writeFile(out, compiled.outputFiles[0].text);
-const { reducer, diffState, applyPatch, isMirroredKey } = await import(out);
+const { reducer, diffState, applyPatch, isMirroredKey } = await import(pathToFileURL(out).href);
 
 const tab = (id, extra = {}) => ({ id, tool: 'claude', cwd: '/p', title: id, claudeMode: (extra.tool ?? 'claude') === 'claude' ? 'conversation' : undefined, ...extra });
 let state = { terminals: [{ id: 'blank', tool: null, folderPath: null }], tabOrder: ['blank'], activeTerminalId: 'blank' };
