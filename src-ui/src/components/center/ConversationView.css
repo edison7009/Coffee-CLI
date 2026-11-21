@@ -191,3 +191,10 @@ body.gambit-docked .conversation-navigation {
 @media (prefers-reduced-motion: reduce) {
   .conversation-navigation-item > span { transition: none; }
 }
+.conversation-working-detail {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--text-3);
+}

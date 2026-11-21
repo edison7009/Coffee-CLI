@@ -27,13 +27,14 @@ import { ScrollLatestIcon } from './ScrollLatestIcon';
 
 
 /** Pi's working status: its logo with the three colors moving clockwise, the label and the time. */
-function Running({ label, startedAt }: { label: string; startedAt?: number }) {
+function Running({ label, startedAt, tool }: { label: string; startedAt?: number; tool?: string }) {
   const t = useT();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
   return <div className="pi-running" role="status">
     <PiMark />
     <span>{label}</span>
+    {tool && <span className="conversation-working-detail" title={tool}>{tool}</span>}
     {startedAt && <span className="pi-running-elapsed">{formatElapsed(now - startedAt, t)}</span>}
   </div>;
 }
@@ -181,7 +182,8 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
         </MeasuredRow>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <Dialog key={request.id} sessionId={sessionId} request={request} />)}
-        {s.ready && s.busy && !s.requests.length && <Running label={label} startedAt={s.startedAt} />}
+        {s.ready && s.busy && !s.requests.length && <Running label={label} startedAt={s.startedAt}
+          tool={s.status === 'working' ? s.messages.findLast(message => message.toolStatus === 'running')?.toolName : undefined} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {noModel && <div className="claude-session-error" role="alert">{t('pi.no_model')}</div>}

@@ -48,7 +48,7 @@ await build({
       const recorded=${recorded};const session=recorded.events.find(e=>e.data.sessionID).data.sessionID;
       window.calls=[];
       window.emit=event=>{const start=window.calls.find(c=>c.name==='opencode_session_start');window.listener({payload:{id:'a',generation:start.generation,event:{...event,data:{sessionID:session,...event.data}}}})};
-      window.replay=async(until)=>{for(const event of recorded.events){if(until&&event.type===until)return;window.emit(event);await new Promise(r=>setTimeout(r,5))}};
+      window.replay=async(until,from)=>{for(const event of recorded.events.slice(from?recorded.events.findIndex(e=>e.type===from):0)){if(until&&event.type===until)return;window.emit(event);await new Promise(r=>setTimeout(r,5))}};
       export const isTauri=false,commands=new Proxy({},{get:(_,name)=>async()=>name==='computerName'?'TEST-DESKTOP':undefined});
       export async function invoke(name,args){window.calls.push({name,...args});
         if(name==='opencode_session_start')return {session:{id:session,title:'',agent:'build',model:{id:'deepseek-flash',providerID:'echobird'},tokens:{input:0,output:0,reasoning:0,cache:{read:0,write:0}}},
@@ -137,8 +137,16 @@ try {
   await input.fill('');
 
   // A full recorded turn: prompt, tool, reply, completion.
+  await page.evaluate(()=>window.stopAt='session.tool.success');
   await input.fill('Read readme.txt');
   await page.keyboard.press('Enter');
+  const running = page.locator('.opencode-working');
+  await running.getByText(/read.*readme\.txt/).waitFor();
+  assert.equal(await running.locator('.opencode-activity-mark rect').count(),12);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await running.locator('.opencode-activity-mark rect').first().evaluate(rect=>getComputedStyle(rect).animationName),'none');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(()=>{window.stopAt=undefined;return window.replay(undefined,'session.tool.success')});
   await page.waitForFunction(() => document.querySelector('.claude-row--completed'));
   const rows = await page.locator('.claude-row').evaluateAll(rows => rows.map(row => row.className.match(/claude-row--(\w+)/)[1]));
   assert.deepEqual(rows, ['user', 'tool', 'assistant', 'completed']);

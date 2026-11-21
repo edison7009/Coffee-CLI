@@ -189,7 +189,64 @@ try {
   assert.equal(await input.inputValue(),'');
   assert.equal(await page.locator('.host:visible .conversation-navigation').count(),0,'one user turn does not need navigation');
   const turnId=await page.evaluate(()=>window.turn);
+  const liveStatus=page.locator('.host:visible .codex-live-status');
+  assert.equal(await liveStatus.locator('.codex-live-label').textContent(),'Thinking');
+  assert.equal(await liveStatus.locator('.codex-live-icon').count(),0);
+  await page.evaluate(()=>{
+    const decode=HTMLImageElement.prototype.decode;
+    const gate=new Promise(resolve=>{window.releaseActivityDecode=()=>{
+      HTMLImageElement.prototype.decode=decode;
+      resolve();
+    }});
+    HTMLImageElement.prototype.decode=function(){return gate.then(()=>decode.call(this))};
+  });
   await emit('item/started',{turnId,item:{id:'exec',type:'commandExecution',command:'echo Coffee',status:'inProgress',aggregatedOutput:''}});
+  await liveStatus.getByText('echo Coffee',{exact:true}).waitFor();
+  assert.equal(await liveStatus.locator('.codex-live-label').textContent(),'Running');
+  assert.deepEqual(await liveStatus.locator('.codex-live-activity').evaluate(row=>{
+    const style=getComputedStyle(row);
+    return [style.fontSize,style.lineHeight,style.columnGap,row.getBoundingClientRect().height];
+  }),['13px','21px','8px',21]);
+  assert.ok(await liveStatus.locator('.codex-live-sweep').evaluate(sweep=>{
+    const animation=sweep.getAnimations()[0];
+    if(!animation || animation.effect.getTiming().duration!==4000) return false;
+    animation.pause();
+    const positions=[100,800,1200,3900].map(time=>{
+      animation.currentTime=time;
+      return getComputedStyle(sweep).transform;
+    });
+    animation.play();
+    return positions[0]!==positions[1] && positions[2]===positions[3];
+  }),'text sweeps for one second and rests until the next four-second cycle');
+  assert.equal(await liveStatus.locator('.codex-live-activity .codex-activity-mark').getAttribute('data-kind'),'command');
+  const commandSprite=liveStatus.locator('.codex-live-sprite[data-kind="command"]');
+  assert.equal(await liveStatus.locator('.codex-live-icon').getAttribute('data-animating'),null);
+  assert.equal(await commandSprite.evaluate(sprite=>getComputedStyle(sprite).opacity),'0');
+  await page.evaluate(()=>window.releaseActivityDecode());
+  await liveStatus.locator('.codex-live-icon[data-animating]').waitFor();
+  assert.equal(await commandSprite.evaluate(sprite=>getComputedStyle(sprite,'::before').animationDuration),'1.66667s');
+  assert.ok(await commandSprite.evaluate(sprite=>{
+    const frames=sprite.getAnimations({subtree:true}).find(animation=>animation.animationName==='codex-command-frames');
+    if(!frames) return false;
+    frames.pause();
+    frames.currentTime=0;
+    const first=getComputedStyle(sprite,'::before').transform;
+    frames.currentTime=700;
+    const later=getComputedStyle(sprite,'::before').transform;
+    frames.play();
+    return first!==later && getComputedStyle(sprite,'::before').maskImage!=='none';
+  }),'running command advances the original sprite within the same tool call');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await commandSprite.evaluate(sprite=>getComputedStyle(sprite,'::before').animationName),'none');
+  assert.equal(await liveStatus.locator('.codex-live-sweep').evaluate(sweep=>getComputedStyle(sweep).display),'none');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(()=>window.setActive('b'));
+  const backgroundStatus=page.locator('.codex-conversation .codex-live-status').first();
+  await page.waitForFunction(()=>document.querySelector('.codex-live-status')?.hasAttribute('data-motion-hidden'));
+  assert.equal(await backgroundStatus.locator('.codex-live-sweep').count(),0);
+  assert.equal(await backgroundStatus.locator('.codex-live-sprite').evaluate(sprite=>getComputedStyle(sprite,'::before').animationPlayState),'paused');
+  await page.evaluate(()=>window.setActive('a'));
+  await page.waitForFunction(()=>document.querySelector('.codex-live-sweep')!==null);
   const group=page.locator('.host:visible .codex-group-heading');await group.click();
   const heading=page.locator('.host:visible .codex-tool-heading .claude-tool-heading');await heading.click();
   await emit('item/commandExecution/outputDelta',{turnId,itemId:'exec',delta:'Coffee output'});
@@ -198,16 +255,113 @@ try {
   await page.locator('.codex-tool-heading .conversation-copy').click();
   assert.ok((await page.evaluate(()=>window.copiedText)).includes('Coffee output'));
   assert.equal(await page.getByRole('button',{name:'Select Codex model',exact:true}).isDisabled(),true);
+  await emit('item/completed',{turnId,item:{id:'exec',type:'commandExecution',command:'echo Coffee',status:'completed',aggregatedOutput:'Coffee output'}});
+  await liveStatus.locator('.codex-live-activity').getByText('Ran',{exact:true}).waitFor();
+  assert.equal(await liveStatus.locator('.codex-live-detail').textContent(),'echo Coffee');
+  assert.equal(await commandSprite.evaluate(sprite=>getComputedStyle(sprite,'::before').animationPlayState),'paused');
+  assert.equal(await commandSprite.evaluate(sprite=>getComputedStyle(sprite).transitionDuration),'0.15s');
+  await page.waitForFunction(()=>{
+    const sprite=document.querySelector('.codex-live-activity .codex-live-sprite[data-kind="command"]');
+    return sprite && getComputedStyle(sprite).opacity==='0';
+  });
+  const freezeIconExit=await page.addStyleTag({content:'.codex-live-outgoing,.codex-live-icon-exit {animation-play-state:paused !important}'});
+  await emit('item/started',{turnId,item:{id:'reasoning-next',type:'reasoning',summary:[]}});
+  await liveStatus.locator('.codex-live-label').filter({hasText:/^Thinking$/}).waitFor();
+  assert.equal(await liveStatus.locator('.codex-live-text-slot').evaluate(slot=>getComputedStyle(slot).animationName),'codex-sprite-in',
+    'mid-turn thinking uses a fade and skips the horizontal reveal');
+  assert.equal(await liveStatus.locator('.codex-live-sweep').evaluate(sweep=>getComputedStyle(sweep).animationDelay),'0.6s');
+  const exitSlot=liveStatus.locator('.codex-live-icon-exit');
+  assert.equal(await exitSlot.evaluate(slot=>getComputedStyle(slot).animationDirection),'reverse');
+  await freezeIconExit.evaluate(style=>style.remove());
+  await exitSlot.waitFor({state:'detached'});
   await input.fill('Keep this draft');
   await emit('item/commandExecution/requestApproval',{turnId,itemId:'exec',command:'echo approved'},7);
+  await liveStatus.getByText('Waiting for your input',{exact:false}).waitFor();
+  assert.equal(await liveStatus.locator('.codex-live-detail').count(),0);
+  assert.equal(await liveStatus.locator('.codex-live-activity .codex-activity-mark').getAttribute('data-paused'),'true');
   await page.locator('.codex-request').waitFor();
   assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.name==='codex_session_respond').length),0);
   await page.getByRole('button',{name:'Decline',exact:true}).click();
   assert.equal(await page.evaluate(()=>window.calls.find(c=>c.name==='codex_session_respond').requestId),7);
+  const freezeHandoff=await page.addStyleTag({content:'.codex-live-outgoing {animation-play-state:paused !important}'});
+  await emit('item/started',{turnId,item:{id:'search',type:'commandExecution',command:'rg Coffee src',commandActions:[{type:'search',query:'Coffee',path:'D:/Test/src/'}],status:'inProgress'}});
+  await liveStatus.getByText('Searching files in',{exact:true}).waitFor();
+  const outgoing=liveStatus.locator('.codex-live-outgoing');
+  assert.equal(await outgoing.getAttribute('aria-hidden'),'true');
+  assert.equal(await outgoing.evaluate(row=>getComputedStyle(row).animationDuration),'0.2s');
+  await freezeHandoff.evaluate(style=>style.remove());
+  await outgoing.waitFor({state:'detached'});
+  assert.equal(await liveStatus.locator('.codex-live-detail').textContent(),'src');
+  assert.equal(await liveStatus.locator('.codex-live-activity .codex-activity-mark').getAttribute('data-kind'),'search');
+  await emit('item/started',{turnId,item:{id:'read-next',type:'commandExecution',command:'cat README.md',commandActions:[{type:'read',name:'README.md'}],status:'inProgress'}});
+  await emit('item/started',{turnId,item:{id:'exec-next',type:'commandExecution',command:'echo latest',status:'inProgress'}});
+  await page.evaluate(turnId=>{
+    for(let i=0;i<40;i++) window.emit('a','item/commandExecution/outputDelta',{turnId,itemId:'exec-next',delta:'tick\n'});
+  },turnId);
+  await liveStatus.locator('.codex-live-activity').getByText('echo latest',{exact:true}).waitFor();
+  assert.ok(await liveStatus.locator('.codex-live-text-slot').evaluate(slot=>{
+    const animation=getComputedStyle(slot);
+    return animation.animationName.includes('codex-label-reveal') && animation.animationDuration.startsWith('1s');
+  }),'a change between tool activities reveals its label with a one-second sweep');
+  assert.ok((await liveStatus.locator('.codex-live-outgoing').allTextContents()).every(text=>!text.includes('README.md')),
+    'the next cadence boundary samples the latest tool activity');
+  await commandSprite.evaluate(sprite=>sprite.dataset.phaseProbe='preserve');
+  await emit('item/started',{turnId,item:{id:'same-kind',type:'commandExecution',command:'echo next command',status:'inProgress'}});
+  await liveStatus.locator('.codex-live-activity').getByText('echo next command',{exact:true}).waitFor();
+  assert.equal(await commandSprite.getAttribute('data-phase-probe'),'preserve','changing commands preserves the running icon node');
+  await emit('item/started',{turnId,item:{id:'web-search',type:'webSearch',query:'Coffee CLI'}});
+  await emit('item/completed',{turnId,item:{id:'same-kind',type:'commandExecution',command:'echo next command',status:'completed'}});
+  await liveStatus.locator('.codex-live-icon:not([data-animating]) .codex-live-sprite[data-kind="command"]').waitFor({state:'attached'});
+  assert.equal(await liveStatus.locator('.codex-live-detail').textContent(),'echo next command',
+    'the previous label waits for the next cadence boundary');
+  assert.equal(await commandSprite.evaluate(sprite=>getComputedStyle(sprite,'::before').animationPlayState),'paused',
+    'the completed icon stops even while its label is retained');
+  const webActivity=liveStatus.locator('.codex-live-activity');
+  await webActivity.getByText('Searching the web',{exact:true}).waitFor();
+  assert.equal(await webActivity.locator('.codex-live-detail').textContent(),'Coffee CLI');
+  assert.equal(await webActivity.locator('.codex-activity-mark').getAttribute('data-kind'),'webSearch');
+  assert.equal(await webActivity.locator('.codex-live-sprite').count(),0,'native web search uses a static icon');
+  const webIconBounds=await webActivity.locator('.codex-activity-mark').evaluate(icon=>{
+    const {x,y,width}=icon.getBBox();
+    return [x,y,width].map(value=>Math.round(value*100)/100);
+  });
+  assert.deepEqual(webIconBounds,[2.47,2.47,10.7],'the web search mark uses the original magnifying glass outline');
+  const longSearchQuery='Coffee architecture '.repeat(30).trim();
+  await emit('item/started',{turnId,item:{id:'query-only',type:'commandExecution',command:'rg Coffee',commandActions:[{type:'search',query:longSearchQuery}],status:'inProgress'}});
+  await liveStatus.locator('.codex-live-activity').getByText('Searching',{exact:true}).waitFor();
+  assert.equal(await liveStatus.locator('.codex-live-detail').textContent(),longSearchQuery);
+  const activityViewport=page.viewportSize();
+  await page.setViewportSize({width:320,height:activityViewport.height});
+  const compactStatus=await liveStatus.locator('.codex-live-activity').evaluate(row=>{
+    const text=row.querySelector('.codex-live-text');
+    const icon=row.querySelector('.codex-live-icon');
+    const bounds=row.getBoundingClientRect();
+    return {
+      singleLine:bounds.height===21 && getComputedStyle(text).whiteSpace==='nowrap',
+      insidePane:bounds.right<=row.closest('.codex-conversation').getBoundingClientRect().right,
+      ellipsis:getComputedStyle(text).textOverflow==='ellipsis' && text.scrollWidth>text.clientWidth,
+      iconWidth:icon.getBoundingClientRect().width,
+    };
+  });
+  assert.deepEqual(compactStatus,{singleLine:true,insidePane:true,ellipsis:true,iconWidth:16});
+  assert.equal(await liveStatus.locator('.codex-live-text-slot').getAttribute('title'),longSearchQuery);
+  await page.setViewportSize(activityViewport);
+  for (const [id, action, command, label, detail, duration] of [
+    ['read', {type:'read',name:'README.md'}, 'Get-Content README.md', 'Reading', 'README.md', '0.6s'],
+    ['list', {type:'listFiles',path:'src'}, 'Get-ChildItem src', 'Listing files', 'src', '1.2s'],
+  ]) {
+    await emit('item/started',{turnId,item:{id,type:'commandExecution',command,commandActions:[action],status:'inProgress'}});
+    await liveStatus.locator('.codex-live-label').filter({hasText:new RegExp('^'+label+'$')}).waitFor();
+    assert.equal(await liveStatus.locator('.codex-live-detail').textContent(),detail);
+    const sprite=liveStatus.locator(`.codex-live-icon[data-animating] .codex-live-sprite[data-kind="${id}"]`);
+    await sprite.waitFor();
+    assert.equal(await sprite.evaluate(el=>getComputedStyle(el,'::before').animationDuration),duration);
+  }
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>!window.currentState.busy);
   assert.equal(await input.inputValue(),'Keep this draft','stop preserves a draft');
   assert.equal(await page.locator('.claude-session-error').count(),0,'user stop is neutral');
+  await liveStatus.waitFor({state:'hidden'});
   await page.getByText('Interrupted · Worked for 2s',{exact:true}).waitFor();
   await input.focus();
   await page.getByRole('button',{name:'Codex permissions',exact:true}).click();
@@ -375,7 +529,22 @@ try {
   assert.equal(implemented.collaborationMode.mode,'default');assert.deepEqual(implemented.sandboxPolicy,await page.evaluate(()=>window.beforePlan));
   assert.equal(await approve.count(),0,'one approval cannot execute twice');
   assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.method==='turn/start').length),countBeforeApproval+2,'only explicit approval attempts start implementation');
-  await page.evaluate(()=>window.emit('b','turn/completed',{turn:{id:window.turn,status:'completed'}}));
+  await liveStatus.scrollIntoViewIfNeeded();
+  await page.waitForFunction(()=>[...document.querySelectorAll('.codex-live-status')].some(row=>!row.hasAttribute('data-motion-hidden')));
+  const exitDuration=await page.evaluate(()=>new Promise(resolve=>{
+    const observer=new MutationObserver(()=>{
+      const row=document.querySelector('.codex-live-status[data-finishing]');
+      if(!row) return;
+      observer.disconnect();
+      resolve(getComputedStyle(row).animationDuration);
+    });
+    observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['data-finishing']});
+    window.setTimeout(()=>{observer.disconnect();resolve(null)},1000);
+    window.emit('b','turn/completed',{turn:{id:window.turn,status:'completed'}});
+  }));
+  assert.equal(exitDuration,'0.15s','a completed turn lets its working row fade out');
+  const finishing=page.locator('.host:visible .codex-live-status[data-finishing]');
+  await finishing.waitFor({state:'detached'});
 
   // A manual handoff preserves the draft, and linked worker sessions cannot change identity.
   await input.fill('Unsent draft with "D:/image.png"');
@@ -394,6 +563,26 @@ try {
   await page.getByRole('button',{name:'Cancel',exact:true}).click();
   await input.fill('');
   console.log('ok read-only plan, explicit implementation, delivery retry, permission restoration, manual continuation, draft and worker identity');
+  await page.evaluate(()=>window.emit('b','turn/started',{turn:{id:'visibility-first'}}));
+  await liveStatus.scrollIntoViewIfNeeded();
+  await page.locator('.host:visible .codex-live-status:not([data-motion-hidden])').waitFor();
+  await page.evaluate(()=>{
+    Object.defineProperty(document,'hidden',{configurable:true,value:true});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.locator('.host:visible .codex-live-status[data-motion-hidden]').waitFor();
+  await page.evaluate(()=>window.emit('b','turn/completed',{turn:{id:'visibility-first',status:'completed'}}));
+  await liveStatus.waitFor({state:'detached'});
+  await page.evaluate(()=>{
+    Reflect.deleteProperty(document,'hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.emit('b','turn/started',{turn:{id:'visibility-second'}});
+  });
+  await liveStatus.scrollIntoViewIfNeeded();
+  await page.locator('.host:visible .codex-live-status:not([data-motion-hidden])').waitFor({timeout:5000});
+  await page.evaluate(()=>window.emit('b','turn/completed',{turn:{id:'visibility-second',status:'completed'}}));
+  await liveStatus.waitFor({state:'detached'});
+  console.log('ok working animation resumes after a window becomes visible between turns');
   await page.evaluate(()=>{document.documentElement.style.setProperty('--bg-terminal','#eee9e2');document.documentElement.style.setProperty('--text-2','#51473d');document.documentElement.style.setProperty('--bg-panel','#e7dfd4')});
   assert.equal(await page.locator('.host:visible .codex-conversation').evaluate(el=>getComputedStyle(el).color),'rgb(81, 71, 61)');
   await page.evaluate(()=>window.setProvider('claude'));await page.getByRole('button',{name:'Context used: 25%',exact:true}).click();

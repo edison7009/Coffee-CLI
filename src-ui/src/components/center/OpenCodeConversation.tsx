@@ -22,6 +22,13 @@ import './CodexConversation.css';
 import './OpenCodeConversation.css';
 import { ScrollLatestIcon } from './ScrollLatestIcon';
 
+function OpenCodeActivityMark() {
+  return <svg className="opencode-activity-mark" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
+    {[1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14].map(cell =>
+      <rect key={cell} x={cell % 4 * 4} y={Math.floor(cell / 4) * 4} width="3" height="3" rx="1"
+        style={{ animationDelay: `${-(cell % 7) * 0.17}s` }} />)}
+  </svg>;
+}
 function Measured({ id, measure, children }: { id: string; measure: (id: string, height: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { const node = ref.current; if (!node) return; const update = () => measure(id, node.getBoundingClientRect().height); update(); const observer = new ResizeObserver(update); observer.observe(node); return () => observer.disconnect(); }, [id, measure]);
@@ -124,6 +131,8 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   const waiting = s.permissions.length + s.forms.length;
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: waiting ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [waiting, s.busy, sessionId, dispatch]);
   const messages = useMemo(() => openCodeRows(s.native), [s.native]);
+  const runningTool = s.busy && !s.interrupting && !waiting
+    ? messages.findLast(message => message.toolStatus === 'running') : undefined;
   const rows = useMemo<Row[]>(() => {
     const result: Row[] = [];
     for (const message of messages) {
@@ -245,7 +254,12 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.permissions.map(request => <PermissionCard key={str(request.id)} sessionId={sessionId} request={request} />)}
         {s.forms.map(form => <FormCard key={str(form.id)} sessionId={sessionId} form={form} />)}
-        {s.ready && s.busy && <div className="codex-working" role="status"><span className="codex-spinner" aria-hidden="true" />{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</div>}
+        {s.ready && s.busy && <div className="codex-working opencode-working" role="status"
+          data-paused={s.interrupting || !!waiting || !isVisible || undefined}>
+          <OpenCodeActivityMark />
+          <span>{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</span>
+          {runningTool && <span className="conversation-working-detail" title={title(runningTool)}>{title(runningTool)}</span>}
+        </div>}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'OpenCode', t)}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {!directoryIssue && !rows.length && <div className="claude-empty"><OpenCodeWelcomeLogo isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}

@@ -12,6 +12,91 @@
 .codex-request .claude-approval-actions { flex-wrap:wrap; }
 .codex-request input { font:inherit; }
 .codex-working { display:flex; align-items:center; gap:10px; padding:10px 0 24px 4.5px; color:var(--text-3); font-size:15px; }
+.codex-conversation .codex-live-status { min-width:0; padding-left:4.5px; font-size:13px; line-height:21px; }
+.codex-live-stack { display:block; position:relative; min-width:0; width:100%; }
+.codex-live-activity { display:inline-flex; vertical-align:top; align-items:center; min-width:0; max-width:100%; gap:8px; }
+.codex-live-outgoing { display:none; position:absolute; inset:0; align-items:center; gap:8px; pointer-events:none; }
+.codex-live-text-slot { min-width:0; overflow:hidden; }
+.codex-live-text { display:block; position:relative; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.codex-live-label { color:var(--text-2); }
+.codex-live-sweep { display:none; }
+.codex-activity-mark { width:14px; height:14px; flex:none; color:inherit; }
+.codex-live-icon { display:inline-grid; place-items:center; width:16px; height:16px; flex:none; }
+.codex-live-icon > * { grid-area:1 / 1; }
+.codex-live-icon > .codex-activity-mark { width:16px; height:16px; }
+.codex-live-icon-exit { display:none; }
+.codex-live-sprite { display:none; width:16px; height:16px; overflow:hidden; }
+.codex-live-sprite::before { content:""; display:block; height:100%; width:calc(100% * var(--columns)); background:currentColor; mask:var(--sprite) 0 0 / 100% 100% no-repeat; }
+.codex-live-sprite[data-kind="command"] { --columns:100; --sprite:url('./codex-activity-command.webp'); --frames:codex-command-frames 1.66667s step-end infinite; }
+.codex-live-sprite[data-kind="search"], .codex-live-sprite[data-kind="list"] { --columns:120; --sprite:url('./codex-activity-search.webp'); --frames:codex-search-frames 1.2s steps(120,end) infinite; }
+.codex-live-sprite[data-kind="read"] { --columns:90; --sprite:url('./codex-activity-read.webp'); --frames:codex-reading-frames .6s -243ms step-end infinite; }
+@media (prefers-reduced-motion:no-preference) {
+  .codex-live-sprite { display:block; opacity:0; transition:opacity .15s ease-out; }
+  .codex-live-icon > svg { transition:opacity .15s ease-out; }
+  .codex-live-icon[data-animating] > .codex-live-sprite { opacity:1; }
+  .codex-live-icon[data-animating]:has(.codex-live-sprite) > svg { opacity:0; }
+  .codex-live-sprite::before { animation:var(--frames); animation-play-state:paused; }
+  .codex-live-icon[data-animating] > .codex-live-sprite::before { animation-play-state:running; }
+  @starting-style {
+    .codex-live-icon[data-animating] > .codex-live-sprite { opacity:0; }
+    .codex-live-icon[data-animating]:has(.codex-live-sprite) > svg { opacity:1; }
+  }
+}
+@keyframes codex-sprite-in { from { opacity:0; } to { opacity:1; } }
+.codex-live-status[data-motion-hidden] .codex-live-sprite::before,
+.codex-live-status[data-motion-hidden] .codex-live-outgoing { animation-play-state:paused; }
+.codex-live-status[data-finishing] { animation:codex-label-release .15s ease-out both; pointer-events:none; }
+.codex-live-status[data-finishing] *,.codex-live-status[data-finishing] .codex-live-sprite::before { animation-play-state:paused; }
+@keyframes codex-search-frames { to { transform:translateX(-100%); } }
+.codex-activity-mark[data-kind="working"]:not([data-paused]) circle:nth-child(1) { animation:codex-activity-blink 1.2s ease-in-out infinite; }
+.codex-activity-mark[data-kind="working"]:not([data-paused]) circle:nth-child(2) { animation:codex-activity-blink 1.2s .15s ease-in-out infinite; }
+.codex-activity-mark[data-kind="working"]:not([data-paused]) circle:nth-child(3) { animation:codex-activity-blink 1.2s .3s ease-in-out infinite; }
+@keyframes codex-activity-blink { 50% { opacity:.25; } }
+@media (prefers-reduced-motion:no-preference) and (forced-colors:none) {
+  .codex-live-outgoing { display:flex; animation:codex-label-release .2s ease-out both; }
+  .codex-live-outgoing:has(svg) + .codex-live-activity > .codex-live-icon { animation:codex-sprite-in .2s ease-out both; }
+  .codex-live-outgoing:not(:has(.codex-live-icon)) + .codex-live-activity > .codex-live-icon {
+    overflow:hidden; animation:codex-icon-make-room .2s ease-out both, codex-sprite-in .2s ease-out both;
+  }
+  .codex-live-icon-exit { display:block; width:16px; flex:none; animation:codex-icon-make-room .2s ease-out reverse both; }
+  .codex-live-activity:not([data-paused]) .codex-live-text-slot {
+    --handoff-offset:-108%;
+    animation:codex-label-reveal 1s linear both, codex-sprite-in .2s ease-out both;
+  }
+  .codex-live-activity:not([data-paused]) .codex-live-text {
+    --handoff-offset:108%;
+    color:color-mix(in srgb, var(--text-2) 55%, transparent);
+    animation:codex-label-reveal 1s linear both;
+  }
+  .codex-live-activity:not([data-paused]) .codex-live-label { color:inherit; }
+  .codex-live-activity[data-fade-label]:not([data-paused]) .codex-live-text-slot { animation:codex-sprite-in .2s ease-out both; }
+  .codex-live-activity[data-fade-label]:not([data-paused]) .codex-live-text { animation:none; }
+  .codex-live-sweep {
+    display:block; position:absolute; inset:0; overflow:hidden; pointer-events:none;
+    mask-image:linear-gradient(90deg, transparent 0%, #000 20% 30%, transparent 50% 100%);
+    --sweep-start:-50%; --sweep-end:125%;
+    animation:codex-label-sweep 4s infinite;
+  }
+  .codex-live-sweep > span {
+    display:block; overflow:hidden; text-overflow:ellipsis; color:var(--text-1);
+    --sweep-start:50%; --sweep-end:-125%;
+    animation:codex-label-sweep 4s infinite;
+  }
+  .codex-live-sweep[data-delay], .codex-live-sweep[data-delay] > span {
+    animation-delay:.6s;
+    animation-fill-mode:backwards;
+  }
+}
+@keyframes codex-label-release { to { opacity:0; } }
+@keyframes codex-icon-make-room { from { width:0; margin-inline-end:-8px; } }
+@keyframes codex-label-reveal { from { transform:translateX(var(--handoff-offset)); } 74%, to { transform:translateX(0); } }
+@keyframes codex-label-sweep {
+  0% { transform:translateX(var(--sweep-start)); animation-timing-function:steps(48,end); }
+  25%, to { transform:translateX(var(--sweep-end)); }
+}
+@media (prefers-reduced-motion:reduce) {
+  .codex-conversation .codex-activity-mark * { animation:none !important; }
+}
 .codex-spinner { display:inline-block; width:12px; height:12px; border:1.5px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:codex-spin 1s linear infinite; }
 .codex-control-menu .codex-permission-option { flex-direction:column; align-items:stretch; gap:3px; }
 .codex-control-menu .codex-permission-option small { white-space:normal; line-height:1.5; }
@@ -23,3 +108,45 @@
 .codex-catalog-tool small { color:var(--text-3); line-height:1.5; }
 @keyframes codex-spin { to { transform:rotate(360deg); } }
 @media(prefers-reduced-motion:reduce) { .codex-spinner { animation:none; } }
+@keyframes codex-command-frames {
+  0% { animation-timing-function:steps(2,end);transform:translate(0%); }
+  2% { transform:translate(-2%); }
+  4% { transform:translate(-4%); }
+  8% { transform:translate(-8%); }
+  12% { transform:translate(-12%); }
+  16% { transform:translate(-16%); }
+  28% { animation-timing-function:steps(11,end);transform:translate(-28%); }
+  39% { transform:translate(-39%); }
+  43% { animation-timing-function:steps(10,end);transform:translate(-43%); }
+  53% { transform:translate(-53%); }
+  58% { animation-timing-function:steps(10,end);transform:translate(-58%); }
+  68% { transform:translate(-68%); }
+  to { transform:translate(0%); }
+}
+@keyframes codex-reading-frames {
+  0%,to { transform:translate(-18.8889%); }
+  6.08866% { transform:translate(-20%); }
+  11.5706% { transform:translate(-21.1111%); }
+  16.3386% { transform:translate(-22.2222%); }
+  19.8114% { transform:translate(-23.3333%); }
+  23.6224% { transform:translate(-24.4444%); }
+  29.3289% { transform:translate(-25.5556%); }
+  35.2272% { transform:translate(-26.6667%); }
+  40.4347% { transform:translate(-27.7778%); }
+  43.8057% { transform:translate(-28.8889%); }
+  47.1533% { transform:translate(-30%); }
+  50.5095% { transform:translate(-31.1111%); }
+  53.7779% { transform:translate(-32.2222%); }
+  56.9688% { transform:translate(-33.3333%); }
+  60.249% { transform:translate(-34.4444%); }
+  63.1912% { transform:translate(-35.5556%); }
+  66.184% { transform:translate(-36.6667%); }
+  69.1816% { transform:translate(-37.7778%); }
+  72.2419% { transform:translate(-38.8889%); }
+  75.3325% { transform:translate(-40%); }
+  78.5519% { transform:translate(-41.1111%); }
+  82.1871% { transform:translate(-42.2222%); }
+  85.9013% { transform:translate(-43.3333%); }
+  89.6785% { transform:translate(-44.4444%); }
+  93.7312% { transform:translate(-45.5556%); }
+}

@@ -84,8 +84,9 @@ try {
   await page.locator('.claude-working').waitFor();
   assert.equal(await word(), 'Thinking…', 'the default words fill in before Claude titles the step');
 
-  await page.evaluate(t => window.setSession({ messages: [...window.currentMessages(), t] }), tool('t1', 'Compare the launch page before the fix'));
+  await page.evaluate(t => window.setSession({ status: 'tool', messages: [...window.currentMessages(), t] }), tool('t1', 'Compare the launch page before the fix'));
   await page.waitForFunction(() => document.querySelector('.claude-working .claude-morph-face:not(.is-leaving)')?.textContent === 'Compare the launch page before the fix…');
+  assert.equal(await page.locator('.claude-working .conversation-working-detail').textContent(), 'Bash');
   const leaving = page.locator('.claude-working .claude-morph-face.is-leaving');
   assert.equal(await leaving.count(), 1, 'the old face leaves while the new one enters');
   assert.equal(await leaving.innerText(), 'Thinking…');

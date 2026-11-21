@@ -40,7 +40,7 @@ function title(message: DshMessage): string {
   return [message.toolName, first].filter(Boolean).join(' · ');
 }
 /** DeepSeek Harness's running status: the swinging whale tail and a blue sweep over "deep diving for …". */
-function Running({ since, stopping }: { since?: number; stopping: boolean }) {
+function Running({ since, stopping, tool }: { since?: number; stopping: boolean; tool?: string }) {
   const t = useT();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
@@ -48,9 +48,10 @@ function Running({ since, stopping }: { since?: number; stopping: boolean }) {
   const duration = `${hours ? `${hours}${t('dsh.time.hour')}` : ''}${total >= 60 ? `${minutes}${t('dsh.time.minute')}` : ''}${total % 60}${t('dsh.time.second')}`;
   const label = stopping ? `${t('codex.stopping')}…` : since ? t('dsh.deep_diving_for', { duration }) : t('dsh.deep_diving');
   return <div className="dsh-running">
-    <span className="dsh-running-status" role="status">{stopping ? t('codex.stopping') : t('dsh.deep_diving')}</span>
+    <span className="dsh-running-status" role="status">{stopping ? t('codex.stopping') : [t('dsh.deep_diving'), tool].filter(Boolean).join(' · ')}</span>
     <span className="dsh-running-whale" aria-hidden="true" style={{ maskImage: `url(${DSH_RUNNING_WHALE})`, WebkitMaskImage: `url(${DSH_RUNNING_WHALE})` }} />
     <span className="dsh-shimmer" aria-hidden="true">{label}</span>
+    {!stopping && tool && <span className="conversation-working-detail" aria-hidden="true" title={tool}>{tool}</span>}
   </div>;
 }
 function RequestCard({ sessionId, request }: { sessionId: string; request: DshRequest }) {
@@ -200,7 +201,8 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         </Measured>)}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={String(request.id)} sessionId={sessionId} request={request} />)}
-        {(s.busy || (s.restarting && s.stopping)) && !s.requests.length && <Running since={s.busy ? s.startedAt : undefined} stopping={!!s.restarting} />}
+        {(s.busy || (s.restarting && s.stopping)) && !s.requests.length && <Running since={s.busy ? s.startedAt : undefined}
+          stopping={!!s.stopping} tool={s.messages.findLast(message => message.toolStatus === 'running')?.toolName} />}
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'DeepSeek Harness', t)}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
