@@ -47,6 +47,7 @@ import { conversationLink, findPaths, pathLinkAt, type ConversationLink } from '
 import { registerTerminalObserver, getTerminalObserver } from '../../lib/terminal-observer';
 import { readLaunchControls, setSessionControls, clearSessionControls } from '../../lib/session-controls';
 import { createTerminalEnterEncoder } from '../../lib/terminal-enter';
+import { muteTerminalReplies } from '../../lib/terminal-mirror-replies';
 import { confirmTerminalAgentStatus, forwardTerminalInput, isTerminalSubmitInput, registerTerminalControl, setTerminalControlReady, submitTerminalPrompt, terminalControlStatus } from '../../lib/terminal-control';
 import { supportsAgentStatus, useAppDispatch, useAppStateRef, type AgentStatus, type ToolType, type ThemeColor } from '../../store/app-state';
 import { parseAdditionalAgentTitle, supportsAdditionalAgentStatus } from '../../lib/terminal-agent-status';
@@ -1210,6 +1211,8 @@ function TierTerminalImpl({
     }
     const startMirror = async () => {
       fitMirror = fitMirrorFont;
+      // The desktop's terminal answers the program's queries; an answer from here would arrive as typed input.
+      unlisteners.push(muteTerminalReplies(term));
       // The desktop already started this tool; its brand splash would only cover the replay.
       setShowSplash(false);
       type Chunk = { data: string; start: number; end: number };
