@@ -1,64 +1,59 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v4.0.6 · 操控其他设备
+### Coffee CLI v4.0.7 · 让 AI 操作远程窗口
 
-- **操控其他设备（全新）：** 点左下角的设备状态 →「操控其他设备…」，粘贴另一台电脑在「设置 → 设备连接」里生成的链接，就能在单独的窗口里操控它：界面和本机一样，用的是那台电脑的会话和文件。关掉窗口后，可以从「最近操控」一键重新打开，不用再配对。对方需要 v4.0.2 或更新的版本。
-- **设备菜单：** 左下角菜单会列出正在操控的电脑、最近操控的电脑和连到本机的设备。
-- **更细致的界面：** 除「面板」外的各种风格，左、中、右三栏之间和标题栏都加了细分隔线；更新中的按钮恢复为条纹动画。
-- **更易懂的说法：** 设置里的「形态」改名为「风格」，「跟随主题」改为「跟随系统」。
-- **修复：** 预输入列表中较长的文字会在两个悬停按钮之前淡出，不再被按钮挡住。
+- **让 AI 操作远程窗口（全新）：** 在「设置 → 设备连接」打开「允许本机 AI 操作远程电脑窗口」后，新开的 Claude 标签就能查看和操作已打开的远程电脑窗口：读屏幕、输入、按键、新开标签。窗口被操作时顶部会提示，可以随时暂停。默认关闭。
+- **Codex 对话活动提示：** 桌面版 Codex 对话会显示它正在做什么，例如运行命令、读取文件、搜索、编辑；Claude 对话会显示正在运行的工具名，OpenCode 换上了新的工作中图标。
+- **修复：** 操控其他电脑时，新开的终端不再在提示符后出现「[?1;2c」之类的乱码，第一条命令可以正常执行。
+- **修复：** 设备菜单第一次悬停时文字不再跳动；更新下载提示不再被侧边栏挡住。
 
 </details>
 
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v4.0.6 · Control Another Device
+### Coffee CLI v4.0.7 · Let AI Operate Remote Windows
 
-- **Control another device (new):** Click the device status at the bottom left → "Control another device…", paste the link the other computer makes under Settings → Devices, and control it in a window of its own: the same interface as here, with that computer's sessions and files. After closing the window, reopen it from "Recent" with one click, no pairing needed. The other computer needs v4.0.2 or later.
-- **Device menu:** The bottom-left menu lists the computers you are controlling, the ones you controlled recently, and the devices connected to this computer.
-- **Finer interface:** Every style but Panel now draws thin lines between the left, center and right columns and in the title bar, and the Updating button has its stripes back.
-- **Clearer names:** In Settings, "Shape" is now "Style".
-- **Fixes:** Long text in the Pre-input list fades out before both hover buttons instead of running under them.
+- **Let AI operate remote windows (new):** Turn on "Let AI on this computer operate remote windows" under Settings → Devices, and Claude tabs opened afterwards can see and operate the open remote computer windows: read the screen, type, press keys and open tabs. A window being operated says so at the top and can be paused at any time. Off by default.
+- **Codex activity in conversations:** Codex desktop conversations show what it is doing, such as running a command, reading files, searching or editing; Claude conversations show the tool that is running, and OpenCode has a new working indicator.
+- **Fixes:** When controlling another computer, new terminals no longer start with stray text such as "[?1;2c" on the prompt, so the first command runs normally.
+- **Fixes:** The device menu's labels no longer jump on first hover, and the update download tip is no longer cut off by the sidebar.
 
 </details>
 
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v4.0.6 · 操控其他裝置
+### Coffee CLI v4.0.7 · 讓 AI 操作遠端視窗
 
-- **操控其他裝置（全新）：** 點左下角的裝置狀態 →「操控其他裝置…」，貼上另一台電腦在「設定 → 裝置連線」裡產生的連結，就能在獨立的視窗裡操控它：介面和本機一樣，用的是那台電腦的對話和檔案。關掉視窗後，可以從「最近操控」一鍵重新開啟，不用再配對。對方需要 v4.0.2 或更新的版本。
-- **裝置選單：** 左下角選單會列出正在操控的電腦、最近操控的電腦和連到本機的裝置。
-- **更細緻的介面：** 除「面板」外的各種風格，左、中、右三欄之間和標題列都加了細分隔線；更新中的按鈕恢復為條紋動畫。
-- **更易懂的說法：** 設定裡的「形態」改名為「風格」，「跟隨主題」改為「跟隨系統」。
-- **修正：** 預輸入列表中較長的文字會在兩個懸停按鈕之前淡出，不再被按鈕擋住。
+- **讓 AI 操作遠端視窗（全新）：** 在「設定 → 裝置連線」開啟「允許本機 AI 操作遠端電腦視窗」後，新開的 Claude 分頁就能查看和操作已開啟的遠端電腦視窗：讀取畫面、輸入、按鍵、新開分頁。視窗被操作時頂部會提示，可以隨時暫停。預設關閉。
+- **Codex 對話活動提示：** 桌面版 Codex 對話會顯示它正在做什麼，例如執行命令、讀取檔案、搜尋、編輯；Claude 對話會顯示正在執行的工具名稱，OpenCode 換上了新的工作中圖示。
+- **修正：** 操控其他電腦時，新開的終端不再在提示字元後出現「[?1;2c」之類的亂碼，第一條命令可以正常執行。
+- **修正：** 裝置選單第一次懸停時文字不再跳動；更新下載提示不再被側邊欄擋住。
 
 </details>
 
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v4.0.6 · ほかのデバイスを操作
+### Coffee CLI v4.0.7 · AI にリモートウィンドウを操作させる
 
-- **ほかのデバイスを操作（新機能）：** 左下のデバイス状態 →「ほかのデバイスを操作…」を選び、もう一台のコンピューターの「設定 → デバイス接続」で作ったリンクを貼り付けると、専用のウィンドウでそのコンピューターを操作できます。画面はこちらと同じで、中身はそのコンピューターのセッションとファイルです。ウィンドウを閉じた後も「最近」からワンクリックで開き直せ、再ペアリングは不要です。相手側は v4.0.2 以降が必要です。
-- **デバイスメニュー：** 左下のメニューに、操作中のコンピューター、最近操作したコンピューター、このコンピューターに接続中のデバイスが表示されます。
-- **より繊細な画面：** 「パネル」以外のスタイルでは、左・中央・右の列の間とタイトルバーに細い区切り線が入り、更新中ボタンのストライプも戻りました。
-- **わかりやすい名前：** 設定の「シェイプ」は「スタイル」になりました。
-- **修正：** 事前入力リストの長いテキストが、ホバー時の 2 つのボタンの手前でフェードアウトし、ボタンの下に隠れなくなりました。
+- **AI にリモートウィンドウを操作させる（新機能）：** 「設定 → デバイス接続」で「このPCのAIにリモート画面の操作を許可」をオンにすると、その後に開いた Claude タブが、開いているリモートPCのウィンドウを表示・操作できます（画面の読み取り、入力、キー操作、タブを開く）。操作中のウィンドウには上部に表示が出て、いつでも一時停止できます。初期設定はオフです。
+- **Codex の会話でアクティビティ表示：** デスクトップ版 Codex の会話で、コマンドの実行、ファイルの読み取り、検索、編集など、いま何をしているかが表示されます。Claude の会話では実行中のツール名が表示され、OpenCode には新しい作業中アイコンが付きました。
+- **修正：** ほかのコンピューターを操作しているとき、新しいターミナルのプロンプトに「[?1;2c」のような文字が入らなくなり、最初のコマンドが正しく実行されます。
+- **修正：** デバイスメニューの文字が最初のホバーで動かなくなり、更新のダウンロード案内がサイドバーで切れなくなりました。
 
 </details>
 
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v4.0.6 · 다른 기기 제어
+### Coffee CLI v4.0.7 · AI가 원격 창을 조작
 
-- **다른 기기 제어(신규):** 왼쪽 아래 기기 상태 → "다른 기기 제어…"를 누르고, 다른 컴퓨터의 "설정 → 기기 연결"에서 만든 링크를 붙여 넣으면 별도 창에서 그 컴퓨터를 제어할 수 있습니다. 화면은 이곳과 같고, 내용은 그 컴퓨터의 세션과 파일입니다. 창을 닫은 뒤에도 "최근"에서 클릭 한 번으로 다시 열 수 있으며 다시 페어링할 필요가 없습니다. 상대 컴퓨터는 v4.0.2 이상이 필요합니다.
-- **기기 메뉴:** 왼쪽 아래 메뉴에 제어 중인 컴퓨터, 최근 제어한 컴퓨터, 이 컴퓨터에 연결된 기기가 표시됩니다.
-- **더 섬세한 화면:** "패널"을 제외한 모든 스타일에서 왼쪽·가운데·오른쪽 열 사이와 제목 표시줄에 가는 구분선이 생겼고, 업데이트 중 버튼의 줄무늬도 돌아왔습니다.
-- **알기 쉬운 이름:** 설정의 "형태"가 "스타일"로 바뀌었습니다.
-- **수정:** 사전 입력 목록의 긴 텍스트가 마우스를 올렸을 때 나오는 두 버튼 앞에서 흐려져 버튼 아래로 가려지지 않습니다.
+- **AI가 원격 창을 조작(신규):** "설정 → 기기 연결"에서 "이 컴퓨터의 AI가 원격 창을 조작하도록 허용"을 켜면, 그 뒤에 연 Claude 탭이 열려 있는 원격 컴퓨터 창을 보고 조작할 수 있습니다: 화면 읽기, 입력, 키 누르기, 탭 열기. 조작 중인 창 위쪽에 안내가 표시되며 언제든 일시 중지할 수 있습니다. 기본값은 꺼짐입니다.
+- **Codex 대화 활동 표시:** 데스크톱 Codex 대화에서 명령 실행, 파일 읽기, 검색, 편집 등 지금 하는 일을 보여 줍니다. Claude 대화에서는 실행 중인 도구 이름이 표시되고, OpenCode에는 새 작업 중 아이콘이 생겼습니다.
+- **수정:** 다른 컴퓨터를 제어할 때 새 터미널의 프롬프트에 "[?1;2c" 같은 문자가 붙지 않아 첫 명령이 정상적으로 실행됩니다.
+- **수정:** 기기 메뉴의 글자가 처음 마우스를 올릴 때 움직이지 않고, 업데이트 다운로드 안내가 사이드바에 잘리지 않습니다.
 
 </details>
