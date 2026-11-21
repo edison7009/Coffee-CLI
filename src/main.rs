@@ -30,6 +30,7 @@ mod worker_worktree;
 mod notify_sound;
 mod remote_link;
 mod remote_window;
+mod window_control;
 mod tools;
 mod update_sources;
 mod usage_stats;
@@ -71,6 +72,14 @@ fn main() -> Result<()> {
             if helper_args[1] == "__team_mcp" { orchestration::mcp(port, token) }
             else { orchestration::worker_cli(port, token, &helper_args[4..]) }
         })();
+        if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
+        return Ok(());
+    }
+    if helper_args.get(1).map(String::as_str) == Some(window_control::SUBCOMMAND) {
+        let result = match (helper_args.get(2).and_then(|value| value.parse::<u16>().ok()), helper_args.get(3)) {
+            (Some(port), Some(token)) => window_control::mcp(port, token),
+            _ => Err("Expected port and token".into()),
+        };
         if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
         return Ok(());
     }

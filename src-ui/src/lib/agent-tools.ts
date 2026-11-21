@@ -30,6 +30,7 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
     return async (request: ToolRequest): Promise<unknown> => {
       const args = request.arguments;
       if (!await pending(request.requestId)) throw new Error('操作已取消');
+      if (request.name === 'sessions_list') return { sessions: project() };
       if (request.name === 'sessions_open') {
         if (typeof args.tool !== 'string' || !args.tool.trim()) throw new Error('请先询问用户要打开什么 CLI 工具');
         const tools = await commands.listTools();

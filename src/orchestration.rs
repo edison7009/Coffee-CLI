@@ -844,7 +844,7 @@ fn worker_command(port: u16, token: &str) -> Result<String, String> {
     Ok(format!("{executable} __team_worker {port} {token}"))
 }
 pub fn log_args(args: &[String]) -> Vec<String> {
-    args.iter().map(|arg| if arg.contains("__team_mcp") && arg.contains("coffee-team") { "[session coordination]".into() } else { arg.clone() }).collect()
+    args.iter().map(|arg| if (arg.contains("__team_mcp") && arg.contains("coffee-team")) || arg.contains(crate::window_control::SUBCOMMAND) { "[session coordination]".into() } else { arg.clone() }).collect()
 }
 fn worker_instructions(task: &Task, prompt: &str, command: &str) -> String {
     let isolated = task.worktree.as_ref().map(|worktree| format!("\n\nYou work in your own git worktree on branch {}, cut from the project's HEAD commit; the main checkout is {}. Make every change here, never in the main checkout, and commit your finished work on this branch. Do not merge, rebase or push it: the parent session reviews and merges it.", worktree.branch, worktree.root)).unwrap_or_default();
@@ -1118,10 +1118,10 @@ fn mcp_response(port: u16, token: &str, request: &Value) -> Value {
     json!({"jsonrpc":"2.0","id":id,"result":result})
 }
 const MCP_REQUEST_LIMIT: usize = 100_000;
-enum McpLine { End, Unreadable, Text(String) }
+pub(crate) enum McpLine { End, Unreadable, Text(String) }
 /// A request over the limit is answered, never fatal: the server's exit would cost the session every coordination
 /// tool. Lines beyond it are still read, because the answer needs their id.
-fn read_request(input: &mut impl BufRead) -> std::io::Result<McpLine> {
+pub(crate) fn read_request(input: &mut impl BufRead) -> std::io::Result<McpLine> {
     const BUFFER_LIMIT: u64 = 8_000_000;
     let mut line = vec![];
     if Read::by_ref(input).take(BUFFER_LIMIT).read_until(b'\n', &mut line)? == 0 { return Ok(McpLine::End); }
@@ -1881,6 +1881,8 @@ mod tests {
         let config = json!({"mcpServers":{"coffee-team":{"args":["__team_mcp",1234,"secret-token"]}}}).to_string();
         assert!(!log_args(&["--mcp-config".into(), config]).join(" ").contains("secret-token"));
         assert_eq!(log_args(&["--model".into(), "model-id".into()]), vec!["--model", "model-id"]);
+        let control = json!({"mcpServers":{"coffee-control":{"args":[crate::window_control::SUBCOMMAND,1234,"control-token"]}}}).to_string();
+        assert!(!log_args(&["--mcp-config".into(), control]).join(" ").contains("control-token"));
     }
     #[test]
     fn conversation_pick_narrows_allowed_workers() {

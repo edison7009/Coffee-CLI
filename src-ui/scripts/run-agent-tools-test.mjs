@@ -206,6 +206,23 @@ await test('stale generations, cancellation and arbitrary IPC are rejected befor
     assert.equal(f.stateRef.current.terminals.length, 1);
   } finally { f.dispose(); }
 });
+await test('sessions_list names every tool tab with the generation the other operations need', async () => {
+  const f = fixture();
+  try {
+    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'launcher', tool: null, folderPath: null } });
+    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'shell', tool: 'terminal', folderPath: 'D:\\Test' } });
+    f.dispatch({ type: 'ADD_TERMINAL', session: { id: 'agent', tool: 'codex', folderPath: 'D:\\Project' } });
+    const { sessions } = await f.execute('sessions_list');
+    assert.deepEqual(JSON.parse(JSON.stringify(sessions.map(item => [item.sessionId, item.tool, item.cwd]))), [['shell', 'terminal', 'D:\\Test'], ['agent', 'codex', 'D:\\Project']]);
+    const shell = sessions[0];
+    assert.equal(shell.generation, f.api.getTerminalObserver('shell').generation);
+    assert.equal(shell.ready, true);
+    await f.execute('terminal_send', { sessionId: shell.sessionId, generation: shell.generation, text: 'echo hi' });
+    assert.ok(f.writes.some(write => write.sessionId === 'shell'));
+    f.cancel();
+    await assert.rejects(f.execute('sessions_list'), /取消/);
+  } finally { f.dispose(); }
+});
 await test('read_screen exposes the actual target tool, directory and interface language for project preparation', async () => {
   const f = fixture();
   try {

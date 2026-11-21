@@ -42,7 +42,8 @@ const DENIED: [&str; 26] = [
     "take_pending_launch", "orchestration_sync", "orchestration_pending", "orchestration_resolve",
 ];
 // `remote_`: windows here that control other computers, and their connections, are this desktop's own.
-const DENIED_PREFIXES: [&str; 4] = ["mobile_rpc_", "voice_", "plugin:", "remote_"];
+// `window_control_`: letting this computer's AI operate its windows is this computer's own setting.
+const DENIED_PREFIXES: [&str; 5] = ["mobile_rpc_", "voice_", "plugin:", "remote_", "window_control_"];
 
 const TOOLS: [&str; 5] = ["claude", "codex", "opencode", "pi", "dsh"];
 

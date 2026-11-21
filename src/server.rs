@@ -1039,11 +1039,16 @@ fn tier_terminal_start_blocking(
     let extra_env: Vec<(String, String)> = Vec::new();
 
     if tool.as_deref() == Some("claude") {
-        if let Some(native_id) = &native_token {
-            if let Some(parent) = crate::orchestration::parent_launch(&app, &session_id, native_id, std::path::Path::new(&actual_cwd), false)? {
-                args.extend(["--mcp-config".into(), parent.mcp, "--append-system-prompt".into(), parent.prompt]);
-                args.extend(parent.args);
-            }
+        let parent = match &native_token {
+            Some(native_id) => crate::orchestration::parent_launch(&app, &session_id, native_id, std::path::Path::new(&actual_cwd), false)?,
+            None => None,
+        };
+        if let Some(mcp) = crate::window_control::add_to(&app, parent.as_ref().map(|parent| parent.mcp.clone())) {
+            args.extend(["--mcp-config".into(), mcp]);
+        }
+        if let Some(parent) = parent {
+            args.extend(["--append-system-prompt".into(), parent.prompt]);
+            args.extend(parent.args);
         }
     }
 
@@ -1787,6 +1792,9 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::remote_window::remote_control_info,
             crate::remote_window::remote_pairing_save,
             crate::remote_window::remote_window_set_name,
+            crate::window_control::window_control_enabled,
+            crate::window_control::window_control_set_enabled,
+            crate::window_control::window_control_resolve,
             crate::remote_link::remote_link_open,
             crate::remote_link::remote_link_send,
             crate::remote_link::remote_link_close,

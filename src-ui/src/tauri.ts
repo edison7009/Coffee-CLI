@@ -204,6 +204,8 @@ export const commands = {
   orchestrationResolve: (requestId: string, result: unknown) => invoke<void>('orchestration_resolve', { requestId, result }),
   mobileRpcStatus: () => invoke<MobileRpcStatus>('mobile_rpc_status'),
   // Windows that control other computers (src/remote_window.rs).
+  windowControlEnabled: () => invoke<boolean>('window_control_enabled'),
+  windowControlSetEnabled: (enabled: boolean) => invoke<void>('window_control_set_enabled', { enabled }),
   remoteWindowOpen: (address: string, prefix: string) => invoke<import('./lib/remote-control').RemoteWindow>('remote_window_open', { address, prefix }),
   remoteWindowList: () => invoke<import('./lib/remote-control').RemoteWindow[]>('remote_window_list'),
   remoteWindowFocus: (label: string) => invoke<void>('remote_window_focus', { label }),

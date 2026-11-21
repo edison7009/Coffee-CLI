@@ -23,7 +23,8 @@ import { CenterPanel } from './components/center/CenterPanel';
 import { ActiveGambit } from './components/center/ActiveGambit';
 import { Toast } from './components/common/Toast';
 import { AgentBridge } from './components/agent/AgentBridge';
-import { REMOTE } from './remote/bridge';
+import { CONTROL, REMOTE } from './remote/bridge';
+import { WindowControlBridge } from './components/agent/WindowControlBridge';
 import { RemoteMirror } from './remote/RemoteMirror';
 import { FolderPickerHost } from './components/common/FolderPicker';
 import { RightPanel } from './components/right/Compiler';
@@ -517,6 +518,8 @@ export function App() {
       {/* The desktop's background agent, orchestration and pairing run only in the desktop app. */}
       {!REMOTE && <AgentBridge />}
       {REMOTE && <RemoteMirror />}
+      {/* A window showing another computer can be operated by a Claude tab on this one. */}
+      {CONTROL && <WindowControlBridge />}
       <FolderPickerHost />
       {/* Closing the window asks, keeps Coffee CLI running or quits; a browser has no window of its own to close. */}
       {!REMOTE && <AppCloseHost />}

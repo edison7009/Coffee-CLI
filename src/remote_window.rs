@@ -105,7 +105,7 @@ fn describe(label: &str, entry: &Entry) -> RemoteWindow {
     RemoteWindow { label: label.to_string(), name: entry.name.clone(), title: titled(&entry.prefix, &entry.name), origin: entry.origin.clone() }
 }
 
-fn list(app: &AppHandle) -> Vec<RemoteWindow> {
+pub(crate) fn list(app: &AppHandle) -> Vec<RemoteWindow> {
     let entries = entries().lock().map(|map| map.clone()).unwrap_or_default();
     let mut windows: Vec<RemoteWindow> = app
         .webview_windows()
