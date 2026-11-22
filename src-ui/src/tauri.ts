@@ -412,12 +412,20 @@ export const commands = {
     invoke<void>('open_url', { url }),
   computerName: () => invoke<string>('computer_name'),
 
-  // In-app self-update (Windows): download the latest installer from
-  // coffeecli.com/download/<os> with streamed progress, launch it, exit.
-  // Emits `self-update-progress` while it runs (see onSelfUpdateProgress).
-  // Rejects on non-Windows / download failure — caller falls back to openUrl.
-  downloadAndInstallUpdate: () =>
-    invoke<void>('download_and_install_update'),
+  // In-app self-update, two steps. downloadUpdate saves the latest installer
+  // to Downloads with streamed progress (`self-update-progress`, see
+  // onSelfUpdateProgress) and resolves to the version now ready to install
+  // (Windows), or null once macOS / Linux opened the DMG or folder. Rejects
+  // when every source fails — caller falls back to openUrl.
+  downloadUpdate: (expected: string) =>
+    invoke<string | null>('download_update', { expected }),
+  // Windows: is the intact installer for `version` already in Downloads?
+  isUpdateDownloaded: (version: string) =>
+    invoke<boolean>('is_update_downloaded', { version }),
+  // Windows: run the downloaded installer and close Coffee CLI. Resolves
+  // false when the file is gone or changed, so the button offers Download.
+  installDownloadedUpdate: (version: string) =>
+    invoke<boolean>('install_downloaded_update', { version }),
 
   // Live fs watcher — subscribes to OS-native events under `path` and
   // emits `fs-refresh` Tauri events that Explorer already listens for.
@@ -436,13 +444,13 @@ export const commands = {
     invoke<void>('set_tool_config', { tool, entry }),
 };
 
-// In-app self-update progress, emitted by download_and_install_update.
+// In-app self-update progress, emitted by download_update and install_downloaded_update.
 export interface SelfUpdateProgress {
   status: 'speed_test' | 'downloading' | 'launching' | 'downloaded' | 'error';
   percent: number;
 }
 
-// Subscribe to self-update progress while downloadAndInstallUpdate runs.
+// Subscribe to self-update progress while an update downloads or installs.
 // Returns an unlisten fn. Dynamic-imports the event API (matches how the
 // rest of the app subscribes to Tauri events).
 export async function onSelfUpdateProgress(

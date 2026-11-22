@@ -639,6 +639,8 @@ export const pt = {
   'self_update.download': 'Baixar atualização v{version}',
   'self_update.connecting': 'Conectando',
   'self_update.downloading': 'Baixando atualização {percent}%',
+  'self_update.install': 'Instalar atualização v{version}',
+  'self_update.install_short': 'Instalar',
   'self_update.restarting': 'Reiniciando',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Falha na atualização. Verifique a rede e as permissões e tente novamente.',

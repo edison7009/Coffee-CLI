@@ -505,10 +505,21 @@
 }
 
 /* In-app self-update circular progress ring — replaces the download glyph
-   while the installer downloads, fills 0→100%, then the installer runs. */
+   while the installer downloads and fills 0→100%. */
 .update-check-btn.is-installing {
   cursor: default;
   opacity: 1;
+}
+/* Windows: the installer is downloaded and waits for the user's click. */
+.update-check-btn.is-ready {
+  width: auto;
+  padding: 0 8px;
+}
+.update-install-label {
+  font-size: var(--type-caption);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 .update-ring {
   display: block;
