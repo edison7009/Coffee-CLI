@@ -143,7 +143,7 @@ function Working({ status, startedAt, title, tool }: { status: string; startedAt
   // Claude Code's own description of the current step titles the turn; the rotating words fill in until it gives one.
   const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'starting' ? t('claude.status.connecting') : title ?? (status === 'tool' ? t('claude.status.working') : words[wordIndex % words.length]);
   return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><MorphText faceClassName="claude-working-word" text={`${word}…`} />
-    {tool && status === 'tool' && <span className="conversation-working-detail" title={tool}>{tool}</span>}
+    {tool && status === 'tool' && <span className="conversation-working-detail" title={tool}>{orchestrationToolLabel(tool, t) ?? tool}</span>}
     {startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
 }
 

@@ -9,9 +9,12 @@
 //!
 //! Off until the user turns it on in Settings; it is checked again on every request, so turning it
 //! off stops tabs already running. The window shows while it is being operated and can stop it.
+//!
+//! The user may also tie one conversation to one window (the composer's chip): that conversation then
+//! sees and operates only that window, and each prompt it is sent says so.
 
 use serde_json::{json, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Ipv4Addr, SocketAddrV4, TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -32,7 +35,14 @@ const RESPONSE_LIMIT: usize = 4_000_000;
 struct Pending { window: String, sender: mpsc::Sender<Value> }
 
 #[derive(Default)]
-struct State { app: Option<AppHandle>, port: Option<u16>, tokens: HashSet<String>, pending: HashMap<String, Pending> }
+struct State {
+    app: Option<AppHandle>, port: Option<u16>,
+    /// Each launch's token, and the tab it was issued to.
+    tokens: HashMap<String, String>,
+    pending: HashMap<String, Pending>,
+    /// The window (its label) each tab is tied to.
+    picks: HashMap<String, String>,
+}
 
 fn state() -> &'static Mutex<State> {
     static STATE: OnceLock<Mutex<State>> = OnceLock::new();
@@ -70,9 +80,9 @@ pub fn window_control_set_enabled(window: WebviewWindow, enabled: bool) -> Resul
 
 /// Adds `coffee-control` to a launch's MCP configuration (`--mcp-config` JSON) when the setting is
 /// on. A failure leaves the configuration as it was: Claude still starts, without the server.
-pub fn add_to(app: &AppHandle, mcp: Option<String>) -> Option<String> {
+pub fn add_to(app: &AppHandle, session: &str, mcp: Option<String>) -> Option<String> {
     if !enabled() { return mcp; }
-    let server = match initialize(app).and_then(|port| server_entry(port, &new_token())) {
+    let server = match initialize(app).and_then(|port| server_entry(port, &new_token(session))) {
         Ok(server) => server,
         Err(error) => { eprintln!("[window control] not offered: {error}"); return mcp; }
     };
@@ -82,9 +92,13 @@ pub fn add_to(app: &AppHandle, mcp: Option<String>) -> Option<String> {
     }
 }
 
-fn new_token() -> String {
+/// A tab restarted gets a new token; the one it had before stops working.
+fn new_token(session: &str) -> String {
     let token = uuid::Uuid::new_v4().to_string();
-    if let Ok(mut state) = state().lock() { state.tokens.insert(token.clone()); }
+    if let Ok(mut state) = state().lock() {
+        state.tokens.retain(|_, owner| owner != session);
+        state.tokens.insert(token.clone(), session.into());
+    }
     token
 }
 
@@ -131,9 +145,8 @@ fn serve(mut stream: TcpStream) -> Result<(), String> {
     let result = if line.len() > REQUEST_LIMIT { Err("Request too large".to_string()) } else {
         serde_json::from_str::<Value>(&line).map_err(|e| e.to_string()).and_then(|request| {
             let token = request["token"].as_str().unwrap_or_default();
-            let known = state().lock().map(|state| state.tokens.contains(token)).unwrap_or(false);
-            if !known { return Err("Unknown session".into()); }
-            call(request["action"].as_str().unwrap_or_default(), &request["arguments"])
+            let session = state().lock().ok().and_then(|state| state.tokens.get(token).cloned()).ok_or("Unknown session")?;
+            call(&session, request["action"].as_str().unwrap_or_default(), &request["arguments"])
         })
     };
     let answer = match result { Ok(value) => json!({ "ok": true, "result": value }), Err(error) => json!({ "ok": false, "error": error }) };
@@ -177,16 +190,31 @@ fn operation(tool: &str) -> Option<&'static str> {
     })
 }
 
-fn call(tool: &str, arguments: &Value) -> Result<Value, String> {
+/// The window a tab is tied to, while it is open. A pick whose window has closed is dropped, so the
+/// tab is back to every window, as its chip then shows.
+fn tied(session: &str, targets: &[Target]) -> Option<Target> {
+    let mut state = state().lock().ok()?;
+    let label = state.picks.get(session)?.clone();
+    let target = targets.iter().find(|t| t.label == label).cloned();
+    if target.is_none() { state.picks.remove(session); }
+    target
+}
+
+fn call(session: &str, tool: &str, arguments: &Value) -> Result<Value, String> {
     if !enabled() { return Err("AI control of windows is turned off in Coffee CLI settings.".into()); }
     let app = state().lock().map_err(|_| "unavailable")?.app.clone().ok_or("Coffee CLI window unavailable")?;
-    let targets = targets(&app);
+    let all = targets(&app);
+    let tied = tied(session, &all);
+    let targets = match &tied { Some(target) => vec![target.clone()], None => all };
     if tool == "window_list" {
         let windows: Vec<Value> = targets.iter().map(|t| json!({ "window": t.window, "title": t.title })).collect();
         return Ok(json!({ "windows": windows }));
     }
     let name = operation(tool).ok_or("Unknown tool")?;
-    let window = pick(&targets, arguments["window"].as_str().unwrap_or_default())?;
+    let window = pick(&targets, arguments["window"].as_str().unwrap_or_default()).map_err(|error| match &tied {
+        Some(target) => format!("The user set this conversation to work in the window \"{}\" (id {}) only. Use that window.", target.title, target.window),
+        None => error,
+    })?;
     let mut arguments = arguments.clone();
     if let Some(map) = arguments.as_object_mut() { map.remove("window"); }
     ask_window(&app, &window, name, arguments)
@@ -216,6 +244,47 @@ fn resolve(window: &str, request_id: &str, result: Value) -> Result<(), String> 
     if state.pending.get(request_id).map(|pending| pending.window.as_str()) != Some(window) { return Err("Request expired".into()); }
     let pending = state.pending.remove(request_id).ok_or("Request expired")?;
     pending.sender.send(result).map_err(|_| "Request expired".into())
+}
+
+// ─── The composer's chip ───────────────────────────────────────────────────
+
+/// What the chip of one tab shows: whether the tab was started with these tools, the windows it can
+/// be tied to, and the one it is tied to.
+#[tauri::command]
+pub fn window_control_state(app: AppHandle, session_id: String) -> Value {
+    let all = targets(&app);
+    let attached = enabled() && state().lock().map(|state| state.tokens.values().any(|owner| *owner == session_id)).unwrap_or(false);
+    let pick = tied(&session_id, &all).map(|target| target.window);
+    let windows: Vec<Value> = all.iter().map(|t| json!({ "window": t.window, "title": t.title })).collect();
+    json!({ "attached": attached, "windows": windows, "pick": pick })
+}
+
+/// Ties a tab to one window (by its id), or back to every window (`None`). Only the main window may.
+#[tauri::command]
+pub fn window_control_set_pick(app: AppHandle, window: WebviewWindow, session_id: String, pick: Option<String>) -> Result<Value, String> {
+    if window.label() != "main" { return Err("Only the main window can change this".into()); }
+    {
+        let mut state = state().lock().map_err(|_| "unavailable")?;
+        match pick {
+            None => { state.picks.remove(&session_id); }
+            Some(id) => {
+                let label = targets(&app).into_iter().find(|t| t.window == id).ok_or("That window is no longer open")?.label;
+                state.picks.insert(session_id.clone(), label);
+            }
+        }
+    }
+    Ok(window_control_state(app, session_id))
+}
+
+/// A note sent with each prompt of a tab tied to a window, so Claude works there rather than in its
+/// own folder. Shown to Claude only: the conversation hides `<system-reminder>` text.
+pub fn prompt_note(app: &AppHandle, session: &str) -> Option<String> {
+    if !enabled() || !state().lock().ok()?.tokens.values().any(|owner| owner == session) { return None; }
+    tied(session, &targets(app)).map(|target| note(&target))
+}
+
+fn note(target: &Target) -> String {
+    format!("<system-reminder>The user set this conversation to work in the Coffee CLI window \"{}\" (window id {}). Do the task in that window's tabs with the coffee-control tools (window_tabs, tab_open, tab_send, tab_read, tab_key), not with your own shell or files, unless the user asks otherwise.</system-reminder>", target.title, target.window)
 }
 
 // ─── The MCP process (`<exe> __window_control_mcp <port> <token>`) ─────────
@@ -339,6 +408,28 @@ mod tests {
         assert!(pick(&windows, "Studio").unwrap_err().contains("window id"));
         assert!(pick(&windows, "main").unwrap_err().contains("window_list"));
         assert!(pick(&[], "").is_err());
+    }
+
+    #[test]
+    fn a_tied_tab_sees_only_its_window_until_it_closes() {
+        let windows = vec![target("a", "EB"), target("b", "Studio")];
+        state().lock().unwrap().picks.insert("tab-tied".into(), "remote-b".into());
+        assert_eq!(tied("tab-tied", &windows), Some(windows[1].clone()));
+        assert_eq!(tied("tab-free", &windows), None);
+        let tied_note = note(&windows[1]);
+        assert!(tied_note.starts_with("<system-reminder>") && tied_note.contains("\"Studio\"") && tied_note.contains("window id b"));
+        // The window closed: the pick is dropped and the tab is back to every window.
+        assert_eq!(tied("tab-tied", &windows[..1]), None);
+        assert!(!state().lock().unwrap().picks.contains_key("tab-tied"));
+    }
+
+    #[test]
+    fn a_restarted_tab_keeps_only_its_new_token() {
+        let old = new_token("tab-restart");
+        let new = new_token("tab-restart");
+        let state = state().lock().unwrap();
+        assert!(!state.tokens.contains_key(&old));
+        assert_eq!(state.tokens.get(&new).map(String::as_str), Some("tab-restart"));
     }
 
     #[test]

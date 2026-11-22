@@ -85,6 +85,8 @@ interface GambitProps {
   orchestration?: boolean;
   computer?: boolean;
   browser?: boolean;
+  /** The remote control chip (RemoteControlPicker), for a tab that can operate remote windows. */
+  remoteControl?: React.ReactNode;
   /** Controls beside the target label: the worktree switch for desktop conversations, New chat for Coffee Agent. */
   worktreeControl?: React.ReactNode;
 }
@@ -184,6 +186,7 @@ function GambitImpl({
   orchestration,
   computer,
   browser,
+  remoteControl,
   worktreeControl,
 }: GambitProps) {
   const t = useT();
@@ -819,8 +822,9 @@ function GambitImpl({
     height: effectiveH,
   };
 
-  const capabilitiesStatus = (orchestration || computer || browser) && <div className="gambit-capabilities" role="status">
+  const capabilitiesStatus = (orchestration || computer || browser || remoteControl) && <div className="gambit-capabilities" role="status">
     {orchestration && <OrchestrationPicker sessionId={sessionId} />}
+    {remoteControl}
     {computer && <span className="gambit-capability is-computer">{t('control.computer_label')}</span>}
     {browser && <span className="gambit-capability is-browser">{t('control.browser_label')}</span>}
   </div>;

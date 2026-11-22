@@ -93,20 +93,6 @@ export function MobileSettings() {
 
   const enabled = !!status?.enabled;
 
-  // Whether Claude tabs started here may operate the windows showing other computers (src/window_control.rs).
-  const [aiControl, setAiControl] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (!isTauri) return;
-    let current = true;
-    void commands.windowControlEnabled().then(value => { if (current) setAiControl(value); }, () => {});
-    return () => { current = false; };
-  }, []);
-  const toggleAiControl = () => run(async () => {
-    const next = !aiControl;
-    await commands.windowControlSetEnabled(next);
-    setAiControl(next);
-  });
-
   // Firewall: only meaningful while listening; slow on Windows, so checked on its own.
   useEffect(() => {
     if (!isTauri || !enabled) { setFirewall(null); return; }
@@ -195,17 +181,6 @@ export function MobileSettings() {
           </div>
           : <div className="settings-choice-hint settings-mobile-empty">{t('settings.mobile.devices.empty')}</div>}
         {error && <div className="settings-sound-failed" role="alert">{error}</div>}
-      </section>
-
-      <section className="settings-voice-channels">
-        <div className="settings-sound-list">
-          <div className="settings-sound-item">
-            <div className="settings-sound-row">
-              <div className="settings-sound-title">{t('settings.mobile.ai_control')}<div className="settings-choice-hint">{t('settings.mobile.ai_control.sub')}</div></div>
-              <button type="button" role="switch" className="settings-switch" aria-checked={!!aiControl} aria-label={t('settings.mobile.ai_control')} disabled={busy || aiControl === null} onClick={() => void toggleAiControl()}><span /></button>
-            </div>
-          </div>
-        </div>
       </section>
     </>
   );

@@ -54,6 +54,18 @@ for (const lang of languages) {
   assert.equal(search.description,['start','list','wait'].map(action=>t('orchestration.tool.'+action)).join(' · '));
   assert.equal(orchestrationSearchLabel('ToolSearch',query+',mcp__coffee-team__',t).description,search.description,'streaming namespace suffix does not expose internal identifiers');
   for (const [name,input] of [['Read',query],['ToolSearch','browser search'],['ToolSearch','select:mcp__other__worker_start'],['ToolSearch',query+',mcp__other__worker_wait'],['ToolSearch','select:mcp__coffee-team__unknown'],['ToolSearch','select:mcp__coffee-team__constructor'],['ToolSearch','select:mcp__coffee-team__']]) assert.equal(orchestrationSearchLabel(name,input,t),undefined,'ordinary searches and unrecognized tools remain unchanged');
+  // The window tools (src/window_control.rs) read in the user's language too, and never mix with coffee-team's.
+  for (const [tool, key] of [['window_list','list'],['window_tabs','tabs'],['tab_open','open'],['tab_send','send'],['tab_key','key'],['tab_read','read']]) {
+    assert.ok(t('ai_remote.tool.' + key), lang + ': window tool label exists');
+    assert.equal(orchestrationToolLabel('mcp__coffee-control__' + tool, t), t('ai_remote.tool.' + key), lang + ': window tool label');
+    assert.equal(orchestrationToolLabel(tool, t, 'coffee-control'), t('ai_remote.tool.' + key));
+    assert.equal(orchestrationToolLabel(tool, t, 'coffee-team'), undefined);
+  }
+  assert.equal(orchestrationToolLabel('mcp__coffee-control__worker_start', t), undefined);
+  const windowSearch = orchestrationSearchLabel('ToolSearch', 'select:mcp__coffee-control__window_list,mcp__coffee-control__tab_read,mcp__coffee-control__', t);
+  assert.equal(windowSearch.title, t('ai_remote.tool.search'));
+  assert.equal(windowSearch.description, [t('ai_remote.tool.list'), t('ai_remote.tool.read')].join(' · '));
+  assert.equal(orchestrationSearchLabel('ToolSearch', 'select:mcp__coffee-control__window_list,mcp__coffee-team__worker_start', t), undefined, 'a mixed search keeps the plain names');
   for (const level of ['low', 'medium', 'high', 'xhigh', 'max']) assert.equal(claudeEffortLabel(level, t), t(`claude.effort.${level}`));
   assert.equal(claudeEffortLabel('ultracode', t), 'Ultracode');
   assert.equal(claudeEffortLabel('provider-custom-level', t), 'provider-custom-level');

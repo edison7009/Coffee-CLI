@@ -398,6 +398,9 @@
 .gambit-capability.is-picker { border:0; cursor:pointer; transition:background .15s; }
 .gambit-capability.is-picker:hover,.gambit-capability.is-picker[aria-expanded="true"] { background:color-mix(in srgb,var(--capability-color) 22%,transparent); }
 .gambit-capability.is-computer { --capability-color:var(--blue); }
+.gambit-capability.is-remote { --capability-color:#d3a66f; }
+[data-mode="light"] .gambit-capability.is-remote { --capability-color:#8a5f2a; }
+.remote-pick-empty { margin:0; padding:6px 10px; color:var(--text-3); font:var(--type-caption) var(--font); }
 .gambit-capability.is-browser { --capability-color:#b59cce; }
 [data-mode="light"] .gambit-capability.is-browser { --capability-color:#7a6095; }
 

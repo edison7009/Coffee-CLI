@@ -30,7 +30,7 @@ impl Session {
     fn write_with_delivery(&self, value: &Value, delivery: Option<&str>) -> Result<(), String> {
         let mut input = self.input.lock().map_err(|e| e.to_string())?;
         if value["type"] == "user" {
-            let prompt = value["message"]["content"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            let prompt = value["message"]["content"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).filter(|text| !text.starts_with("<system-reminder>")).collect::<Vec<_>>().join("\n");
             crate::orchestration::native_input(&self.id, "claude", &self.generation, &prompt, value["uuid"].as_str().unwrap_or(""), delivery)?;
         } else if value["request"]["subtype"] == "interrupt" {
             crate::orchestration::native_stop(&self.id, "claude", &self.generation);
@@ -138,7 +138,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     else { command.args(["--session-id", &native_id]); }
     let previous = continue_from.as_ref().and_then(|from| previous_conversation(&cwd, from));
     let parent = crate::orchestration::parent_launch(&app, &id, &native_id, &cwd, true)?;
-    if let Some(mcp) = crate::window_control::add_to(&app, parent.as_ref().map(|parent| parent.mcp.clone())) { command.args(["--mcp-config", &mcp]); }
+    if let Some(mcp) = crate::window_control::add_to(&app, &id, parent.as_ref().map(|parent| parent.mcp.clone())) { command.args(["--mcp-config", &mcp]); }
     if let Some(parent) = &parent { command.args(&parent.args); }
     let appended = [parent.map(|parent| parent.prompt), previous].into_iter().flatten().collect::<Vec<_>>().join("\n\n");
     // cmd.exe ends a command line at the first newline, so npm installs read the text from a file.
@@ -292,7 +292,11 @@ pub async fn claude_session_send(app: tauri::AppHandle, sessions: State<'_, Clau
     let s = get(&sessions, &id, &generation)?;
     if text.trim().is_empty() { return Err("消息不能为空".into()); }
     tauri::async_runtime::spawn_blocking(move || {
-        let content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
+        let mut content = if orchestration_delivery.is_some() { json!([{"type":"text","text":text}]) } else { user_content(&text)? };
+        // A tab tied to a window is told so with each prompt the user sends (src/window_control.rs).
+        if orchestration_delivery.is_none() {
+            if let (Some(note), Some(blocks)) = (crate::window_control::prompt_note(&app, &s.id), content.as_array_mut()) { blocks.push(json!({"type":"text","text":note})); }
+        }
         s.write_with_delivery(&json!({"type":"user","uuid":uuid::Uuid::new_v4().to_string(),"session_id":s.native_id,"parent_tool_use_id":null,"message":{"role":"user","content":content}}), orchestration_delivery.as_deref())?;
         // A slash command or `!` shell line is not what the conversation is about; wait for a real prompt.
         let prompt = text.trim_start();

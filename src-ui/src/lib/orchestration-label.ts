@@ -1,28 +1,58 @@
 import type { I18nKey } from '../i18n/en';
 
-const labels: Record<string, I18nKey> = {
-  worker_start: 'orchestration.tool.start',
-  worker_list: 'orchestration.tool.list',
-  worker_wait: 'orchestration.tool.wait',
-  worker_read: 'orchestration.tool.read',
-  worker_send: 'orchestration.tool.send',
-  worker_reply: 'orchestration.tool.reply',
-  worker_interrupt: 'orchestration.tool.interrupt',
+// What the tools Coffee CLI gives an assistant are called in the conversation, by server.
+const servers: Record<string, { search: I18nKey; labels: Record<string, I18nKey> }> = {
+  'coffee-team': {
+    search: 'orchestration.tool.search',
+    labels: {
+      worker_start: 'orchestration.tool.start',
+      worker_list: 'orchestration.tool.list',
+      worker_wait: 'orchestration.tool.wait',
+      worker_read: 'orchestration.tool.read',
+      worker_send: 'orchestration.tool.send',
+      worker_reply: 'orchestration.tool.reply',
+      worker_interrupt: 'orchestration.tool.interrupt',
+    },
+  },
+  // src/window_control.rs
+  'coffee-control': {
+    search: 'ai_remote.tool.search',
+    labels: {
+      window_list: 'ai_remote.tool.list',
+      window_tabs: 'ai_remote.tool.tabs',
+      tab_open: 'ai_remote.tool.open',
+      tab_send: 'ai_remote.tool.send',
+      tab_key: 'ai_remote.tool.key',
+      tab_read: 'ai_remote.tool.read',
+    },
+  },
 };
 
+/** The server and tool a name like `mcp__coffee-team__worker_start` refers to, when it is one of ours. */
+function ours(name: string, server?: string): { server: string; action: string } | undefined {
+  for (const id of Object.keys(servers)) {
+    const prefix = `mcp__${id}__`;
+    if (name.startsWith(prefix)) return { server: id, action: name.slice(prefix.length) };
+    if (server === id) return { server: id, action: name };
+  }
+  return undefined;
+}
+
 export function orchestrationToolLabel(name: string, t: (key: I18nKey) => string, server?: string): string | undefined {
-  const prefix = 'mcp__coffee-team__';
-  const action = name.startsWith(prefix) ? name.slice(prefix.length) : server === 'coffee-team' ? name : '';
-  const key = Object.hasOwn(labels, action) ? labels[action] : undefined;
-  return key ? t(key) : undefined;
+  const tool = ours(name, server);
+  const labels = tool && servers[tool.server].labels;
+  return labels && Object.hasOwn(labels, tool.action) ? t(labels[tool.action]) : undefined;
 }
 
 export function orchestrationSearchLabel(name: string, query: string, t: (key: I18nKey) => string): { title: string; description: string } | undefined {
   if (name !== 'ToolSearch' || !query.startsWith('select:')) return undefined;
-  const names = query.slice(7).split(',').map(name => name.trim());
-  if (names.at(-1) === 'mcp__coffee-team__') names.pop();
+  const names = query.slice(7).split(',').map(name => name.trim()).filter(name => !/^mcp__[^_]+(?:-[^_]+)*__$/.test(name));
   if (!names.length) return undefined;
+  const tools = names.map(name => ours(name));
+  // Only a search for one server's tools gets that server's title.
+  const server = tools[0]?.server;
+  if (!server || tools.some(tool => tool?.server !== server)) return undefined;
   const descriptions = names.map(name => orchestrationToolLabel(name, t));
   if (descriptions.some(label => !label)) return undefined;
-  return { title: t('orchestration.tool.search'), description: [...new Set(descriptions)].join(' · ') };
+  return { title: t(servers[server].search), description: [...new Set(descriptions)].join(' · ') };
 }

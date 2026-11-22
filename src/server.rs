@@ -1043,7 +1043,7 @@ fn tier_terminal_start_blocking(
             Some(native_id) => crate::orchestration::parent_launch(&app, &session_id, native_id, std::path::Path::new(&actual_cwd), false)?,
             None => None,
         };
-        if let Some(mcp) = crate::window_control::add_to(&app, parent.as_ref().map(|parent| parent.mcp.clone())) {
+        if let Some(mcp) = crate::window_control::add_to(&app, &session_id, parent.as_ref().map(|parent| parent.mcp.clone())) {
             args.extend(["--mcp-config".into(), mcp]);
         }
         if let Some(parent) = parent {
@@ -1795,6 +1795,8 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::window_control::window_control_enabled,
             crate::window_control::window_control_set_enabled,
             crate::window_control::window_control_resolve,
+            crate::window_control::window_control_state,
+            crate::window_control::window_control_set_pick,
             crate::remote_link::remote_link_open,
             crate::remote_link::remote_link_send,
             crate::remote_link::remote_link_close,

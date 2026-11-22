@@ -206,6 +206,8 @@ export const commands = {
   // Windows that control other computers (src/remote_window.rs).
   windowControlEnabled: () => invoke<boolean>('window_control_enabled'),
   windowControlSetEnabled: (enabled: boolean) => invoke<void>('window_control_set_enabled', { enabled }),
+  windowControlState: (sessionId: string) => invoke<WindowControlState>('window_control_state', { sessionId }),
+  windowControlSetPick: (sessionId: string, pick: string | null) => invoke<WindowControlState>('window_control_set_pick', { sessionId, pick }),
   remoteWindowOpen: (address: string, prefix: string) => invoke<import('./lib/remote-control').RemoteWindow>('remote_window_open', { address, prefix }),
   remoteWindowList: () => invoke<import('./lib/remote-control').RemoteWindow[]>('remote_window_list'),
   remoteWindowFocus: (label: string) => invoke<void>('remote_window_focus', { label }),
@@ -482,3 +484,6 @@ export interface MobileRpcPairing { uri: string; host: string; hosts: string[]; 
 
 export interface FolderPickerPlace { name: string; path: string; kind: 'home' | 'desktop' | 'documents' | 'downloads' | 'drive' }
 export interface FolderPickerPlaces { home: string | null; separator: string; places: FolderPickerPlace[] }
+
+/** One tab's view of the windows it may operate (src/window_control.rs `window_control_state`). */
+export interface WindowControlState { attached: boolean; windows: { window: string; title: string }[]; pick: string | null }

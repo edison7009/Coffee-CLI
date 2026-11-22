@@ -22,6 +22,8 @@ import { sendSessionPrompt } from '../../lib/send-session-prompt';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
+import { RemoteControlPicker } from './RemoteControlPicker';
+import { useRemoteControlState } from '../../lib/remote-control-state';
 import { useCompact } from '../../lib/viewport';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
 import { interruptCodex, useCodexSession } from '../../lib/codex-session';
@@ -99,6 +101,7 @@ export function ActiveGambit() {
   // icon+name pairing). null session → undefined → Gambit hides the icon.
   const toolIcon = activeSession ? getToolIcon(activeSession.tool) : undefined;
   const coordinator = activeSession?.tool === 'claude' && !activeSession.parentId && orchestration.enabled && orchestration.coordinators?.includes(activeSession.id);
+  const [remote, setRemote] = useRemoteControlState(activeId ?? '', !!activeId && activeSession?.tool === 'claude' && !activeSession.parentId);
 
   const handleDraftChange = useCallback((draft: string) => {
     if (!activeId) return;
@@ -170,6 +173,7 @@ export function ActiveGambit() {
       orchestration={coordinator}
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
+      remoteControl={activeId && remote?.attached ? <RemoteControlPicker key={`remote:${activeId}`} sessionId={activeId} state={remote} onState={setRemote} /> : undefined}
       worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode || isPi)
         // Sits beside the tool's composer controls, keyed by session: a shared key would strand a stale switch in the footer.
         ? <WorktreeControl key={`worktree:${activeSession.id}`} tab={activeSession} started={started} running={running} /> : undefined}
