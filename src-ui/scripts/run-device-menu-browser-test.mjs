@@ -67,7 +67,7 @@ try {
     assert.equal((await status.innerText()).trim(), '未连接设备');
     await status.click();
     const menu = page.getByRole('menu');
-    assert.deepEqual(await menu.getByRole('menuitem').allInnerTexts(), ['下载 Coffee CLI 移动端', '操控其他设备…', '连接设置'], 'empty sections are left out; the phone app placeholder leads');
+    assert.deepEqual(await menu.getByRole('menuitem').allInnerTexts(), ['操控其他设备…', '下载 Coffee CLI 移动端', '连接设置'], 'empty sections are left out; controlling another device leads, the phone app placeholder sits above settings');
     assert.equal(await page.evaluate(() => document.querySelector('.settings-page, .settings-modal') === null), true, 'it no longer jumps to Settings');
 
     // Paste an address: a wrong one is explained, a pairing link opens the window for that computer.
@@ -95,7 +95,7 @@ try {
     assert.equal(await status.getAttribute('data-on'), 'true');
     await status.click();
     assert.deepEqual(await menu.locator('.sidebar-web-section').allInnerTexts(), ['正在操控']);
-    assert.deepEqual(await menu.locator('.sidebar-web-remote-name').allInnerTexts(), ['MacBook Pro']);
+    assert.deepEqual(await menu.locator('.sidebar-web-remote-name > span').allInnerTexts(), ['MacBook Pro']);
     await page.waitForTimeout(300); // the menu's rise animation
     await page.screenshot({ path: join(directory, 'controlling.png'), clip: { x: 0, y: 560, width: 420, height: 260 } });
 
@@ -122,7 +122,7 @@ try {
     assert.deepEqual(await menu.locator('.sidebar-web-section').allInnerTexts(), ['连接到本机']);
     assert.equal((await menu.locator('.sidebar-web-device-name').innerText()).trim(), 'iPhone');
     assert.equal(await menu.getByRole('menuitem', { name: '全部断开' }).count(), 1);
-    assert.equal(await menu.getByRole('menuitem').first().innerText(), '下载 Coffee CLI 移动端', 'the phone app placeholder stays on top');
+    assert.equal(await menu.getByRole('menuitem').nth(-2).innerText(), '下载 Coffee CLI 移动端', 'the phone app placeholder sits just above settings');
     assert.equal(await menu.getByRole('menuitem', { name: '下载 Coffee CLI 移动端' }).isDisabled(), true, 'not out yet');
     assert.deepEqual(errors, []);
     await page.close();

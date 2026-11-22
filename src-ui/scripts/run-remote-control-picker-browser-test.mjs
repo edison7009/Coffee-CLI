@@ -31,6 +31,7 @@ window.windows=[{window:'eb',title:'EB'},{window:'studio',title:'Studio'}];windo
 const state=id=>{if(window.picks[id]&&!window.windows.some(w=>w.window===window.picks[id]))delete window.picks[id];return {attached:!!window.attached[id],windows:structuredClone(window.windows),pick:window.picks[id]??null}};
 export const commands={
   async windowControlState(id){window.calls.push(['state',id]);return state(id)},
+  async remoteWindowList(){return window.windows.map(w=>({label:w.window,name:'',title:w.title,origin:'http://192.168.1.20:7788'}))},
   async windowControlSetPick(id,pick){window.calls.push(['pick',id,pick]);if(pick&&!window.windows.some(w=>w.window===pick))throw 'That window is no longer open';if(pick)window.picks[id]=pick;else delete window.picks[id];return state(id)},
 };
 ` }));
@@ -50,35 +51,36 @@ try {
 
   // A tab with the window tools starts on Auto, and its menu lists every open window.
   await chip.waitFor();
-  assert.equal(await chip.textContent(), '远程操控：自动');
+  assert.equal(await chip.getAttribute('aria-label'), '远程操控：自动');
+  assert.equal(await chip.textContent(), '自动', 'the chip shows the name alone');
   await chip.click();
-  assert.deepEqual(await page.getByRole('menuitemradio').allTextContents(), ['自动✓', 'EB', 'Studio']);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('[role=menuitemradio]')].map(item => item.getAttribute('aria-label') + (item.getAttribute('aria-checked') === 'true' ? '✓' : ''))), ['自动✓', 'EB', 'Studio']);
   await page.screenshot({ path: join(directory, 'remote-picker-menu.png') });
 
   // Choosing a window ties this tab to it.
   await option('EB').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：EB');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：EB');
   assert.deepEqual(await page.evaluate(() => window.calls.filter(call => call[0] === 'pick')), [['pick', 'tab-a', 'eb']]);
   assert.equal(await page.getByRole('menuitemradio').count(), 0, 'the menu closes after a choice');
   await chip.click();
   assert.equal(await option('EB').getAttribute('aria-checked'), 'true');
   await option('自动').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
 
   // The tied window closing drops the pick: the chip reads Auto again once the windows change.
   await chip.click(); await option('Studio').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：Studio');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：Studio');
   await page.evaluate(() => { window.windows = window.windows.filter(w => w.window !== 'studio'); window.listeners['remote-windows-changed']({ payload: null }); });
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
 
   // A window that closed while the menu was open is refused, and the chip shows what is true.
   await chip.click();
   await page.evaluate(() => { window.windows = []; });
   await option('EB').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
   await chip.click();
   await page.getByText('还没有打开远程电脑窗口', { exact: true }).waitFor();
-  assert.deepEqual(await page.getByRole('menuitemradio').allTextContents(), ['自动✓']);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('[role=menuitemradio]')].map(item => item.getAttribute('aria-label') + (item.getAttribute('aria-checked') === 'true' ? '✓' : ''))), ['自动✓']);
   await page.keyboard.press('Escape');
 
   // Turning the tool off in settings takes the chip away from open tabs.
@@ -90,12 +92,17 @@ try {
   // Another tab keeps its own choice, and a tab started without the window tools shows no chip.
   await page.evaluate(() => { window.windows = [{ window: 'eb', title: 'EB' }]; window.picks['tab-a'] = 'eb'; window.attached['tab-b'] = true; window.show('tab-b'); });
   await page.waitForFunction(() => window.calls.some(call => call[0] === 'state' && call[1] === 'tab-b'));
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
   await page.evaluate(() => window.show('tab-a'));
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '远程操控：EB');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：EB');
   await page.evaluate(() => window.show('tab-c'));
   await page.locator('#hidden').waitFor();
   assert.equal(await chip.count(), 0);
+  // A window's title carries the prefix it was opened with (「远程：」); the chip and menu show the computer's name once.
+  await page.evaluate(() => { window.windows = [{ window: 'studio', title: '远程：Studio' }]; window.picks['tab-a'] = 'studio'; window.show('tab-a'); });
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === 'Studio');
+  assert.equal(await page.locator('.gambit-capability.is-remote').getAttribute('aria-label'), '远程操控：Studio');
   assert.deepEqual(errors, []);
   console.log(`remote control picker browser test passed (screenshot: ${join(directory, 'remote-picker-menu.png')})`);
+
 } finally { await browser.close(); server.close(); }

@@ -14,7 +14,7 @@
 // Claude Code) will read the file; agents that don't just see the raw path.
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { usePhone } from '../../lib/viewport';
+import { useCompact, usePhone } from '../../lib/viewport';
 import { isWorktreePending } from '../../lib/worktree-pending';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
@@ -152,6 +152,7 @@ function DraftActions({ enabled, canShare, label, shareLabel, clearLabel, tips, 
   </span>;
 }
 
+const MINIMAL_MIN_HEIGHT = 84; // 纯净: the one-line box plus the line of controls under it
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
 /** The strip a phone keeps clear at the bottom (the iPhone home indicator); 0 where there is none. The
@@ -192,6 +193,8 @@ function GambitImpl({
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
   const desktop = claude || codex || dsh || opencode || pi;
+  // 纯净: the one-line box for every conversation, and for the new-conversation page before a tool is picked.
+  const minimalShell = useAppState().state.layoutMode === 'work' && (!!desktop || !tool);
   // Every desktop conversation accepts prompts during a running turn.
   const steerable = claude || codex || dsh || opencode || pi;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
@@ -256,7 +259,8 @@ function GambitImpl({
   });
   // Height the draft needs. The dragged height stays the floor, so clearing the draft returns to it.
   const [contentH, setContentH] = useState(0);
-  const effectiveH = Math.max(dockedH, contentH);
+  // 纯净: one line that grows with the draft; the dragged height applies to 专业 only.
+  const effectiveH = Math.max(minimalShell ? MINIMAL_MIN_HEIGHT : dockedH, contentH);
   // Caches the latest height written to the DOM during a resize drag, so
   // onUp commits it back to React state once without thrashing intermediate
   // renders. Null when no resize is in progress.
@@ -468,6 +472,7 @@ function GambitImpl({
   }, [sendEmpty]);
 
   const { state: appState, dispatch: appDispatch } = useAppState();
+  const compactLayout = useCompact();
 
   // Auto-grow the textarea to fit its content as the user types.
   useLayoutEffect(() => {
@@ -812,15 +817,21 @@ function GambitImpl({
   // breathing room on left/right/bottom — sits between, never under, the
   // Explorer / right pane. Native chrome (rounded corners, soft glow,
   // backdrop-filter) is preserved.
+  const workShell = appState.layoutMode === 'work' && !compactLayout;
   const dockStyle: React.CSSProperties = {
     transform: 'none',
-    left: leftPanelHidden ? 8 : 'calc(var(--w-left) + 8px)',
-    right: rightPanelHidden ? 8 : 'calc(var(--w-right) + 8px)',
+    // Clear: the rail is see-through, so the box keeps the same gap to the rail's icons as to the window's
+    // right edge (icons end 15px inside the 48px rail; 48px leaves 15px, the right edge gets 16px).
+    left: workShell ? 48 : leftPanelHidden ? 8 : 'calc(var(--w-left) + 8px)',
+    right: workShell ? 16 : rightPanelHidden ? 8 : 'calc(var(--w-right) + 8px)',
     bottom: `calc(8px + ${SAFE_BOTTOM})`,
     top: 'auto',
     width: 'auto',
     height: effectiveH,
   };
+
+  // 纯净: one line that grows with the draft, and every control on a quiet line under it.
+  const minimal = minimalShell;
 
   const capabilitiesStatus = (orchestration || computer || browser || remoteControl) && <div className="gambit-capabilities" role="status">
     {orchestration && <OrchestrationPicker sessionId={sessionId} />}
@@ -832,7 +843,7 @@ function GambitImpl({
   return (
     <div
       ref={rootRef}
-      className="gambit gambit--docked"
+      className={`gambit gambit--docked${minimal ? ' gambit--minimal' : ''}`}
       style={dockStyle}
       onMouseDown={(e) => e.stopPropagation() /* don't let global focus enforcer steal focus back to xterm */}
       // Block native WebView context menu across the whole Gambit panel.
@@ -844,7 +855,7 @@ function GambitImpl({
       <div className="gambit-dock-resize" onMouseDown={onDockResizeStart} />
 
       {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
-      {appState.preInputButton && <DraftActions
+      {appState.preInputButton && !minimal && <DraftActions
         enabled={!!draft.trim()} canShare={canShare}
         label={t('gambit.save_pre_input')} shareLabel={t('prompt_link.copy')} clearLabel={t('gambit.clear_draft')}
         tips={{ save: t('pre_input.tip_save'), share: t('pre_input.tip_share_draft'), clear: t('pre_input.tip_clear') }}
@@ -883,7 +894,7 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={draft}
-          placeholder={suggestion ? undefined : phone ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ? undefined : phone || minimal ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}
@@ -896,7 +907,7 @@ function GambitImpl({
         {suggestion && <div className="gambit-suggestion" aria-hidden="true">{suggestion}</div>}
       </div>
 
-      <div className={`gambit-footer${desktop ? ' gambit-footer--claude' : ''}${!desktop && attachable ? ' gambit-footer--attach' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}`}>
+      <div className={`gambit-footer${desktop ? ' gambit-footer--claude' : ''}${!desktop && attachable ? ' gambit-footer--attach' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}${minimal ? ' gambit-footer--minimal' : ''}`}>
 
         {/* Target label — leftmost footer item, symmetric to the send button.
             Shows the active tab's folder or remote host so a prompt can't be
@@ -904,6 +915,12 @@ function GambitImpl({
             Deliberately no hover tooltip — the visible name is the info.
             No folder icon: every directory would get the same glyph, so it's
             pure noise (and read as a different brightness than the text). */}
+        {/* 纯净: the box's own ＋; it presses the controls' attach button, so attaching works the same. */}
+        {minimal && (desktop || attachable) && <button type="button" className="gambit-pill-attach" aria-label={t('claude.attach')} onClick={() => { if (desktop) rootRef.current?.querySelector<HTMLButtonElement>('.claude-composer-controls > .claude-control-icon')?.click(); else void attachFiles(); }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        </button>}
+        {/* 纯净: the controls become one quiet line under the box; the wrapper is inert in 专业. */}
+        <span className={minimal ? 'gambit-meta' : 'gambit-meta-off'}>
         {workspaceName && (
           <span className="gambit-workspace">
             {toolIcon != null && <span className="gambit-workspace-icon">{toolIcon}</span>}
@@ -911,15 +928,18 @@ function GambitImpl({
           </span>
         )}
         {worktreeControl}
+        {!desktop && minimal && capabilitiesStatus}
+        {!desktop && minimal && usageMeter}
         {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} quota={usageMeter}>{capabilitiesStatus}</ClaudeComposerControls>}
         {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</CodexComposerControls>}
 
         {opencode && <OpenCodeComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</OpenCodeComposerControls>}
         {pi && <PiComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</PiComposerControls>}
         {dsh && <DshComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</DshComposerControls>}
-        {!desktop && attachable && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
-        {!desktop && capabilitiesStatus}
-        {!desktop && usageMeter}
+        </span>
+        {!desktop && attachable && !minimal && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
+        {!desktop && !minimal && capabilitiesStatus}
+        {!desktop && !minimal && usageMeter}
 
         {sendFailed && (
           <span className="gambit-send-hint" role="status">
@@ -931,6 +951,7 @@ function GambitImpl({
             {t('gambit.send_empty_hint')}
           </span>
         )}
+
 
 
         <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool ?? ''} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />

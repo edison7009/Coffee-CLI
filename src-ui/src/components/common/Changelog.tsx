@@ -6,7 +6,7 @@ import { BUNDLED_VERSION, RELEASE_NOTES_SEEN, cachedReleaseNotes, loadReleaseNot
 import { MarkdownContent } from '../center/MarkdownContent';
 import './Changelog.css';
 
-export function Changelog() {
+export function Changelog({ className = 'titlebar-btn changelog-trigger' }: { className?: string } = {}) {
   const t = useT(), language = useAppLanguage(), titleId = useId();
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState(BUNDLED_VERSION);
@@ -55,7 +55,7 @@ export function Changelog() {
   }, [open]);
 
   return <>
-    <button type="button" className="titlebar-btn changelog-trigger" aria-label={t('changelog.title')} aria-expanded={open} onClick={() => { setFailed(false); setOpen(true); }}>
+    <button type="button" className={className} aria-label={t('changelog.title')} aria-expanded={open} onClick={() => { setFailed(false); setOpen(true); }}>
       {t('changelog.title')}
     </button>
     {open && createPortal(<div className="settings-overlay changelog-overlay" onMouseDown={event => {

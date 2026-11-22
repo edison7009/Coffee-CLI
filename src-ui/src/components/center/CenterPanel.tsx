@@ -22,6 +22,7 @@ import { receiveOrchestration, useOrchestration, workerState } from '../../lib/o
 import { CloseSessionGroupDialog } from './CloseSessionGroupDialog';
 import '../../styles/orchestration.css';
 import { LaunchModeControl } from './LaunchModeControl';
+import { workLaunchable } from '../../lib/layout-mode';
 import { CliUpdateButton } from './CliUpdateButton';
 import { SessionSplitDividers } from './SessionSplitDividers';
 import { sessionSplitRects, splitSessionIds } from '../../lib/session-split-layout';
@@ -884,6 +885,16 @@ export function CenterPanel() {
   };
   const handleCloseTab = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    closeTabById(id);
+  };
+  // Closing from elsewhere (Clear's icon rail) goes through the same checks as the tab's ×.
+  const closeTabRef = useRef<(id: string) => void>(() => {});
+  useEffect(() => {
+    const onClose = (event: Event) => { const id = (event as CustomEvent<string>).detail; if (id) closeTabRef.current(id); };
+    window.addEventListener('coffee-close-tab', onClose);
+    return () => window.removeEventListener('coffee-close-tab', onClose);
+  }, []);
+  const closeTabById = (id: string) => {
     const tasks = orchestration.tasks.filter(task => !task.detached && task.parentId === id);
     const children = terminals.filter(tab => tab.parentId === id || tasks.some(task => task.sessionId === tab.id));
     if (tasks.length || children.length) {
@@ -893,6 +904,7 @@ export function CenterPanel() {
     }
     dispatch({ type: 'REMOVE_TERMINAL', id });
   };
+  closeTabRef.current = closeTabById;
 
   // ── Tab drag-to-reorder ─────────────────────────────────────────────────
   // Browser-style: pointer-down a tab, drag horizontally past 5px, drop
@@ -1062,7 +1074,9 @@ export function CenterPanel() {
       if (cwd) {
         rememberFolder(tool, cwd);
       }
-      dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? claudeLaunchMode : undefined, codexMode: tool === 'codex' ? codexLaunchMode : undefined, opencodeMode: tool === 'opencode' ? opencodeLaunchMode : undefined, piMode: tool === 'pi' ? piLaunchMode : undefined });
+      // 工作式 never starts a terminal: every tool opens as its desktop conversation.
+      const work = state.layoutMode === 'work';
+      dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? (work ? 'conversation' : claudeLaunchMode) : undefined, codexMode: tool === 'codex' ? (work ? 'conversation' : codexLaunchMode) : undefined, opencodeMode: tool === 'opencode' ? (work ? 'conversation' : opencodeLaunchMode) : undefined, piMode: tool === 'pi' ? (work ? 'conversation' : piLaunchMode) : undefined });
     }
   };
 
@@ -1518,13 +1532,14 @@ export function CenterPanel() {
                 <div className="launchpad-page">
                   <div className="launchpad-inner">
                     {(() => {
-                      const pinnedAgents = AGENT_CATALOG.filter(a => pinnedItems.includes(`agent:${a.key}`));
+                      const pinnedAgents = AGENT_CATALOG.filter(a => pinnedItems.includes(`agent:${a.key}`) && (state.layoutMode !== 'work' || workLaunchable(a.key)));
 
                       if (pinnedAgents.length === 0) {
                         return null;
                       }
 
-                      return (
+                      return (<>
+                        {state.layoutMode === 'work' && <div className="launchpad-work-head"><h1>{t('launchpad.work_title')}</h1><p>{t('launchpad.work_hint')}</p></div>}
                         <div className="launchpad-grid">
                           {pinnedAgents.map(tool => {
                             const isTerminal = tool.key === 'terminal';
@@ -1559,14 +1574,14 @@ export function CenterPanel() {
                                   {tool.requiresCwd && <button type="button" className="launchpad-folder" aria-label={t('launchpad.open_folder')} disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
                                     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
                                   </button>}
-                                  {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
+                                  {tool.type === 'ai-cli' && state.layoutMode !== 'work' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                 </div>
                               </div>
                             );
                           })}
 
                         </div>
-                      );
+                      </>);
                     })()}
 
                     {/* "Can't detect?" help link - for users whose PATH was

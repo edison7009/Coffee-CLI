@@ -1,4 +1,5 @@
 import { worktreeFromPath } from '../../lib/worktree-path';
+import { currentLayoutMode } from '../../lib/layout-mode';
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
@@ -494,7 +495,8 @@ export function HistoryBoard() {
     }
     const targetId = crypto.randomUUID();
     let mode: 'terminal' | 'conversation' = 'conversation';
-    try { if (localStorage.getItem(`coffee:${saved.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* optional preference */ }
+    // 工作式 opens every tool as its conversation.
+    if (currentLayoutMode() !== 'work') try { if (localStorage.getItem(`coffee:${saved.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* optional preference */ }
     // A conversation that ran in a Coffee worktree goes back into it, with its branch and merge button.
     const worktree = saved.worktree_cwd ? worktreeFromPath(saved.worktree_cwd) : undefined;
     dispatch({

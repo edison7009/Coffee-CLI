@@ -188,3 +188,48 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 .conversation-chevron { flex:none; display:inline-block; vertical-align:-1px; transition:transform .15s ease; }
 .conversation-chevron[data-open="true"] { transform:rotate(90deg); }
 @media(prefers-reduced-motion:reduce) { .conversation-chevron { transition:none; } }
+
+/* Tool calls as one quiet card (toolcalls 方案 B): a sentence that sums the run up and a check once done;
+   inside, one line per call — icon, verb, target, result — that opens into the full call. */
+.claude-tool-group { border-radius:var(--shape-radius-panel,8px); background:color-mix(in srgb,var(--text-1) 4%,transparent); overflow:hidden; }
+.claude-tool-group-head { display:flex; align-items:center; gap:9px; width:100%; min-height:38px; padding:6px 12px; border:0; background:transparent; color:var(--text-2); font:inherit; font-size:14px; text-align:left; cursor:pointer; transition:background-color .15s,color .15s; }
+.claude-tool-group-head:hover { background:var(--bg-hover); color:var(--text-1); }
+.claude-tool-group-head:focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
+.claude-tool-group--running .claude-tool-group-head { color:var(--text-1); }
+.claude-tool-group-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.claude-tool-group-target { margin-left:6px; color:var(--text-2); }
+.claude-tool-group-time { flex:none; color:var(--text-3); font-size:13px; font-variant-numeric:tabular-nums; }
+.claude-tool-group-done { display:inline-flex; color:var(--text-3); }
+.claude-step-icon { width:15px; height:15px; flex:none; }
+.claude-tool-group-done .claude-step-icon { width:14px; height:14px; }
+.claude-step-spinner { width:13px; height:13px; flex:none; border-radius:50%; border:1.6px solid color-mix(in srgb,var(--text-3) 35%,transparent); border-top-color:var(--text-1); animation:claude-step-spin 1s linear infinite; }
+@keyframes claude-step-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .claude-step-spinner { animation-duration:2.4s; } }
+.claude-tool-group-list { display:flex; flex-direction:column; gap:2px; padding:6px 6px 8px; border-top:1px solid var(--border); }
+.claude-step-line { display:flex; align-items:center; gap:9px; width:100%; min-height:30px; padding:4px 8px; border:0; border-radius:max(0px,calc(var(--shape-radius-panel,8px) - 4px)); background:transparent; color:var(--text-3); font:inherit; font-size:13.5px; text-align:left; cursor:pointer; transition:background-color .15s,color .15s; }
+.claude-step-line:hover { background:var(--bg-hover); color:var(--text-2); }
+.claude-step-line:focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
+.claude-step-verb { flex:none; color:var(--text-2); }
+.claude-step-target { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-1); font-family:'JetBrainsMono',var(--font-mono,ui-monospace),monospace; font-size:12.5px; }
+.claude-step-diff { flex:none; font-family:'JetBrainsMono',var(--font-mono,ui-monospace),monospace; font-size:12.5px; }
+.claude-step-diff i { font-style:normal; } .claude-step-diff .is-add { color:var(--green); } .claude-step-diff .is-del { color:var(--red); }
+.claude-step-result { flex:none; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-3); font-family:'JetBrainsMono',var(--font-mono,ui-monospace),monospace; font-size:12.5px; }
+.claude-step--running .claude-step-verb { color:var(--text-1); }
+.claude-step--failed .claude-step-verb { color:var(--red); }
+.claude-step-detail { padding:6px 8px 10px 32px; }
+.claude-row--group.claude-row--done::before { background:var(--success,#79c99e); }
+
+/* 工作式: a plain chat, not a timeline. No rail line or status dots; the assistant writes on the page,
+   and each tool step (single or grouped) is one quiet card with regular-weight text. Same components,
+   same order — only the look changes. Also covers Codex, OpenCode, Pi and DeepSeek Harness, which share
+   these rows. */
+[data-layout="work"] .claude-row { border-left:0; margin-left:0; padding-left:0; padding-bottom:22px; }
+[data-layout="work"] .claude-row::before { display:none; }
+[data-layout="work"] .claude-row--nested { margin-left:20px; }
+[data-layout="work"] .claude-row--assistant > time,[data-layout="work"] .claude-row--reasoning > time { display:none; }
+[data-layout="work"] .claude-row--tool:not(.claude-row--group) > .claude-tool { padding:8px 12px; border-radius:var(--shape-radius-panel,8px); background:color-mix(in srgb,var(--text-1) 4%,transparent); }
+[data-layout="work"] .claude-tool-heading strong { font-weight:500; color:var(--text-2); }
+[data-layout="work"] .claude-row--running > .claude-tool .claude-tool-heading strong { color:var(--text-1); }
+/* Shapes that clear plain fills (global.css's glass/carbon rule) would leave the step cards invisible: keep their quiet fill. */
+[data-layout="work"] .panel-center .claude-row .claude-tool-group,
+[data-layout="work"] .panel-center .claude-row--tool:not(.claude-row--group) > .claude-tool { background:color-mix(in srgb,var(--text-1) 5%,transparent) !important; }

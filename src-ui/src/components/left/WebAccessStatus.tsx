@@ -8,7 +8,7 @@ import { useAppDispatch } from '../../store/app-state';
 import { commands, isTauri, type MobileRpcDevice, type MobileRpcStatus } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { REMOTE } from '../../remote/bridge';
-import { controlAddress, forgetRemote, loadRecentRemotes, originOf, recentAddress, rememberRemote, type RecentRemote, type RemoteWindow } from '../../lib/remote-control';
+import { controlAddress, forgetRemote, loadRecentRemotes, onControlRequest, originOf, recentAddress, rememberRemote, remoteHost, type RecentRemote, type RemoteWindow } from '../../lib/remote-control';
 
 const CLOSE_ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>;
 
@@ -24,6 +24,9 @@ export function WebAccessStatus() {
   const [error, setError] = useState('');
   const button = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
+
+  // The composer's remote chip asks for the same dialog (lib/remote-control.ts requestControl).
+  useEffect(() => onControlRequest(() => { setError(''); setAsking(true); }), []);
 
   useEffect(() => {
     if (!isTauri || REMOTE) return;
@@ -106,23 +109,19 @@ export function WebAccessStatus() {
     </button>
     {open && rect && createPortal(<div ref={menu} className="ctx-menu sidebar-web-menu" role="menu" aria-label={label}
       style={{ position: 'fixed', left: rect.left, bottom: window.innerHeight - rect.top + 6 }}>
-      {/* Not out yet: shown greyed so people know a phone app is coming. */}
-      <button type="button" role="menuitem" className="ctx-menu-item" aria-disabled="true" disabled>{t('sidebar.devices.mobile_app')}</button>
-      <div className="ctx-menu-divider" />
-      <button type="button" role="menuitem" className="ctx-menu-item" onClick={() => { setOpen(false); setAsking(true); }}>{t('sidebar.devices.control')}</button>
-
+      {/* What you are controlling comes first, then the way to control another, then the rest. */}
       {remotes.length > 0 && <>
-        <div className="ctx-menu-divider" />
         <div className="sidebar-web-section">{t('sidebar.devices.section_controlling')}</div>
         {remotes.map(win => <div key={win.label} className="sidebar-web-remote">
           <button type="button" role="menuitem" className="ctx-menu-item sidebar-web-remote-name" data-live
             onClick={() => { setOpen(false); void commands.remoteWindowFocus(win.label).catch(() => {}); }}>
-            <i aria-hidden="true" /><span>{win.name}</span>
+            <i aria-hidden="true" /><span>{win.name}</span>{remoteHost(win.origin) && <small className="sidebar-web-remote-host">{remoteHost(win.origin)}</small>}
           </button>
           <button type="button" className="sidebar-web-remote-x" aria-label={t('sidebar.devices.close_remote', { name: win.name })}
             onClick={() => void commands.remoteWindowClose(win.label).catch(() => {})}>{CLOSE_ICON}</button>
         </div>)}
       </>}
+      <button type="button" role="menuitem" className="ctx-menu-item" onClick={() => { setOpen(false); setAsking(true); }}>{t('sidebar.devices.control')}</button>
 
       {closedRecent.length > 0 && <>
         <div className="ctx-menu-divider" />
@@ -147,6 +146,8 @@ export function WebAccessStatus() {
       </>}
 
       <div className="ctx-menu-divider" />
+      {/* Not out yet: shown greyed so people know a phone app is coming. */}
+      <button type="button" role="menuitem" className="ctx-menu-item" aria-disabled="true" disabled>{t('sidebar.devices.mobile_app')}</button>
       <button type="button" role="menuitem" className="ctx-menu-item" onClick={() => settings()}>{t('sidebar.devices.settings')}</button>
       {error && <div className="sidebar-web-error" role="alert">{error}</div>}
     </div>, document.body)}

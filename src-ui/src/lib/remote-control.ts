@@ -76,3 +76,32 @@ export function olderThan(a: string, b: string): boolean {
   for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i];
   return false;
 }
+
+/**
+ * "Control another device…" asked from somewhere other than the device menu (the composer's remote
+ * chip): the device menu (components/left/WebAccessStatus.tsx) owns the dialog and answers.
+ */
+const controlListeners = new Set<() => void>();
+export function onControlRequest(listener: () => void): () => void {
+  controlListeners.add(listener);
+  return () => { controlListeners.delete(listener); };
+}
+export function requestControl(): boolean {
+  controlListeners.forEach(listener => listener());
+  return controlListeners.size > 0;
+}
+export const canRequestControl = () => controlListeners.size > 0;
+
+/**
+ * A remote window's own name, without the prefix its title was given when it opened (「远程：」 in
+ * Chinese, `remote_control.window_prefix`), which would otherwise read twice beside 「远程操控」.
+ */
+export function remoteWindowName(title: string, prefix: string): string {
+  const trimmed = prefix.trim();
+  return trimmed && title.startsWith(trimmed) ? title.slice(trimmed.length).trim() || title : title;
+}
+
+/** `host` of a window's address, the line under its name. */
+export function remoteHost(origin: string): string {
+  try { return new URL(origin).hostname; } catch { return ''; }
+}

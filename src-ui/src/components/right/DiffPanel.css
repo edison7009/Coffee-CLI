@@ -252,8 +252,8 @@
   gap: 10px;
   font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
 }
-.diff-toolarge-stats .diff-add { color: #4ec76b; }
-.diff-toolarge-stats .diff-del { color: #e07070; }
+.diff-toolarge-stats .diff-add { color: var(--green); }
+.diff-toolarge-stats .diff-del { color: var(--red); }
 
 .diff-markdown-preview {
   min-height: 100%;
@@ -448,29 +448,27 @@
   user-select: none;
 }
 
-.diff-line-add .diff-marker { color: #b8e8c4; }
-.diff-line-del .diff-marker { color: #e8b8b8; }
-
-[data-mode="light"] .diff-line-add .diff-marker { color: #1a4d2a; }
-[data-mode="light"] .diff-line-del .diff-marker { color: #4d1a1a; }
+.diff-line-add .diff-marker { color: var(--green); }
+.diff-line-del .diff-marker { color: var(--red); }
 
 /* Row-level background tint — the "whole line is +/- at a glance"
  * scanning signal. Distinct concern from Shiki token coloring
  * (which colors keywords/strings INSIDE a line). A 2026-04 cleanup
  * mistakenly deleted these as "superseded by tokenization"; restored
- * here. Solid hex (not rgba) keeps the hue consistent over panel /
+ * here. A quiet tint of the theme's own green / red, mixed into the
+ * solid app colour (not rgba) so the hue stays the same over panel /
  * glass / any backdrop — and .diff-line IS in the glass whitelist
- * (global.css:1218-1220) so the bg survives glass nuclear-transparent. */
+ * (global.css) so the bg survives glass nuclear-transparent. */
 .diff-line-add {
-  background: #1a4d2a;
+  background: color-mix(in srgb, var(--green) 14%, var(--bg-app));
 }
 .diff-line-del {
-  background: #4d1a1a;
+  background: color-mix(in srgb, var(--red) 14%, var(--bg-app));
 }
 
 [data-mode="light"] .diff-line-add {
-  background: #c0e8c8;
+  background: color-mix(in srgb, var(--green) 12%, var(--bg-app));
 }
 [data-mode="light"] .diff-line-del {
-  background: #e8c0c0;
+  background: color-mix(in srgb, var(--red) 12%, var(--bg-app));
 }

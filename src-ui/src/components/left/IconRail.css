@@ -1,0 +1,120 @@
+/* 工作式: a 48px column of icons where the sidebar was. Flat: the pressed page shows as a slightly
+   deeper fill, hover only tints — nothing moves. */
+.icon-rail {
+  position: relative;
+  /* Above the docked composer (Gambit, z-index 200) so the conversation list is never covered. */
+  z-index: 250;
+  flex: none;
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0 10px;
+  /* The same ground as the title bar and the conversation: one surface, no sidebar tint or seam. */
+  background: transparent;
+}
+.icon-rail-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: max(0px, calc(var(--radius-md) - 4px));
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color .15s, color .15s;
+}
+.icon-rail-button:hover { background: var(--bg-hover); color: var(--text-1); }
+.icon-rail-button[aria-pressed="true"], .icon-rail-button[aria-expanded="true"] { background: var(--bg-active); color: var(--text-1); }
+.icon-rail-button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.icon-rail-button > svg { width: 18px; height: 18px; }
+.icon-rail-badge { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 2px var(--bg-app); }
+.icon-rail-separator { width: 18px; height: 1px; margin: 5px 0; background: var(--border); }
+.icon-rail-spacer { flex: 1; }
+
+/* The device menu's own button covers the icon: its dot shows connection, its label stays for screen readers. */
+.icon-rail-devices { cursor: default; }
+.icon-rail-devices .sidebar-footer-status-button { position: absolute; inset: 0; width: auto; height: auto; padding: 0; margin: 0; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.icon-rail-devices .sidebar-footer-status-button > i { position: absolute; right: 7px; bottom: 7px; margin: 0; box-shadow: 0 0 0 2px var(--bg-app); }
+.icon-rail-devices .sidebar-footer-status-button:not([data-on]) > i { display: none; }
+.icon-rail-devices .sidebar-web-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.icon-rail-devices .sidebar-web-chevron { display: none; }
+
+/* Conversations: the sidebar's list, beside the rail, over the conversation. */
+.icon-rail-list {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 54px;
+  width: 288px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-panel);
+  animation: icon-rail-list-in .15s ease-out;
+}
+.icon-rail-list .explorer-history-host { flex: none; }
+@keyframes icon-rail-list-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .icon-rail-list { animation: none; } }
+
+/* The right panel opens over the conversation instead of taking a column. */
+.app-layout > .panel-right.is-sheet {
+  position: absolute !important;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 250;
+  width: min(var(--w-right), calc(100% - 120px));
+  min-width: 280px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-panel);
+  transition: opacity 150ms ease-out;
+}
+.app-layout > .panel-right.is-sheet::after { display: none; }
+.app-layout > .panel-right.is-sheet.is-collapsed { width: min(var(--w-right), calc(100% - 120px)); min-width: 280px; opacity: 0; pointer-events: none; }
+
+/* Opaque on every shape (Carbon and friends make panels see-through): the list and the sheet are read on
+   top of the conversation, the way History search is (global.css .history-search-dialog). */
+.icon-rail-list, .app-layout > .panel-right.is-sheet {
+  background-color: var(--bg-app) !important;
+  background-image: linear-gradient(var(--bg-panel), var(--bg-panel)) !important;
+}
+
+/* Tips open to the right of the rail, level with the icon they name (the app's tip card look). */
+.icon-rail-tip { position: fixed; z-index: 10000; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; max-width: 280px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); line-height: 1.35; pointer-events: none; box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 20px rgba(0, 0, 0, .22); }
+.icon-rail-tip-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.icon-rail-tip.has-action { pointer-events: auto; padding-right: 4px; }
+.icon-rail-tip-close { display: grid; place-items: center; width: 24px; height: 24px; flex: none; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; transition: background-color .15s, color .15s; }
+.icon-rail-tip-close:hover { background: var(--bg-hover); color: var(--text-1); }
+.icon-rail-tip-close svg { width: 14px; height: 14px; }
+.icon-rail-tip strong { font-weight: 500; overflow-wrap: anywhere; }
+.icon-rail-tip small { color: var(--text-3); font-size: 12px; }
+
+/* Open conversations: the project's own icon with the tool in its corner, or the tool alone. */
+.icon-rail-sessions { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.icon-rail-sessions::-webkit-scrollbar { display: none; }
+.icon-rail-session { width: 40px; height: 40px; }
+/* The icon is the whole button: no tile behind it. Others sit a little faded; the open one is full strength
+   with a short bar at the rail's edge. Hover brings an icon to full strength — nothing moves. */
+.icon-rail-session, .icon-rail-session:hover, .icon-rail-session[aria-current="true"] { background: transparent; }
+.icon-rail-session > :is(.icon-rail-project, .icon-rail-tool) { opacity: .6; transition: opacity .15s; }
+.icon-rail-session:hover > :is(.icon-rail-project, .icon-rail-tool), .icon-rail-session[aria-current="true"] > :is(.icon-rail-project, .icon-rail-tool) { opacity: 1; }
+.icon-rail-session[aria-current="true"]::before { content: ''; position: absolute; left: -4px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: var(--text-1); }
+.icon-rail-project { width: 28px; height: 28px; border-radius: 7px; object-fit: contain; }
+.icon-rail-tool { display: grid; place-items: center; width: 28px; height: 28px; }
+.icon-rail-tool > *, .icon-rail-tool svg, .icon-rail-tool img { width: 28px !important; height: 28px !important; border-radius: 7px; }
+.icon-rail-tool-badge { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 13px; height: 13px; border-radius: 4px; background: var(--bg-app); box-shadow: 0 0 0 1.5px var(--bg-app); }
+.icon-rail-tool-badge > *, .icon-rail-tool-badge svg, .icon-rail-tool-badge img { width: 11px !important; height: 11px !important; }
+.icon-rail-state { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--text-3) 40%, transparent); border-top-color: var(--text-1); box-sizing: border-box; width: 8px; height: 8px; animation: icon-rail-spin 1s linear infinite; }
+.icon-rail-state.is-waiting { border: 0; background: var(--blue); width: 6px; height: 6px; animation: none; }
+@keyframes icon-rail-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .icon-rail-state { animation-duration: 2.4s; } }

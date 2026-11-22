@@ -16,7 +16,6 @@ import { IS_MACOS } from '../../lib/platform';
 import { IS_WEB, useCompact } from '../../lib/viewport';
 import { useT } from '../../i18n/useT';
 import { isConversationSession } from '../../lib/chat-tools';
-import { Changelog } from './Changelog';
 import './TitleBar.css';
 
 export function TitleBar() {
@@ -53,7 +52,9 @@ export function TitleBar() {
   // collapsed window" effect for zero flicker — the right call.
   // Narrow: the panels are drawers, so the buttons show and toggle the open drawer instead.
   const compact = useCompact();
-  const leftShown = compact ? state.drawer === 'left' : !state.leftPanelHidden;
+  // 工作式 has no tab strip or sidebar: the bar shows the conversation's name, and the rail holds the rest.
+  const work = state.layoutMode === 'work' && !compact;
+  const leftShown = !work && (compact ? state.drawer === 'left' : !state.leftPanelHidden);
   const rightShown = compact ? state.drawer === 'right' : !state.rightPanelHidden;
   const toggleLeft  = () => dispatch({ type: 'TOGGLE_LEFT_PANEL' });
   const toggleRight = () => dispatch({ type: 'TOGGLE_RIGHT_PANEL' });
@@ -99,7 +100,17 @@ export function TitleBar() {
           its .chrome-tabs-header into this slot so the tabs sit on the drag bar
           above the center column, with the layout toggles + window controls to
           their right. The flexible spacer between them stays a draggable handle. */}
-      <div className="titlebar-tabs" id="titlebar-tab-slot" />
+      <div className="titlebar-tabs" id="titlebar-tab-slot" hidden={work} />
+      {/* 纯净: 「项目 / 对话标题」, like a path to where you are; nothing before a conversation has started. */}
+      {work && (() => {
+        const folder = activeTab?.tool ? activeTab.folderPath?.split(/[\\/]/).filter(Boolean).pop() : undefined;
+        const name = activeTab?.tool ? activeTab.toolTitle : undefined;
+        return (folder || name) ? <div className="titlebar-work-title">
+          {folder && <span className="titlebar-work-folder">{folder}</span>}
+          {folder && name && <span className="titlebar-work-slash" aria-hidden="true">/</span>}
+          {name && <span className="titlebar-work-name">{name}</span>}
+        </div> : null;
+      })()}
       <div className="titlebar-drag-spacer" />
       {/* Icons come straight from Lucide (lucide.dev, ISC license). No
           runtime dependency — just the d-paths copied inline so we
@@ -118,12 +129,16 @@ export function TitleBar() {
           all layout toggles so the panels and the keyboard read as one set.
           Active signal travels via .is-active background only. */}
       <div className="titlebar-layout-toggles" data-toggle-display={state.titlebarToggleDisplay}>
-        <Changelog />
+        {/* 纯净 ↔ 专业, in both shells (the changelog moved to Settings, under the version). */}
+        <div className="titlebar-layout-switch" role="radiogroup" aria-label={t('layout.title')}>
+          {(['work', 'code'] as const).map(mode => <button key={mode} type="button" role="radio" aria-checked={state.layoutMode === mode}
+            onClick={() => dispatch({ type: 'SET_LAYOUT_MODE', mode })}>{t(mode === 'work' ? 'layout.work' : 'layout.code')}</button>)}
+        </div>
         {/* Left panel · Gambit · right panel — the three hinted chrome toggles,
             adjacent with Gambit in the MIDDLE so the row mirrors the screen
             (left panel on the left, right on the right) and the default Alt+QWE
             keys read left-to-right. */}
-        <button
+        {!work && <button
           className={`titlebar-btn titlebar-btn--layout titlebar-btn--hinted${leftShown ? ' is-active' : ''}`}
           onClick={toggleLeft}
           aria-label={`Toggle left panel (${hk.left})`}
@@ -134,11 +149,11 @@ export function TitleBar() {
             <path d="M9 4v16" />
           </svg>
           <span className="titlebar-hotkey-hint">{hk.left}</span>
-        </button>
+        </button>}
         {/* Gambit compose (middle) — always visible even when the left panel is
             hidden. Keyboard glyph; open state reads from the .is-active bg, so
             no need to swap the icon to an X. */}
-        <button
+        {!work && <button
           className={`titlebar-btn titlebar-btn--layout titlebar-btn--hinted${gambitOpen ? ' is-active' : ''}`}
           onClick={() => dispatch({ type: 'TOGGLE_GAMBIT' })}
           disabled={claudeComposerLocked}
@@ -157,8 +172,8 @@ export function TitleBar() {
             <path d="M7 16h10" />
           </svg>
           <span className="titlebar-hotkey-hint">{hk.gambit}</span>
-        </button>
-        <button
+        </button>}
+        {!work && <button
           className={`titlebar-btn titlebar-btn--layout titlebar-btn--hinted${rightShown ? ' is-active' : ''}`}
           onClick={toggleRight}
           aria-label={`Toggle right panel (${hk.right})`}
@@ -169,13 +184,13 @@ export function TitleBar() {
             <path d="M15 4v16" />
           </svg>
           <span className="titlebar-hotkey-hint">{hk.right}</span>
-        </button>
+        </button>}
         {/* Personalization settings — gear opens the consolidated modal that
             replaced the old left-panel theme/language popovers. It joins the
             configured titlebar display mode, except "hidden" intentionally
             degrades to icon-only so Settings always remains reachable. */}
         {/* Settings lives at the left sidebar's bottom; here only while that sidebar is hidden, so it stays reachable. */}
-        {(state.leftPanelHidden || compact) && <button
+        {!work && (state.leftPanelHidden || compact) && <button
           className={`titlebar-btn titlebar-btn--layout titlebar-btn--hinted titlebar-btn--settings${state.settingsOpen ? ' is-active' : ''}`}
           onClick={() => dispatch({ type: 'TOGGLE_SETTINGS' })}
           aria-label={t('settings.title')}

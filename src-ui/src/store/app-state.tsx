@@ -1,6 +1,7 @@
 // Coffee CLI — Global App State (React Context)
 
 import { createContext, useContext, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { readLayoutMode, type LayoutMode } from '../lib/layout-mode';
 import type { ReactNode, RefObject } from 'react';
 import { isConversationSession, supportsEnhancedTool } from '../lib/chat-tools';
 import { REMOTE, remoteRequest } from '../remote/bridge';
@@ -271,6 +272,8 @@ export interface AppState {
   // persisted (it depends on files open at the time).
   diffSelection: DiffSelection | null;
   diffMode: 'overlay' | 'tab';
+  /** 工作式 (icon rail + conversation, no terminals) or 代码式 (the full workspace); lib/layout-mode.ts. */
+  layoutMode: LayoutMode;
   /// True while the center diff tab is the active surface (clicked in the tab
   /// strip). Clicking any terminal tab clears it (folded into SET_ACTIVE_TERMINAL).
   /// Lets the diff tab coexist in the strip with terminal tabs the user can
@@ -373,6 +376,7 @@ export type Action =
   | { type: 'SET_DIFF_SELECTION'; selection: DiffSelection }
   | { type: 'CLEAR_DIFF' }
   | { type: 'SET_DIFF_MODE'; mode: 'overlay' | 'tab' }
+  | { type: 'SET_LAYOUT_MODE'; mode: LayoutMode }
   | { type: 'SET_DIFF_TAB_ACTIVE'; active: boolean };
 
 // ─── Reducer ─────────────────────────────────────────────────────────────────
@@ -764,6 +768,9 @@ function reducer(state: AppState, action: Action): AppState {
       // while diffMode==='tab' && diffSelection. Clearing here covers both
       // the tab's close button and the overlay's close button.
       return { ...state, diffSelection: null, diffTabActive: false };
+    case 'SET_LAYOUT_MODE':
+      // The right panel opens on demand in 工作式, so it starts closed there.
+      return action.mode === state.layoutMode ? state : { ...state, layoutMode: action.mode, rightPanelHidden: action.mode === 'work' ? true : state.rightPanelHidden };
     case 'SET_DIFF_MODE': {
       try { localStorage.setItem('cc-diff-mode', action.mode); } catch { /* Best-effort operation; failure is non-fatal. */ }
       // Entering tab mode focuses the diff tab; leaving blurs it. Keeps the
@@ -951,9 +958,12 @@ function getInitialState(): AppState {
   let diffMode: 'overlay' | 'tab' = 'overlay';
   // Gambit starts closed unless the user saved an open preference.
   let gambitOpen = false;
+  const layoutMode = readLayoutMode();
   try {
     leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
     rightPanelHidden = localStorage.getItem('cc-right-hidden') !== '0';
+    // 工作式 opens the right panel on demand only.
+    if (layoutMode === 'work') rightPanelHidden = true;
     preInputButton = localStorage.getItem('cc-pre-input-button') !== '0';
     // The board has one view now; forget the old view choice.
     localStorage.removeItem('cc-task-view');
@@ -991,6 +1001,7 @@ function getInitialState(): AppState {
     preInputButton,
     diffSelection: null,
     diffMode,
+    layoutMode,
     diffTabActive: false,
     usageOpen: false,
     automationsOpen: false,

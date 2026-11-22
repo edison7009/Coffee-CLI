@@ -578,6 +578,10 @@
 .sidebar-web-remote-x { display: grid; place-items: center; flex-shrink: 0; width: 26px; height: 26px; margin-right: 4px; padding: 0; border: 0; border-radius: var(--shape-radius-btn, 6px); color: var(--text-3); background: transparent; cursor: pointer; }
 .sidebar-web-remote-x:hover { color: var(--text-1); background: var(--bg-hover); }
 .sidebar-web-remote-x:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+/* Disconnect waits until the row is hovered or reached by keyboard, so a click on the name never lands on it. */
+.sidebar-web-remote .sidebar-web-remote-x { opacity: 0; transition: opacity .15s, background-color .15s, color .15s; }
+.sidebar-web-remote:hover .sidebar-web-remote-x, .sidebar-web-remote:focus-within .sidebar-web-remote-x { opacity: 1; }
+.sidebar-web-remote-host { margin-left: auto; padding-left: 12px; color: var(--text-3); font-size: var(--type-label, 12px); }
 .sidebar-web-remote-x svg { width: 13px; height: 13px; }
 /* Paste-an-address dialog for controlling another computer. */
 .remote-control-dialog { padding: 0; width: min(440px, calc(100vw - 32px)); }

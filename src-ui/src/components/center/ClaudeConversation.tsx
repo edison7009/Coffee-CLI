@@ -1,4 +1,5 @@
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { toolKind, toolResult, toolRuns, toolRunStatus, toolRunSummary, toolTarget, toolVerbKey } from '../../lib/tool-runs';
 import { startErrorText } from '../../lib/start-error';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { diffLines } from 'diff';
@@ -303,6 +304,72 @@ export const ClaudeTool = memo(function ClaudeTool({ message }: { message: Claud
   </section></ToolExpansionKey.Provider>;
 });
 
+// Which tool groups (and which calls inside them) are open, kept outside the rows: the virtual list unmounts rows scrolled away.
+const openToolGroups = new Set<string>();
+
+const STEP_ICONS: Record<string, ReactNode> = {
+  read: <><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
+  edit: <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />,
+  run: <path d="m4 17 6-6-6-6M12 19h8" />,
+  web: <><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>,
+  remote: <><rect x="2" y="4" width="13" height="9" rx="2" /><rect x="9" y="11" width="13" height="9" rx="2" /></>,
+  team: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>,
+  other: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
+  group: <><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 17l9 5 9-5" /></>,
+  done: <path d="M20 6 9 17l-5-5" />,
+};
+const stepIcon = (key: string) => <svg className="claude-step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{STEP_ICONS[key] ?? STEP_ICONS.other}</svg>;
+
+/** One call as one line: what it did, to what, and what came back; opens into the full call. */
+function ToolStep({ message }: { message: ClaudeMessage }) {
+  const t = useT();
+  const [open, setOpen] = useState(() => openToolGroups.has(`step:${message.id}`));
+  const input = message.input ?? {}, name = message.toolName;
+  const kind = toolKind(name);
+  const label = orchestrationToolLabel(name ?? '', t);
+  const target = label ? '' : toolTarget(name, input);
+  const before = text(input.old_string), after = text(input.new_string);
+  const changes = name === 'Edit' ? diffLines(before, after, { timeout: 100 }) ?? [] : [];
+  const added = changes.filter(c => c.added).reduce((n, c) => n + c.count, 0), removed = changes.filter(c => c.removed).reduce((n, c) => n + c.count, 0);
+  const result = toolResult(name, message.output);
+  const toggle = () => setOpen(value => { const key = `step:${message.id}`; if (value) openToolGroups.delete(key); else openToolGroups.add(key); return !value; });
+  return <div className={`claude-step claude-step--${message.toolStatus ?? 'running'}`}>
+    <button type="button" className="claude-step-line" aria-expanded={open} onClick={toggle}>
+      {stepIcon(kind)}
+      <span className="claude-step-verb">{label ?? t(toolVerbKey(name))}</span>
+      {target && <span className="claude-step-target">{target}</span>}
+      {(added > 0 || removed > 0) && <span className="claude-step-diff"><i className="is-add">+{added}</i> <i className="is-del">−{removed}</i></span>}
+      {result && <span className="claude-step-result">{name === 'Grep' || name === 'Glob' ? t('tools.result.found', { count: result }) : `→ ${result}`}</span>}
+    </button>
+    {open && <div className="claude-step-detail"><ClaudeTool message={message} /></div>}
+  </div>;
+}
+
+/** Tool calls in a row as one quiet card (toolcalls 方案 B): a sentence that sums them up, a check once
+ *  done, and inside, one line per call. While running it names the step under way and its time. */
+export const ToolGroup = memo(function ToolGroup({ messages }: { messages: ClaudeMessage[] }) {
+  const t = useT();
+  const key = messages[0].id;
+  const [open, setOpen] = useState(() => openToolGroups.has(key));
+  const status = toolRunStatus(messages);
+  const running = status === 'running' ? messages.find(message => message.toolStatus === 'running' || !message.toolStatus) : undefined;
+  const now = useClock(!!running);
+  const toggle = () => setOpen(value => { if (value) openToolGroups.delete(key); else openToolGroups.add(key); return !value; });
+  const step = running && (orchestrationToolLabel(running.toolName ?? '', t) ?? t(toolVerbKey(running.toolName)));
+  const stepTarget = running && toolTarget(running.toolName, running.input ?? {});
+  return <section className={`claude-tool-group claude-tool-group--${status}`}>
+    <button type="button" className="claude-tool-group-head" aria-expanded={open} onClick={toggle}>
+      {running ? <span className="claude-step-spinner" aria-hidden="true" /> : stepIcon('group')}
+      <span className="claude-tool-group-title">{running ? <>{t('tools.running', { step: step || '' })}{stepTarget && <span className="claude-tool-group-target">{stepTarget}</span>}</> : toolRunSummary(messages, t)}</span>
+      {running && <span className="claude-tool-group-time">{elapsed(Math.max(0, now - running.timestamp), t)}</span>}
+      {status === 'done' && <span className="claude-tool-group-done">{stepIcon('done')}</span>}
+      <Chevron open={open} />
+    </button>
+    {open && <div className="claude-tool-group-list">{messages.map(message => <ToolStep key={message.id} message={message} />)}</div>}
+  </section>;
+});
+
 function Question({ id, pending }: { id: string; pending: ClaudeRequest }) {
   const t = useT();
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -375,6 +442,10 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const [expandedThinking, setExpandedThinking] = useState(false);
   const [thinkingExpansion, setThinkingExpansion] = useState<Record<string, boolean>>({});
   const virtual = useConversationVirtualizer(s.messages, scrollRef);
+  // Adjacent tool calls fold into one group row; the rest of the run renders empty (lib/tool-runs.ts).
+  // 纯净 shows every call as a card (even alone); 专业 folds runs of two or more.
+  const pure = useAppState().state.layoutMode === 'work';
+  const runs = useMemo(() => toolRuns(s.messages, pure ? 1 : 2), [s.messages, pure]);
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainClaudeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
@@ -482,10 +553,10 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
         {s.historyCursor > 0 && <button className="claude-expand" disabled={s.loadingHistory || !s.ready} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
-        {s.messages.slice(virtual.start, virtual.end).map((m, i) => <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
+        {s.messages.slice(virtual.start, virtual.end).map((m, i) => runs.follower.has(virtual.start + i) ? <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>{null}</MeasuredRow> : <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           {new Date(m.timestamp).toDateString() !== new Date(s.messages[virtual.start + i - 1]?.timestamp ?? 0).toDateString() && <div className="claude-date">{new Date(m.timestamp).toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}</div>}
-          <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''} ${m.parentId ? 'claude-row--nested' : ''}`}>
-            {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></> : m.role === 'tool' ? <ClaudeTool message={m} /> : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? expandedThinking} tokens={s.thinkingTokens} onToggle={open => setThinkingExpansion(previous => (previous[m.id] ?? expandedThinking) === open ? previous : { ...previous, [m.id]: open })} /> : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
+          <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? `claude-row--group claude-row--${toolRunStatus(s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1))}` : m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''} ${m.parentId ? 'claude-row--nested' : ''}`}>
+            {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></> : m.role === 'tool' ? (runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} /> : <ClaudeTool message={m} />) : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? expandedThinking} tokens={s.thinkingTokens} onToggle={open => setThinkingExpansion(previous => (previous[m.id] ?? expandedThinking) === open ? previous : { ...previous, [m.id]: open })} /> : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
             {(m.role === 'user' || m.role === 'assistant') && !m.partial && <MessageCopyButton copied={copied === m.id} onCopy={() => copy(m)} />}
             {m.turnStats && !(s.busy && virtual.start + i === s.messages.length - 1) && <TurnSummary stats={m.turnStats} sessionKey={s.nativeId} messageId={m.id} />}
           </article>

@@ -2,3 +2,20 @@
 /* All CSS for this exists in global.css already:
    .titlebar, .titlebar-controls, .titlebar-btn, .titlebar-btn.close
    This file is intentionally empty — styles come from global.css */
+
+/* 工作式: no tab strip — the bar names the open conversation and its folder. */
+.titlebar-tabs[hidden] { display: none; }
+.titlebar-work-title { display: flex; align-items: center; align-self: stretch; gap: 8px; min-width: 0; padding-left: 16px; color: var(--text-1); font: 500 var(--type-body) var(--font-nav, var(--font)); white-space: nowrap; overflow: hidden; pointer-events: none; }
+.titlebar-work-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.titlebar-work-folder { flex: none; color: var(--text-2); font-weight: 500; }
+.titlebar-work-slash { flex: none; color: var(--text-3); font-weight: 400; }
+
+/* macOS: the traffic lights sit in the collapsed slot's 80px; the title starts just after them, centred on their line. */
+html.is-macos .titlebar-work-title { padding-left: 4px; }
+
+/* 纯净 ↔ 专业, a small two-way switch in the corner: the chosen half sits on a slightly deeper fill. */
+.titlebar-layout-switch { display: inline-flex; align-items: center; gap: 2px; height: 26px; padding: 2px; margin-right: 6px; border-radius: 8px; background: color-mix(in srgb, var(--text-1) 6%, transparent); }
+.titlebar-layout-switch > button { height: 22px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); font: 500 var(--type-caption) var(--font); cursor: pointer; transition: background-color .15s, color .15s; }
+.titlebar-layout-switch > button:hover { color: var(--text-1); }
+.titlebar-layout-switch > button[aria-checked="true"] { background: var(--bg-active); color: var(--text-1); }
+.titlebar-layout-switch > button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }

@@ -28,6 +28,8 @@ import { WindowControlBridge } from './components/agent/WindowControlBridge';
 import { RemoteMirror } from './remote/RemoteMirror';
 import { FolderPickerHost } from './components/common/FolderPicker';
 import { RightPanel } from './components/right/Compiler';
+import { IconRail } from './components/left/IconRail';
+import { saveLayoutMode } from './lib/layout-mode';
 import { GitStatusProvider } from './lib/git-status';
 import './styles/global.css';
 import { AppCloseHost } from './components/common/AppCloseHost';
@@ -218,7 +220,9 @@ export function App() {
 
   // Narrow windows and phones: both panels become drawers over the center, opened one at a time.
   const compact = useCompact();
-  const leftPanel = useSlidingPanel(compact ? state.drawer !== 'left' : state.leftPanelHidden);
+  // 工作式: the icon rail stands in for the left sidebar; the right panel opens over the conversation.
+  const work = state.layoutMode === 'work';
+  const leftPanel = useSlidingPanel(work || (compact ? state.drawer !== 'left' : state.leftPanelHidden));
   const rightPanel = useSlidingPanel(compact ? state.drawer !== 'right' : state.rightPanelHidden);
   // A drawer closes on Escape, when the window grows wide enough to dock, and once a tab is picked.
   useEffect(() => {
@@ -375,6 +379,11 @@ export function App() {
       unlisten?.();
     };
   }, [state.currentTheme, state.themeMode]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-layout', state.layoutMode);
+    saveLayoutMode(state.layoutMode);
+  }, [state.layoutMode]);
 
   useEffect(() => {
     // Frost shapes reuse the whole glass chrome; normalize data-shape to
@@ -537,6 +546,7 @@ export function App() {
           and let CSS animate it back open. */}
       <GitStatusProvider>
         <div className={`app-layout${compact ? ' is-compact' : ''}`}>
+          {work && !compact && <IconRail />}
           {/* Behind an open drawer: a tap anywhere outside it closes it. */}
           {compact && state.drawer && <div className="drawer-scrim" aria-hidden="true" onClick={() => dispatch({ type: 'CLOSE_DRAWER' })} />}
           {leftPanel.mounted && (
@@ -567,7 +577,7 @@ export function App() {
 
           {rightPanel.mounted && (
             <>
-              {!compact && <PanelResizer
+              {!compact && !work && <PanelResizer
                 side="right"
                 size={panelWidths.right}
                 collapsed={rightPanel.collapsed}
@@ -576,7 +586,7 @@ export function App() {
                 onReset={resetPanelWidth}
               />}
               <aside
-                className={`panel panel-right${rightPanel.collapsed ? ' is-collapsed' : ''}`}
+                className={`panel panel-right${rightPanel.collapsed ? ' is-collapsed' : ''}${work && !compact ? ' is-sheet' : ''}`}
               >
                 <RightPanel />
               </aside>

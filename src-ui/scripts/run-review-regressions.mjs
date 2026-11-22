@@ -285,6 +285,7 @@ const selectTool = evaluate(pinDeclarations.get('selectTool').initializer.getTex
   activeIdRef: { current: 'launchpad' },
   commands: { async checkProjectDirectories(paths) { checkedLaunchFolders.push(...paths); return paths.map(path => ({ path, status: 'available' })); } },
   rememberFolder(tool, folder) { rememberedFolders.push([tool, folder]); }, claudeLaunchMode: 'conversation',
+  state: { layoutMode: 'code' },
 });
 await selectTool('claude', undefined, 'E:\\tmp');
 assert.deepEqual(checkedLaunchFolders, ['E:\\tmp']);
@@ -294,6 +295,19 @@ assert.equal(manualLaunches[0].id, 'launchpad');
 assert.equal(manualLaunches[0].tool, 'claude');
 assert.equal(manualLaunches[0].cwd, 'E:\\tmp');
 assert.deepEqual(rememberedFolders, [['claude', 'E:\\tmp']], 'the launch is remembered as this tool\'s last folder');
+{
+  // 工作式 never starts a terminal: a tool saved to open in its terminal still opens as its conversation.
+  const workLaunches = [];
+  const workSelect = evaluate(pinDeclarations.get('selectTool').initializer.getText(centerTree), {
+    activeTerminalId: 'launchpad', dispatch: action => workLaunches.push(action), activeIdRef: { current: 'launchpad' },
+    commands: { async checkProjectDirectories(paths) { return paths.map(path => ({ path, status: 'available' })); } },
+    rememberFolder() {}, claudeLaunchMode: 'terminal', codexLaunchMode: 'terminal', opencodeLaunchMode: 'terminal', piLaunchMode: 'terminal',
+    state: { layoutMode: 'work' },
+  });
+  await workSelect('claude', undefined, 'E:\\tmp');
+  await workSelect('codex', undefined, 'E:\\tmp');
+  assert.deepEqual(workLaunches.map(action => [action.claudeMode, action.codexMode]), [['conversation', undefined], [undefined, 'conversation']]);
+}
 console.log('OK: actual tool-card folder selection uses the launch action and remembers the tool\'s folder');
 
 // Exercise the actual history-card click: native history resumes a real CLI tab,
@@ -335,7 +349,7 @@ console.log('OK: actual tool-card folder selection uses the launch action and re
   const click = evaluate(`const click = ${handler}; click`, {
     dispatch: action => actions.push(action), setAgentError() {},
     crypto: { randomUUID: () => 'native-tab' },
-    isTauri: false, state: { terminals: [] }, liveSessions: [], renamed: { 'claude:claude-renamed': 'My name' },
+    isTauri: false, state: { terminals: [] }, liveSessions: [], renamed: { 'claude:claude-renamed': 'My name' }, currentLayoutMode: () => 'code',
   });
   await click({ id: 'claude-history', tool: 'claude', cwd: 'E:\\tmp', session_token: 'native-resume' });
   assert.deepEqual(actions.map(action => action.type), ['ADD_TERMINAL']);

@@ -260,9 +260,9 @@ await page.waitForFunction(()=>!document.querySelector('[aria-labelledby$="-tab-
 const remotePanel=page.locator('[aria-labelledby$="-tab-remote"]'),remoteSwitch=name=>remotePanel.getByRole('switch',{name,exact:true});
 assert.equal(await remoteSwitch('Claude Code').getAttribute('aria-checked'),'false');
 assert.equal(await remoteSwitch('Codex CLI').isDisabled(),false,'Codex takes the window tools too');
-assert.equal(await remoteSwitch('Cursor').isDisabled(),true,'tools without them stay off');
-assert.equal(await remoteSwitch('Pi').isDisabled(),true);
-assert.equal(await remotePanel.getByText('暂不支持',{exact:true}).count(),3);
+assert.equal(await remoteSwitch('Cursor').count(),0,'tools without them get no switch that can never turn on');
+assert.equal(await remoteSwitch('Pi').count(),0);
+assert.equal(await remotePanel.getByText(/暂不支持$/).count(),1,'they are named once, on one line');
 await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>window.remoteControl.includes('claude'));
 await page.waitForFunction(()=>document.querySelector('[aria-labelledby$="-tab-remote"] [role="switch"][aria-label="Claude Code"]').getAttribute('aria-checked')==='true');
 await remoteSwitch('Codex CLI').click();await page.waitForFunction(()=>window.remoteControl.includes('codex'));

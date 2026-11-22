@@ -61,6 +61,13 @@
           shape = 'carbon';
         }
         document.documentElement.setAttribute('data-shape', shape);
+        // 工作式 / 代码式 (mirror of readLayoutMode in src/lib/layout-mode.ts; the app saves the choice).
+        var layout = 'code';
+        try {
+          layout = localStorage.getItem('cc-layout');
+          if (layout !== 'work' && layout !== 'code') layout = (localStorage.getItem('cc-shape') || localStorage.getItem('cc-theme') || localStorage.getItem('cc-lang')) ? 'code' : 'work';
+        } catch(e) { layout = 'code'; }
+        document.documentElement.setAttribute('data-layout', layout);
       })();
     </script>
   </head>

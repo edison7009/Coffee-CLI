@@ -220,26 +220,28 @@
 .settings-theme-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 11px;
+  gap: 4px;
 }
 .settings-theme-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0;
+  /* The selected card sits on a slightly deeper fill; the padding is always there so nothing moves. */
+  padding: 4px 4px 6px;
   border: none;
+  border-radius: var(--radius-md, 12px);
   background: transparent;
   cursor: pointer;
+  transition: background-color 0.14s ease;
 }
 .settings-theme-preview {
   position: relative;
   display: flex;
   flex-direction: row;
   height: 46px;
-  border-radius: var(--radius-sm, 9px);
+  /* Concentric with the card: outer radius minus its 4px inset. */
+  border-radius: max(0px, calc(var(--radius-md, 12px) - 4px));
   overflow: hidden;
-  border: 2px solid transparent;
-  transition: border-color 0.14s ease, transform 0.14s ease;
 }
 /* One half of the palette. Single-mode tabs render one half across the full
    card; the follow-system tab paints the day half beside the night half, the
@@ -250,21 +252,20 @@
   flex: 1;
   min-width: 0;
 }
-.settings-theme-card:hover .settings-theme-preview { transform: translateY(-1px); }
-.settings-theme-card.active .settings-theme-preview {
-  border-color: var(--ring, var(--accent));
-  /* Cover antialiasing seams between the border and clipped color bands. */
-  background: var(--ring, var(--accent));
-}
+.settings-theme-card:hover { background: var(--bg-hover); }
+.settings-theme-card.active { background: var(--bg-active); }
 .settings-theme-band-bg { flex: 1; }
 .settings-theme-band-accent { height: 14px; }
 .settings-theme-check {
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  /* The app's one selected mark: a blue round check. */
+  background: var(--switch-on, #0a84ff);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -677,3 +678,9 @@
 :root[data-width="xs"] .segmented-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 :root[data-width="xs"] .segmented-tabs::-webkit-scrollbar { display: none; }
 :root[data-width="xs"] .segmented-tabs > * { flex-shrink: 0; }
+
+/* 工作式: settings open as a dialog over the window (dimmed backdrop, rounded card) instead of a full page. */
+.settings-page.settings-page--dialog { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.45); animation: settings-fade 0.16s ease; }
+.settings-page--dialog.settings-page--closing { animation: settings-page-out 0.12s cubic-bezier(0.4, 0, 1, 1) forwards; }
+.settings-page--dialog > .settings-modal { width: min(920px, calc(100vw - 48px)); height: min(680px, calc(100vh - 80px)); background-color: var(--bg-app) !important; background-image: linear-gradient(var(--bg-panel), var(--bg-panel)) !important; }
+.settings-page--dialog .settings-body { width: 100%; }

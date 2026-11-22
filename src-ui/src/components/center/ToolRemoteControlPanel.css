@@ -1,0 +1,30 @@
+/* Remote control page (remote-page 方案 B): the windows open now, then the assistants allowed to use them.
+   Quiet lists on one card each; switches are the app's blue switch; the risk note is one line. */
+.remote-control-page { display: flex; flex-direction: column; }
+.remote-control-head { margin: 0 2px 18px; }
+.remote-control-head strong { color: var(--text-1); font-size: 15px; font-weight: 600; }
+.remote-control-head p { margin: 4px 0 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.6; }
+.remote-control-section { margin: 4px 2px 8px; color: var(--text-3); font-size: var(--type-caption); }
+.remote-control-page .remote-control-list { display: flex; flex-direction: column; gap: 4px; margin: 0 0 18px; }
+.remote-control-page .remote-control-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border: 0; border-radius: max(0px, calc(var(--shape-radius-panel, var(--radius-sm)) - 4px)); background: transparent; color: var(--text-1); font: inherit; text-align: left; transition: background-color .15s; }
+.remote-control-page .remote-control-row:hover { background: var(--bg-hover); }
+/* The whole row is the switch (ToolControlPanel.css .tool-control-card-toggle); keep room for its knob. */
+.remote-control-page .tool-control-agent { padding-right: 70px; }
+.remote-control-page .tool-control-agent-icon, .remote-control-page .tool-control-agent-icon svg { width: 20px; height: 20px; font-size: 20px; }
+.remote-control-icon { position: relative; display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: max(0px, calc(var(--shape-radius-panel, var(--radius-sm)) - 8px)); background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); }
+.remote-control-icon > svg { width: 14px; height: 14px; }
+.remote-control-icon > i { position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px var(--bg-panel); }
+.remote-control-name { font-weight: 500; }
+.remote-control-host { color: var(--text-3); font-size: var(--type-caption); }
+.remote-control-fill { flex: 1; }
+.remote-control-button { padding: 4px 10px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); font: inherit; font-size: var(--type-caption); cursor: pointer; transition: background-color .15s, color .15s; }
+.remote-control-button:hover { background: var(--bg-hover); color: var(--text-1); }
+.remote-control-button:focus-visible, .remote-control-add:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.remote-control-add { cursor: pointer; color: var(--text-2) !important; }
+.remote-control-empty { margin: 0; padding: 12px; color: var(--text-3); font-size: var(--type-label); }
+.remote-control-note { margin: -8px 4px 14px; color: var(--text-3); font-size: var(--type-caption); line-height: 1.6; }
+/* Every row is a quiet card (.tool-control-agent, kept on every shape by global.css): no outline. */
+.remote-control-page .remote-control-list > .tool-control-agent { border-color: transparent; }
+.remote-control-page .remote-control-list > .tool-control-agent:hover { background: var(--bg-hover); }
+.remote-control-page .remote-control-list > .remote-control-add { width: 100%; padding-right: 12px; }
+.remote-control-page .remote-control-list > .remote-control-row:not(.remote-control-add):not(:has(.tool-control-switch)) { padding-right: 12px; }

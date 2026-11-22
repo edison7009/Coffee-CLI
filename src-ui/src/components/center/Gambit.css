@@ -412,7 +412,8 @@
     width: 30px;
     height: 30px;
     padding: 0;
-    background: var(--accent, #C4956A);
+    /* Neutral, not the palette's accent: the main action reads as ink on the page, the same on every palette. */
+    background: var(--text-1);
     border: none;
     /* Pill var is 9999px in soft/glass (→ circle), 4px in slab, 0 in sharp/panel.
        So the send button is round on soft and square on hard-edged themes. */
@@ -422,19 +423,14 @@
        Glass shape overrides this back to #fff + adds a specular inset
        (see global.css) — translucent glass fills wash a deep glyph out
        against variable wallpaper, so glass keeps white. */
-    color: var(--bg-terminal, #fff);
+    color: var(--bg-app, #fff);
     cursor: pointer;
-    transition: background 0.12s, transform 0.08s, opacity 0.12s, filter 0.12s;
+    transition: background-color 0.12s, opacity 0.12s;
 }
 
+/* Hover only deepens the fill a little; nothing moves. */
 .gambit-send:hover:not(.gambit-send--empty) {
-    filter: brightness(1.12);
-    transform: translateY(-1px);
-}
-
-.gambit-send:active:not(.gambit-send--empty) {
-    transform: translateY(0);
-    filter: brightness(0.95);
+    background: color-mix(in srgb, var(--text-1) 85%, var(--bg-app));
 }
 
 /* Nothing to send yet: visually dim without using `disabled` so the click
@@ -545,3 +541,98 @@
 :root[data-width="xs"] .gambit-footer .usage-meter { display: inline-flex; flex-shrink: 0; }
 :root[data-width="xs"] .gambit-footer .usage-meter-item + .usage-meter-item { display: inline-flex; }
 :root[data-width="xs"] .gambit-footer > .gambit-send { position: sticky; right: 0; z-index: 1; box-shadow: -10px 0 10px -4px var(--bg-panel, var(--bg-app)); }
+
+/* 工作式: the composer lines up with the conversation column (.claude-thread, 960px) instead of the window. */
+[data-layout="work"] .gambit--docked { max-width: 1040px; margin-inline: auto; }
+
+/* Remote control chip (remote-chip 方案 A): the computer's name beside a two-screen icon, no repeated
+   「远程操控：远程：」 prefix. The menu says what Auto means and where each window is; the chosen row sits on a
+   slightly deeper fill with the app's blue round check. */
+.gambit-capability.is-remote { display: inline-flex; align-items: center; gap: 5px; }
+.gambit-capability.is-remote > svg { width: 13px; height: 13px; flex: none; }
+.gambit-capability.is-remote.is-tied { color: var(--text-1); }
+.remote-pick-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.remote-pick-menu { padding: 6px; }
+.remote-pick-title { margin: 0; padding: 6px 8px 4px; color: var(--text-3); font: var(--type-caption) var(--font); }
+.claude-control-menu.remote-pick-menu button[role="menuitemradio"] { align-items: center; justify-content: flex-start; gap: 10px; }
+.claude-control-menu.remote-pick-menu button[role="menuitemradio"].is-selected { background: var(--bg-active); }
+.claude-control-menu.remote-pick-menu button[role="menuitemradio"]:hover:not(.is-selected) { background: var(--bg-hover); }
+.remote-pick-icon { position: relative; display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: max(0px, calc(var(--shape-radius-btn, 5px) - 1px)); background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); }
+.remote-pick-icon > svg { width: 14px; height: 14px; }
+.remote-pick-icon > i { position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px var(--bg-panel); }
+.remote-pick-text { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.35; }
+.remote-pick-text small { color: var(--text-3) !important; }
+.remote-pick-check { display: inline-grid; place-items: center; width: 16px; height: 16px; flex: none; border-radius: 50%; background: var(--switch-on, #0a84ff); color: #fff; }
+.remote-pick-check > svg { width: 10px; height: 10px; }
+.remote-pick-divider { height: 1px; margin: 5px 4px; background: var(--border); }
+.claude-control-menu.remote-pick-menu button.remote-pick-control { align-items: center; justify-content: flex-start; gap: 10px; color: var(--text-2); }
+.remote-pick-plus { display: inline-grid; place-items: center; width: 26px; flex: none; font-size: 16px; }
+
+/* 专业: the wrapper around the controls is inert, so the footer lays out exactly as before. */
+.gambit-meta-off { display: contents; }
+
+/* 纯净 (Claude desktop style): one rounded line — ＋, the draft, voice, send — that grows upward with the
+   draft, and under it, outside the box, one quiet line with every control (folder, permissions,
+   collaboration, remote window, usage, model, effort, context). The controls are the
+   same components as in 专业; only their placement changes. */
+.gambit.gambit--minimal {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "files files files files" "attach input voice send" "hint hint hint hint" "meta meta meta meta";
+    grid-template-rows: auto auto auto auto;
+    align-content: end;
+    column-gap: 4px;
+    padding: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-radius: 0;
+}
+.gambit--minimal::before {
+    content: '';
+    grid-area: attach / attach / send / send;
+    z-index: -1;
+    border-radius: 22px;
+    background: var(--bg-panel);
+    box-shadow: var(--gambit-shadow);
+}
+.gambit--minimal > .gambit-dock-resize { display: none; }
+.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; }
+.gambit--minimal > .gambit-input { grid-area: input; align-self: center; max-height: 100%; }
+.gambit.gambit--docked.gambit--minimal .gambit-textarea { padding: 10px 6px 8px; }
+.gambit--minimal > .gambit-footer { display: contents; }
+.gambit-pill-attach { grid-area: attach; align-self: end; display: grid; place-items: center; width: 32px; height: 32px; margin: 0 0 7px 8px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-2); cursor: pointer; transition: background-color .15s, color .15s; }
+.gambit-pill-attach:hover { background: var(--bg-hover); color: var(--text-1); }
+.gambit-pill-attach:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.gambit--minimal .gambit-voice-anchor { grid-area: voice; align-self: end; display: grid; place-items: center; height: 32px; margin-bottom: 7px; }
+.gambit--minimal .gambit-send { grid-area: send; align-self: end; width: 32px; height: 32px; margin: 0 8px 7px 2px; }
+.gambit--minimal .gambit-send-hint { grid-area: hint; justify-self: end; padding: 4px 12px 0; }
+.gambit-meta { grid-area: meta; justify-self: stretch; display: flex; align-items: center; gap: 2px; min-width: 0; padding: 6px 2px 0; flex-wrap: wrap; justify-content: flex-start; }
+.gambit-meta .claude-composer-controls { display: contents; }
+.gambit-meta :is(.claude-model-control, .claude-effort-trigger, .claude-permission-control, .claude-tasks-control) { height: 26px; padding: 0 8px; background: transparent !important; color: var(--text-3); font-size: var(--type-caption); }
+.gambit-meta :is(.claude-model-control, .claude-effort-trigger, .claude-permission-control):hover { color: var(--text-1); background: var(--bg-hover) !important; }
+/* The box's ＋ attaches; the controls' own attach button stays (it does the work) but out of sight. */
+.gambit-meta .claude-composer-controls > .claude-control-icon:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); padding: 0; }
+.gambit-meta :is(.gambit-workspace, .gambit-capability, .claude-control-icon, .gambit-worktree-toggle) { background: transparent !important; color: var(--text-3); }
+.gambit--minimal .gambit-textarea { line-height: 1.5; }
+
+/* Every item on the line under the box: one height, one baseline, one font — nothing sits higher than its neighbour. */
+.gambit-meta > *, .gambit-meta .claude-composer-controls > *, .gambit-meta .gambit-capabilities > * { box-sizing: border-box; height: 26px; min-height: 26px; margin: 0; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: var(--shape-radius-btn, 5px); font: var(--type-caption) var(--font); line-height: 1; vertical-align: middle; }
+.gambit-meta .claude-composer-controls > .claude-context-control { padding: 0 5px; }
+.gambit-meta .gambit-capabilities { display: inline-flex; align-items: center; gap: 2px; height: 26px; margin: 0; padding: 0; }
+.gambit-meta .usage-meter { padding: 0 7px; background: transparent; }
+.gambit-meta .usage-meter-item { display: inline-flex; align-items: center; gap: 4px; }
+.gambit-meta .usage-meter-bar { display: none; }
+.gambit-meta .gambit-workspace-icon, .gambit-meta .gambit-workspace-icon > * { width: 13px; height: 13px; }
+.gambit-meta .claude-composer-controls > .claude-context-control { background: transparent !important; }
+
+/* Two groups like 专业's footer: what goes with the prompt on the left (folder, worktree, commands, permissions,
+   collaboration, remote window), how it runs on the right (usage, model, effort, context). The line spans the
+   box's full width, so both ends line up with the box's edges. */
+.gambit-meta .claude-composer-controls > .claude-model-controls { margin-left: auto; padding: 0; gap: 2px; height: auto; }
+.gambit-meta .claude-model-controls > * { box-sizing: border-box; height: 26px; min-height: 26px; margin: 0; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: transparent !important; color: var(--text-3); font: var(--type-caption) var(--font); line-height: 1; }
+.gambit-meta .claude-model-controls > :is(.claude-model-control, .claude-effort-trigger):hover { color: var(--text-1); background: var(--bg-hover) !important; }
+.gambit-meta .claude-model-controls > .claude-context-control { padding: 0 5px; }
+/* The mic sits in the box like ＋ and send: no fill of its own until hovered. */
+.gambit--minimal .gambit-voice { width: 32px; height: 32px; border-radius: 50%; background: transparent; }

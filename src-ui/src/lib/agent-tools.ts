@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { currentLayoutMode } from './layout-mode';
 import type { ToolType, AppState, useAppDispatch } from '../store/app-state';
 import { commands, invoke } from '../tauri';
 import { getAgentSession } from './agent-session';
@@ -41,7 +42,8 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
         const id = request.sessionId ?? crypto.randomUUID();
         if (stateRef.current.terminals.some(session => session.id === id)) throw new Error('该会话已存在，请读取状态，不要重复创建');
         let mode: 'terminal' | 'conversation' = 'conversation';
-        try { if (localStorage.getItem(`coffee:${args.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* Use the desktop default when no preference is available. */ }
+        // 工作式 opens every tool as its conversation.
+        if (currentLayoutMode() !== 'work') try { if (localStorage.getItem(`coffee:${args.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* Use the desktop default when no preference is available. */ }
         dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id, tool: args.tool as ToolType, cwd, strictCwd: true, resumeToken: typeof args.resumeToken === 'string' ? args.resumeToken : undefined, claudeMode: args.tool === 'claude' ? mode : undefined, codexMode: args.tool === 'codex' ? mode : undefined, opencodeMode: args.tool === 'opencode' ? mode : undefined, piMode: args.tool === 'pi' ? mode : undefined, parentId: request.parentId, background: request.background });
         const deadline = Date.now() + openTimeoutMs;
         let appeared = false;

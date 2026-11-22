@@ -2943,8 +2943,9 @@ html.is-windows[data-frost="frost"] #root {
    don't support it drop the background declaration and fall back to the
    base solid --accent (the safe non-glass look), never to broken. */
 [data-shape="glass"] .gambit-send {
-    color: #fff;
-    background: rgb(from var(--accent, #c4956a) r g b / 0.45);
+    /* Neutral like every other shape (Gambit.css .gambit-send): ink-coloured frost, page-coloured glyph. */
+    color: var(--bg-app, #fff);
+    background: rgb(from var(--text-1) r g b / 0.7);
     backdrop-filter: blur(12px) saturate(160%);
     -webkit-backdrop-filter: blur(12px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.22);

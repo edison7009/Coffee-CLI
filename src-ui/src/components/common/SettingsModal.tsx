@@ -12,6 +12,8 @@
 // Dispatch + persistence mirror the former Explorer wiring exactly so behaviour
 // is unchanged; only the presentation moved.
 
+import { Changelog } from './Changelog';
+import { useCompact } from '../../lib/viewport';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
@@ -119,6 +121,7 @@ const ICONS: Record<Section, ReactNode> = {
 
 export function SettingsModal() {
   const { state } = useAppState();
+  const compactWindow = useCompact();
   const closeBehavior = useCloseBehavior();
   const dispatch = useAppDispatch();
   const t = useT();
@@ -303,14 +306,17 @@ export function SettingsModal() {
     { id: 'feedback',   label: t('settings.feedback') },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
+  const dialog = state.layoutMode === 'work' && !compactWindow;
 
   return (
     // A page over the centre area, like usage and tool settings, not a dialog over the whole window.
+    // 工作式: a dialog over the window instead of a page; a click on the dimmed backdrop closes it.
     <div
-      className={open ? 'settings-page' : 'settings-page settings-page--closing'}
+      className={`settings-page${dialog ? ' settings-page--dialog' : ''}${open ? '' : ' settings-page--closing'}`}
       onAnimationEnd={e => { if (e.target === e.currentTarget && !open) setMounted(false); }}
+      onMouseDown={dialog ? e => { if (e.target === e.currentTarget) close(); } : undefined}
     >
-      <div className="settings-modal settings-modal--page" role="region" aria-label={t('settings.title')}>
+      <div className={`settings-modal${dialog ? '' : ' settings-modal--page'}`} role={dialog ? 'dialog' : 'region'} aria-modal={dialog || undefined} aria-label={t('settings.title')}>
         <aside className="settings-rail">
           {/* The page covers the whole window, so its first entry leads back. */}
           <button type="button" className="settings-rail-back" onClick={close}>
@@ -329,6 +335,8 @@ export function SettingsModal() {
           ))}
           {version && (
             <div className="settings-rail-version">
+              {/* The changelog lives here, above the version it describes (no longer in the title bar). */}
+              <Changelog className="settings-rail-version-link" />
               <span className="settings-rail-version-num">v{version}</span>
               <button
                 type="button"
@@ -400,7 +408,7 @@ export function SettingsModal() {
                             </span>
                           )}
                           {active && (
-                            <span className="settings-theme-check" style={{ background: ring }}>
+                            <span className="settings-theme-check">
                               <svg viewBox="0 0 24 24" fill="none" stroke={bg} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                             </span>
                           )}
@@ -452,6 +460,18 @@ export function SettingsModal() {
             {/* The window is roomy now: wallpaper sits under appearance, sounds under general. */}
             {section === 'appearance' && (
               <>
+                {/* 工作式 / 代码式: which shell wraps the same conversations (lib/layout-mode.ts). */}
+                <div className="settings-group-gap" aria-hidden="true" />
+                <div className="settings-sound-list">
+                  <div className="settings-sound-row settings-choice-row">
+                    <div className="settings-sound-title">{t('layout.title')}</div>
+                    <div className="settings-choice">
+                      <SegmentedTabs compact label={t('layout.title')} value={state.layoutMode} onChange={mode => dispatch({ type: 'SET_LAYOUT_MODE', mode })}
+                        options={[{ value: 'work', content: t('layout.work') }, { value: 'code', content: t('layout.code') }]} />
+                      <div className="settings-choice-hint">{t(state.layoutMode === 'work' ? 'layout.work_hint' : 'layout.code_hint')}</div>
+                    </div>
+                  </div>
+                </div>
                 <div className="settings-group-gap" aria-hidden="true" />
                 <div className="settings-section-label">{t('settings.wallpaper')}</div>
                 <div className="settings-wallpaper-actions">

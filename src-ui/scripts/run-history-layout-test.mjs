@@ -131,6 +131,7 @@ context.crypto = { randomUUID: () => `history-tab-${++nextId}` };
 context.localStorage = { setItem() {}, removeItem() {} };
 context.reducer = vm.runInContext(ts.transpileModule(declarations.join('\n') + '\nreducer;', { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText, context);
 context.setAgentError = error => { context.error = error; };
+context.currentLayoutMode = () => 'code';
 context.dispatch = action => { context.state = context.reducer(context.state, action); };
 const openHistory = evaluate('handleViewHistory');
 const saved = { ...session('history-id', 'D:/Coffee-CLI'), session_token: 'native-1' };
