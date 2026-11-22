@@ -32,7 +32,11 @@ try {
         window.localCalls.push({ cmd, args });
         // A key saved from an earlier pairing: a freshly pasted link still means pairing again.
         if (cmd === 'remote_control_info') return { origin: 'http://192.168.1.20:47321', pairing: { desktop: { hosts: ['192.168.1.20'], port: 47321, publicKey: 'c'.repeat(64) }, computerName: 'Old', deviceName: 'x', privateKey: 'd'.repeat(64), publicKey: 'e'.repeat(64) }, pairLink: link };
-        if (cmd === 'plugin:event|listen') { if (args.event === 'remote-link') window.linkHandler = callbacks[args.handler]; return args.handler; }
+        if (cmd === 'plugin:event|listen') {
+          if (args.event === 'remote-link') window.linkHandler = callbacks[args.handler];
+          if (args.event === 'window-control-request') window.controlHandler = callbacks[args.handler];
+          return args.handler;
+        }
         if (cmd === 'plugin:app|version') return '4.0.6';
         return null;
       },
@@ -59,6 +63,22 @@ try {
   assert.ok(kept.includes('plugin:clipboard-manager|write_text'), 'clipboard stays on this computer');
   assert.ok(kept.includes('open_url'), 'links open on this computer');
   console.log('OK @tauri-apps/api goes through the bridge; clipboard and links stay local');
+
+  // This computer's requests to the window (src/window_control.rs) are heard and answered on this
+  // computer's own IPC, not routed to the other computer like everything else.
+  const heard = await page.evaluate(async () => {
+    const { onLocalEvent, localInvoke } = await import('/src/remote/local-ipc.ts');
+    const got = new Promise(resolve => onLocalEvent('window-control-request', resolve));
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const listen = window.localCalls.find(c => c.cmd === 'plugin:event|listen' && c.args.event === 'window-control-request');
+    if (!listen) return { listened: false };
+    window.controlHandler({ event: 'window-control-request', id: 2, payload: { requestId: 'r1', name: 'sessions_list', arguments: {} } });
+    const payload = await got;
+    await localInvoke('window_control_resolve', { requestId: payload.requestId, result: { ok: true } });
+    return { listened: true, requestId: payload.requestId, resolved: window.localCalls.some(c => c.cmd === 'window_control_resolve' && c.args.requestId === 'r1') };
+  });
+  assert.deepEqual(heard, { listened: true, requestId: 'r1', resolved: true }, 'window control listens and answers on this computer');
+  console.log('OK window control requests are heard and answered on this computer');
 
   // Connecting dials every address of the computer through this computer's relay.
   await page.getByRole('button', { name: '连接' }).click();

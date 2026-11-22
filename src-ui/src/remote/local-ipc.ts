@@ -1,6 +1,7 @@
 // In a window controlling another computer (bridge.ts `CONTROL`), Tauri calls go to that computer.
 // What must stay on this computer — answering this computer's own requests to the window — uses
-// this computer's IPC object directly, as bridge.ts does for its connection.
+// this computer's IPC object directly, as bridge.ts does for its connection. Like bridge.ts, this file
+// is left out of vite.config.ts's routing, which would otherwise hand it the other computer's IPC.
 import { CONTROL } from './bridge';
 
 type LocalIpc = { invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown>; transformCallback(callback: (event: unknown) => void, once?: boolean): number };

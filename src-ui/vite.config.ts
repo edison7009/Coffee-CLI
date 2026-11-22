@@ -69,8 +69,9 @@ function routeTauriGlobalsPlugin(): Plugin {
     name: 'coffee-cli:route-tauri-globals',
     enforce: 'pre',
     transform(code, id) {
-      // The bridge itself reads and sets the real objects; everything else is routed.
-      if (id.includes('/src/remote/bridge.ts') || id.includes('@tauri-apps/api/mocks')) return null;
+      // The bridge itself reads and sets the real objects, and local-ipc.ts reaches this computer's
+      // own IPC from a control window; everything else is routed.
+      if (id.includes('/src/remote/bridge.ts') || id.includes('/src/remote/local-ipc.ts') || id.includes('@tauri-apps/api/mocks')) return null;
       if (!id.includes('@tauri-apps/') && !id.includes('/src-ui/src/')) return null;
       if (!code.includes('__TAURI_INTERNALS__') && !code.includes('__TAURI_EVENT_PLUGIN_INTERNALS__')) return null;
       return { code: routeTauriGlobals(code), map: null };
