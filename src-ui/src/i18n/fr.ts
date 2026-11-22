@@ -50,7 +50,7 @@ export const fr = {
   "tools.tab.computer": "Contrôle ordinateur",
   "tools.tab.browser": "Contrôle navigateur",
   "tools.tab.remote": "Contrôle à distance",
-  "ai_remote.description": "Une fois activé, les nouvelles sessions Claude peuvent voir et piloter les fenêtres ouvertes d'ordinateurs distants : lire l'écran, saisir, appuyer sur des touches et ouvrir des onglets. Avec « Contrôle à distance » au-dessus de la zone de saisie, une session peut travailler dans une seule fenêtre. Cela confie cet ordinateur à l'IA ; ne l'activez que si vous lui faites confiance.",
+  "ai_remote.description": "Activé pour un assistant ci-dessous, ses nouvelles sessions peuvent voir et piloter les fenêtres ouvertes d'ordinateurs distants : lire l'écran, saisir, appuyer sur des touches et ouvrir des onglets. Avec « Contrôle à distance » au-dessus de la zone de saisie, une session peut travailler dans une seule fenêtre. Cela confie cet ordinateur à l'IA ; ne l'activez que si vous lui faites confiance.",
   "ai_remote.pick.prefix": "Contrôle à distance : {name}",
   "ai_remote.pick.auto": "Automatique",
   "ai_remote.pick.none": "Aucune fenêtre d'ordinateur distant ouverte",

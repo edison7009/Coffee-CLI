@@ -375,6 +375,8 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     let control = dir.join(format!("{}.preset", uuid::Uuid::new_v4()));
     if let Some(preset) = &preset { write_preset(&control, preset)?; }
     command.arg("--patch").arg(patch).env("COFFEE_DSH_CONTROL", &control).env("COFFEE_DSH_SESSION", &native_id);
+    // The window tools (src/window_control.rs), in a patch named after the control file so closing removes it.
+    if let Some(patch) = crate::window_control::dsh_patch(&app, &id, &control.with_extension("control.yml")) { command.arg("--patch").arg(patch); }
     command.args(&config.extra_args).current_dir(&cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = command.spawn().map_err(|e| crate::session_directory::validate(&cwd).err().unwrap_or_else(|| format!("Could not start DeepSeek Harness: {e}")))?;
     #[cfg(windows)]
@@ -464,7 +466,7 @@ pub async fn dsh_session_set_preset(sessions: State<'_, DshSessions>, id: String
     tauri::async_runtime::spawn_blocking(move || write_preset(&s.control, &preset)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub async fn dsh_session_request(sessions: State<'_, DshSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
+pub async fn dsh_session_request(app: tauri::AppHandle, sessions: State<'_, DshSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
     if !matches!(method.as_str(), "session/prompt" | "session/steer" | "session/query" | "session/working-directory/get") { return Err("Unsupported DeepSeek Harness request".into()); }
     let s = get(&sessions, &id, &generation)?;
     // Requests always address this tab's own Session.
@@ -472,6 +474,10 @@ pub async fn dsh_session_request(sessions: State<'_, DshSessions>, id: String, g
     let prompt = params["contentBlocks"].as_array().into_iter().flatten().filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
     if method == "session/prompt" {
         crate::orchestration::native_input(&id, "dsh", &s.generation, &prompt, &uuid::Uuid::new_v4().to_string(), None)?;
+        // A tab tied to a window is told so with each prompt (src/window_control.rs); the conversation hides it.
+        let (app, tab) = (app.clone(), id.clone());
+        let note = tauri::async_runtime::spawn_blocking(move || crate::window_control::prompt_note(&app, &tab)).await.ok().flatten();
+        if let (Some(note), Some(blocks)) = (note, params["contentBlocks"].as_array_mut()) { blocks.push(json!({"type":"text","text":note})); }
     }
     // The SDK queues every prompt for the next turn; the Host plugin hands this one to the running turn instead.
     if method == "session/steer" {

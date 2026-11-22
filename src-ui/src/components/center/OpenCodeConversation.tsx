@@ -4,6 +4,7 @@ import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
+import { orchestrationToolLabel } from '../../lib/orchestration-label';
 import { arr, obj, str, num, pretty, openCodeRows, type Json, type OpenCodeRow } from '../../lib/opencode-protocol';
 import { interruptOpenCode, loadOpenCodeHistory, replyOpenCodeForm, replyOpenCodePermission, retainOpenCodeSession, useOpenCodeSession } from '../../lib/opencode-session';
 import { clipboardWrite } from '../../lib/clipboard';
@@ -130,7 +131,8 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   useEffect(() => { if (openCodeTitle) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: openCodeTitle }); }, [openCodeTitle, sessionId, dispatch]);
   const waiting = s.permissions.length + s.forms.length;
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: waiting ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [waiting, s.busy, sessionId, dispatch]);
-  const messages = useMemo(() => openCodeRows(s.native), [s.native]);
+  // Coffee CLI's own tools read in the user's language (lib/orchestration-label.ts); others keep their names.
+  const messages = useMemo(() => openCodeRows(s.native).map(row => { const label = row.toolName && orchestrationToolLabel(row.toolName, t); return label ? { ...row, toolName: label } : row; }), [s.native, t]);
   const runningTool = s.busy && !s.interrupting && !waiting
     ? messages.findLast(message => message.toolStatus === 'running') : undefined;
   const rows = useMemo<Row[]>(() => {

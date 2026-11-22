@@ -162,7 +162,7 @@ fn find_on_path(bin: &str) -> Option<String> {
         .find(|candidate| candidate.is_file()).map(|candidate| candidate.to_string_lossy().into_owned())
 }
 
-fn spawn(bin: &str, prefix: &[String], cwd: &std::path::Path, password: &str) -> std::io::Result<Child> {
+fn spawn(bin: &str, prefix: &[String], cwd: &std::path::Path, password: &str, env: Option<(String, String)>) -> std::io::Result<Child> {
     let mut command;
     #[cfg(windows)]
     {
@@ -178,7 +178,7 @@ fn spawn(bin: &str, prefix: &[String], cwd: &std::path::Path, password: &str) ->
     { command = Command::new(bin); }
     // The server reads OPENCODE_PASSWORD as its lease credential and removes it from the environment tools inherit.
     command.args(prefix).args(["serve", "--stdio", "--port", "0"]).env("OPENCODE_PASSWORD", password)
-        .env_remove("OPENCODE_SERVER_PASSWORD")
+        .env_remove("OPENCODE_SERVER_PASSWORD").envs(env)
         .current_dir(cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()
 }
 
@@ -191,7 +191,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     if resume_token.as_deref().is_some_and(|token| !valid_id(token, "ses_")) { return Err("Invalid OpenCode session ID".into()); }
     let (bin, prefix) = executable().ok_or("OpenCode is not installed")?;
     let password = uuid::Uuid::new_v4().simple().to_string();
-    let mut child = spawn(&bin, &prefix, &cwd, &password)
+    let mut child = spawn(&bin, &prefix, &cwd, &password, crate::window_control::opencode_env(&app, &id))
         .map_err(|e| crate::session_directory::validate(&cwd).err().unwrap_or_else(|| format!("Could not start OpenCode: {e}")))?;
     #[cfg(windows)]
     crate::terminal::windows_job::assign_pid(child.id());
@@ -387,9 +387,12 @@ pub async fn opencode_session_request(app: tauri::AppHandle, sessions: State<'_,
             Ok(native) => native,
             Err(reply) => return Ok(reply),
         };
-        let (method, path, body) = route(&native, &op, &params)?;
+        // A tab tied to a window is told so with each prompt (src/window_control.rs); the conversation hides it.
+        let mut sent = params.clone();
+        if op == "prompt" { if let Some(text) = params["text"].as_str() { sent["text"] = json!(crate::window_control::with_note(&app, &s.id, text)); } }
+        let (method, path, body) = route(&native, &op, &sent)?;
         if op == "prompt" { crate::orchestration::native_input(&s.id, "opencode", &s.generation, params["text"].as_str().unwrap_or(""), params["requestId"].as_str().unwrap_or(""), None)?; }
-        else if op == "interrupt" { crate::orchestration::native_stop(&s.id, "opencode", &s.generation); }
+        if op == "interrupt" { crate::orchestration::native_stop(&s.id, "opencode", &s.generation); }
         let mut result = s.http(method, &path, body.as_ref())?;
         strip_media(&mut result);
         Ok(result)
@@ -465,7 +468,7 @@ mod tests {
         let (bin, prefix) = executable().expect("OpenCode is not installed");
         let dir = tempfile::tempdir().unwrap();
         let password = uuid::Uuid::new_v4().simple().to_string();
-        let mut child = spawn(&bin, &prefix, dir.path(), &password).unwrap();
+        let mut child = spawn(&bin, &prefix, dir.path(), &password, None).unwrap();
         let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
         let ready: Value = serde_json::from_str(&lines.next().unwrap().unwrap()).unwrap();
         let url = ready["url"].as_str().unwrap().to_string();

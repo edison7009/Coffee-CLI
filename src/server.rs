@@ -1036,7 +1036,7 @@ fn tier_terminal_start_blocking(
 
     // Per-pane env overrides (reserved). Independent-split and
     // single-terminal panes spawn with no extra env today.
-    let extra_env: Vec<(String, String)> = Vec::new();
+    let mut extra_env: Vec<(String, String)> = Vec::new();
 
     if tool.as_deref() == Some("claude") {
         let parent = match &native_token {
@@ -1051,6 +1051,9 @@ fn tier_terminal_start_blocking(
             args.extend(parent.args);
         }
     }
+    // The window tools for the other tools that take them (src/window_control.rs).
+    if tool.as_deref() == Some("codex") { args.extend(crate::window_control::codex_args(&app, &session_id)); }
+    if tool.as_deref() == Some("opencode") { extra_env.extend(crate::window_control::opencode_env(&app, &session_id)); }
 
     let launched_at = std::time::SystemTime::now();
     terminal::spawn(
@@ -1792,8 +1795,8 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::remote_window::remote_control_info,
             crate::remote_window::remote_pairing_save,
             crate::remote_window::remote_window_set_name,
-            crate::window_control::window_control_enabled,
-            crate::window_control::window_control_set_enabled,
+            crate::window_control::window_control_tools,
+            crate::window_control::window_control_set_tool,
             crate::window_control::window_control_resolve,
             crate::window_control::window_control_state,
             crate::window_control::window_control_set_pick,

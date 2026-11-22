@@ -62,6 +62,10 @@ for (const lang of languages) {
     assert.equal(orchestrationToolLabel(tool, t, 'coffee-team'), undefined);
   }
   assert.equal(orchestrationToolLabel('mcp__coffee-control__worker_start', t), undefined);
+  // OpenCode names a server's tools `<server>_<tool>`.
+  assert.equal(orchestrationToolLabel('coffee-control_tab_read', t), t('ai_remote.tool.read'));
+  assert.equal(orchestrationToolLabel('coffee-control__window_list', t), t('ai_remote.tool.list'));
+  assert.equal(orchestrationToolLabel('coffee-controller_tab_read', t), undefined);
   const windowSearch = orchestrationSearchLabel('ToolSearch', 'select:mcp__coffee-control__window_list,mcp__coffee-control__tab_read,mcp__coffee-control__', t);
   assert.equal(windowSearch.title, t('ai_remote.tool.search'));
   assert.equal(windowSearch.description, [t('ai_remote.tool.list'), t('ai_remote.tool.read')].join(' · '));

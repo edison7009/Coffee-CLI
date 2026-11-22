@@ -2,6 +2,7 @@
 // projector in OpenCode's client (`packages/client/src/solid/data.ts`) so live events and the
 // `/message` history read land on the same shape; `openCodeRows` then flattens it for display.
 import type { ChatMessage } from './chat-transcript';
+import { withoutWindowNote } from './window-note';
 
 export type Json = Record<string, unknown>;
 export const obj = (value: unknown): Json => value && typeof value === 'object' && !Array.isArray(value) ? value as Json : {};
@@ -214,7 +215,7 @@ function rowsOf(message: Json, turn: number, busy: boolean): OpenCodeRow[] {
   let rows: OpenCodeRow[] = [];
   if (message.type === 'user') {
     const files = arr(message.files).map(obj).map(f => str(f.name) || str(f.filename) || str(f.uri)).filter(Boolean);
-    rows = [{ id, role: 'user', content: str(obj(message.metadata).displayText) || str(message.text), turn, timestamp, partial: false, pending: message.pending === true, files }];
+    rows = [{ id, role: 'user', content: str(obj(message.metadata).displayText) || withoutWindowNote(str(message.text)), turn, timestamp, partial: false, pending: message.pending === true, files }];
   } else if (message.type === 'assistant') {
     const open = !time.completed;
     rows = arr(message.content).map(obj).flatMap((part, index): OpenCodeRow[] => {

@@ -81,6 +81,12 @@ try {
   assert.deepEqual(await page.getByRole('menuitemradio').allTextContents(), ['自动✓']);
   await page.keyboard.press('Escape');
 
+  // Turning the tool off in settings takes the chip away from open tabs.
+  await page.evaluate(() => { window.attached['tab-a'] = false; window.listeners['window-control-changed']({ payload: null }); });
+  await page.locator('#hidden').waitFor();
+  await page.evaluate(() => { window.attached['tab-a'] = true; window.listeners['window-control-changed']({ payload: null }); });
+  await chip.waitFor();
+
   // Another tab keeps its own choice, and a tab started without the window tools shows no chip.
   await page.evaluate(() => { window.windows = [{ window: 'eb', title: 'EB' }]; window.picks['tab-a'] = 'eb'; window.attached['tab-b'] = true; window.show('tab-b'); });
   await page.waitForFunction(() => window.calls.some(call => call[0] === 'state' && call[1] === 'tab-b'));

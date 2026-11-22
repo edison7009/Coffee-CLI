@@ -50,7 +50,7 @@ export const pt = {
   "tools.tab.computer": "Controle do computador",
   "tools.tab.browser": "Controle do navegador",
   "tools.tab.remote": "Controle remoto",
-  "ai_remote.description": "Ao ativar, novas sessões do Claude podem ver e operar as janelas abertas de computadores remotos: ler a tela, digitar, pressionar teclas e abrir abas. Em \"Controle remoto\", acima da caixa de entrada, uma sessão pode trabalhar só em uma janela. Isso entrega aquele computador à IA; ative apenas se confiar nela.",
+  "ai_remote.description": "Ative para um assistente abaixo e as novas sessões dele poderão ver e operar as janelas abertas de computadores remotos: ler a tela, digitar, pressionar teclas e abrir abas. Em \"Controle remoto\", acima da caixa de entrada, uma sessão pode trabalhar só em uma janela. Isso entrega aquele computador à IA; ative apenas se confiar nela.",
   "ai_remote.pick.prefix": "Controle remoto: {name}",
   "ai_remote.pick.auto": "Automático",
   "ai_remote.pick.none": "Nenhuma janela de computador remoto aberta",

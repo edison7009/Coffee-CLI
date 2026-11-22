@@ -4,6 +4,8 @@ import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
+import type { I18nKey } from '../../i18n/en';
+import { orchestrationToolLabel } from '../../lib/orchestration-label';
 import { arr, dshToolCard, obj, str, type DshMessage, type DshRequest } from '../../lib/dsh-protocol';
 import { respondDsh, retainDshSession, stopDsh, useDshSession } from '../../lib/dsh-session';
 import { clipboardWrite } from '../../lib/clipboard';
@@ -32,12 +34,12 @@ function Measured({ id, measure, children }: { id: string; measure: (id: string,
   return <div ref={ref}>{children}</div>;
 }
 /** One-line summary of a step: a command's description, else its first string argument; reasoning shows its first line. */
-function title(message: DshMessage): string {
+function title(message: DshMessage, t: (key: I18nKey) => string): string {
   if (message.role === 'reasoning') return message.content.split('\n').find(line => line.trim())?.trim() ?? '';
   let input: Record<string, unknown> = {};
   try { input = obj(JSON.parse(message.toolInput ?? '')); } catch { /* Arguments still streaming. */ }
   const first = str(input.description) || Object.values(input).find((v): v is string => typeof v === 'string');
-  return [message.toolName, first].filter(Boolean).join(' · ');
+  return [message.toolName && (orchestrationToolLabel(message.toolName, t) ?? message.toolName), first].filter(Boolean).join(' · ');
 }
 /** DeepSeek Harness's running status: the swinging whale tail and a blue sweep over "deep diving for …". */
 function Running({ since, stopping, tool }: { since?: number; stopping: boolean; tool?: string }) {
@@ -185,7 +187,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           <article className={`claude-row claude-row--${row.members ? (row.running ? 'running' : 'tool') : row.role} codex-row`} data-message-id={row.id}>
             {row.members ? <>
-              <button type="button" className="codex-group-heading" aria-expanded={groupOpen(row.id)} onClick={() => setExpanded(old => ({ ...old, [row.id]: !groupOpen(row.id) }))}><span aria-hidden="true"><Chevron open={groupOpen(row.id)} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.running && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
+              <button type="button" className="codex-group-heading" aria-expanded={groupOpen(row.id)} onClick={() => setExpanded(old => ({ ...old, [row.id]: !groupOpen(row.id) }))}><span aria-hidden="true"><Chevron open={groupOpen(row.id)} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.running && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!, t)}</small></button>
               {groupOpen(row.id) && <div className="dsh-activity-steps">{row.members.map(m => m.role === 'tool'
                 ? <ClaudeTool key={m.id} message={dshToolCard(m)} />
                 : <details key={m.id} className="claude-reasoning" open={!!expanded[m.id]} onToggle={event => { const open = event.currentTarget.open; setExpanded(old => ({ ...old, [m.id]: open })); }}><summary>{t('conversation.reasoning')}</summary><MarkdownContent content={m.content} /></details>)}</div>}
@@ -202,7 +204,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={String(request.id)} sessionId={sessionId} request={request} />)}
         {(s.busy || (s.restarting && s.stopping)) && !s.requests.length && <Running since={s.busy ? s.startedAt : undefined}
-          stopping={!!s.stopping} tool={s.messages.findLast(message => message.toolStatus === 'running')?.toolName} />}
+          stopping={!!s.stopping} tool={(name => name && (orchestrationToolLabel(name, t) ?? name))(s.messages.findLast(message => message.toolStatus === 'running')?.toolName)} />}
         {/* A failed start must say why; Reconnect alone hides the cause. */}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'DeepSeek Harness', t)}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}

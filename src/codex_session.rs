@@ -48,10 +48,10 @@ impl Session {
         let mut input = self.input.lock().map_err(|e| e.to_string())?;
         let input = input.as_mut().ok_or("Codex connection is closed")?;
         if value["method"] == "turn/start" {
-            let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).filter(|text| !text.starts_with("<system-reminder>")).collect::<Vec<_>>().join("\n");
             crate::orchestration::native_input(&self.id, "codex", &self.generation, &prompt, value["id"].as_str().unwrap_or(""), None)?;
         } else if value["method"] == "turn/steer" {
-            let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).collect::<Vec<_>>().join("\n");
+            let prompt = value["params"]["input"].as_array().into_iter().flatten().filter(|block| block["type"] == "text").filter_map(|block| block["text"].as_str()).filter(|text| !text.starts_with("<system-reminder>")).collect::<Vec<_>>().join("\n");
             crate::orchestration::native_steer(&self.id, "codex", &self.generation, &prompt)?;
         } else if value["method"] == "turn/interrupt" {
             crate::orchestration::native_stop(&self.id, "codex", &self.generation);
@@ -160,7 +160,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, cwd: Option<Stri
     }
     #[cfg(not(windows))]
     { command = Command::new(&bin); }
-    command.args(prefix).args(&config.extra_args).args(["app-server", "--listen", "stdio://"])
+    command.args(prefix).args(&config.extra_args).args(crate::window_control::codex_args(&app, &id)).args(["app-server", "--listen", "stdio://"])
         .current_dir(&cwd).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = command.spawn().map_err(|e| crate::session_directory::validate(&cwd).err().unwrap_or_else(|| format!("Could not start Codex: {e}")))?;
     #[cfg(windows)]
@@ -230,12 +230,17 @@ pub async fn codex_session_start(app: tauri::AppHandle, id: String, generation: 
     tauri::async_runtime::spawn_blocking(move || start(app, id, generation, cwd, resume_token, continue_from)).await.map_err(|e| e.to_string())?
 }
 #[tauri::command]
-pub async fn codex_session_request(sessions: State<'_, CodexSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
+pub async fn codex_session_request(app: tauri::AppHandle, sessions: State<'_, CodexSessions>, id: String, generation: String, method: String, params: Value) -> Result<Value, String> {
     if !matches!(method.as_str(), "turn/start" | "turn/steer" | "turn/interrupt" | "thread/items/list" | "thread/turns/list" | "thread/compact/start" | "review/start" | "skills/list" | "mcpServerStatus/list" | "account/rateLimits/read" | "collaborationMode/list") { return Err("Unsupported Codex request".into()); }
     let s = get(&sessions, &id, &generation)?;
     // Account usage and mode discovery do not address a thread.
     let threadless = matches!(method.as_str(), "account/rateLimits/read" | "collaborationMode/list");
-    let params = if threadless { json!({}) } else { params };
+    let mut params = if threadless { json!({}) } else { params };
+    // A tab tied to a window is told so with each prompt (src/window_control.rs); the conversation hides it.
+    if method == "turn/start" {
+        let note = tauri::async_runtime::spawn_blocking(move || crate::window_control::prompt_note(&app, &id)).await.ok().flatten();
+        if let (Some(note), Some(input)) = (note, params["input"].as_array_mut()) { input.push(json!({"type":"text","text":note,"text_elements":[]})); }
+    }
     if !threadless && params["threadId"].as_str() != Some(s.native_id.lock().unwrap().as_str()) { return Err("Codex thread does not belong to this tab".into()); }
     tauri::async_runtime::spawn_blocking(move || s.request(&method, params)).await.map_err(|e| e.to_string())?
 }

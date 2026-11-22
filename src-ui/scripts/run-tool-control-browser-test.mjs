@@ -11,14 +11,14 @@ const antigravitySvg=await readFile(join(project,'src/icons-inline/antigravity.s
 const mock=`
 window.calls=[];const agents=()=>[{tool:'claude',supported:true,enabled:false,conflict:false},{tool:'codex',supported:true,enabled:false,conflict:false},{tool:'cursor',supported:true,enabled:false,conflict:false},{tool:'copilot',supported:true,enabled:false,conflict:false},{tool:'antigravity',supported:true,enabled:false,conflict:true,issue:'configuration'},{tool:'pi',supported:false,enabled:false,conflict:false}];
 window.controlStatus={computer:{supported:true,installed:true,ready:true,browser:null,agents:agents()},browser:{supported:true,installed:false,ready:false,browser:null,agents:agents()}};
-window.team={enabled:false,agents:[],tasks:[],revision:0};window.remoteControl=false;window.teamCalls=[];
+window.team={enabled:false,agents:[],tasks:[],revision:0};window.remoteControl=[];window.teamCalls=[];
 export const commands={
 async orchestrationGet(){window.teamCalls.push('get');const value=structuredClone(window.team);if(window.delayTeamRead)await new Promise(resolve=>window.resolveTeamRead=resolve);return value},async orchestrationSetMode(mode){window.teamCalls.push({mode});window.team.mode=mode;window.team.revision++;return structuredClone(window.team)},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
 async getToolControl(kind){window.calls.push({type:'read',kind});const value=structuredClone(window.controlStatus[kind]);if(window.delayRead===kind)await new Promise(resolve=>window.resolveRead=resolve);if(window.failRead===kind)throw 'control_read';return value},
 async checkToolControl(kind){window.calls.push({type:'check',kind});if(window.delayCheck)await new Promise(resolve=>window.resolveCheck=resolve);if(window.failCheck)throw 'control_unavailable';return structuredClone(window.controlStatus[kind])},
 async installBrowserControl(){window.calls.push({type:'install'});if(window.delayInstall)await new Promise(resolve=>window.resolveInstall=resolve);window.controlStatus.browser.installed=true;return structuredClone(window.controlStatus.browser)},
 async setToolControl(kind,tool,enabled){window.calls.push({type:'set',kind,tool,enabled});if(window.delaySet)await new Promise(resolve=>window.resolveSet=resolve);if(window.failSet)throw 'control_conflict';window.controlStatus[kind].agents.find(agent=>agent.tool===tool).enabled=enabled;return structuredClone(window.controlStatus[kind])},
-async windowControlEnabled(){window.calls.push({type:'remote-read'});return window.remoteControl},async windowControlSetEnabled(enabled){window.calls.push({type:'remote',enabled});window.remoteControl=enabled},
+async windowControlTools(){window.calls.push({type:'remote-read'});return [...window.remoteControl]},async windowControlSetTool(tool,enabled){window.calls.push({type:'remote',tool,enabled});window.remoteControl=window.remoteControl.filter(t=>t!==tool);if(enabled)window.remoteControl.push(tool);return [...window.remoteControl]},
 async getToolSkills(){return {supported:true,skills:[]}},async searchToolSkills(){return []}};`;
 await build({stdin:{loader:'tsx',resolveDir:project,contents:`
 import React from 'react';import {createRoot} from 'react-dom/client';
@@ -254,17 +254,21 @@ await page.emulateMedia({reducedMotion:'no-preference'});
 await page.setViewportSize({width:1080,height:1000});await tab('技能').click();await tab('Claude Code').click();await page.getByText('暂无技能',{exact:true}).waitFor();
 const emptyGeometry=await page.locator('.skills-empty').evaluate(element=>{const rect=element.getBoundingClientRect(),panel=document.querySelector('.tool-settings-page').getBoundingClientRect(),range=document.createRange();range.selectNodeContents(element);const text=range.getBoundingClientRect();return {bottom:rect.bottom,expected:panel.bottom-32,center:(rect.top+rect.bottom)/2,textCenter:(text.top+text.bottom)/2}});
 assert.ok(Math.abs(emptyGeometry.bottom-emptyGeometry.expected)<2,'empty skills fill the available page height');assert.ok(Math.abs(emptyGeometry.center-emptyGeometry.textCenter)<2,'empty text is vertically centered');
-// Remote Control: one switch, for Claude only, read when the tab opens.
+// Remote Control: a switch per assistant that can take the window tools, read when the tab opens.
 await page.evaluate(()=>window.calls=[]);await tab('远程操控').click();
 await page.waitForFunction(()=>!document.querySelector('[aria-labelledby$="-tab-remote"] [role="switch"][aria-label="Claude Code"]').disabled);
 const remotePanel=page.locator('[aria-labelledby$="-tab-remote"]'),remoteSwitch=name=>remotePanel.getByRole('switch',{name,exact:true});
 assert.equal(await remoteSwitch('Claude Code').getAttribute('aria-checked'),'false');
-assert.equal(await remoteSwitch('Codex CLI').isDisabled(),true,'only Claude has the window tools');
-assert.equal(await remotePanel.getByText('暂不支持',{exact:true}).count(),4);
-await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>window.remoteControl===true);
+assert.equal(await remoteSwitch('Codex CLI').isDisabled(),false,'Codex takes the window tools too');
+assert.equal(await remoteSwitch('Cursor').isDisabled(),true,'tools without them stay off');
+assert.equal(await remoteSwitch('Pi').isDisabled(),true);
+assert.equal(await remotePanel.getByText('暂不支持',{exact:true}).count(),3);
+await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>window.remoteControl.includes('claude'));
 await page.waitForFunction(()=>document.querySelector('[aria-labelledby$="-tab-remote"] [role="switch"][aria-label="Claude Code"]').getAttribute('aria-checked')==='true');
-await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>window.remoteControl===false);
-assert.deepEqual(await page.evaluate(()=>window.calls),[{type:'remote-read'},{type:'remote',enabled:true},{type:'remote',enabled:false}]);
+await remoteSwitch('Codex CLI').click();await page.waitForFunction(()=>window.remoteControl.includes('codex'));
+assert.equal(await remoteSwitch('Claude Code').getAttribute('aria-checked'),'true','each assistant has its own switch');
+await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>!window.remoteControl.includes('claude'));
+assert.deepEqual(await page.evaluate(()=>window.calls),[{type:'remote-read'},{type:'remote',tool:'claude',enabled:true},{type:'remote',tool:'codex',enabled:true},{type:'remote',tool:'claude',enabled:false}]);
 await page.screenshot({path:join(directory,'remote-control.png')});
 assert.deepEqual(errors,[]);
 console.log('OK: seven themed tabs, retained control state, stable first-load geometry, hidden-page completion, background refresh failures, explicit installation, per-agent switches, serialization, late-read protection, themes, isolated SVG masks and demo motion');console.log('Screenshots: '+directory);

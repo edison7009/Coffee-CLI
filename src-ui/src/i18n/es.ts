@@ -50,7 +50,7 @@ export const es = {
   "tools.tab.computer": "Control del equipo",
   "tools.tab.browser": "Control del navegador",
   "tools.tab.remote": "Control remoto",
-  "ai_remote.description": "Al activarlo, las nuevas sesiones de Claude pueden ver y manejar las ventanas abiertas de equipos remotos: leer la pantalla, escribir, pulsar teclas y abrir pestañas. Con «Control remoto», encima del cuadro de entrada, una sesión puede trabajar solo en una ventana. Esto entrega ese equipo a la IA; actívalo solo si confías en ella.",
+  "ai_remote.description": "Actívalo para un asistente de abajo y sus nuevas sesiones podrán ver y manejar las ventanas abiertas de equipos remotos: leer la pantalla, escribir, pulsar teclas y abrir pestañas. Con «Control remoto», encima del cuadro de entrada, una sesión puede trabajar solo en una ventana. Esto entrega ese equipo a la IA; actívalo solo si confías en ella.",
   "ai_remote.pick.prefix": "Control remoto: {name}",
   "ai_remote.pick.auto": "Automático",
   "ai_remote.pick.none": "No hay ventanas de equipos remotos abiertas",

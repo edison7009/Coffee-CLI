@@ -1,6 +1,7 @@
 // DeepSeek Harness Session events (persisted log rows and live SDK `session.event`
 // notifications share one vocabulary) reduced into conversation rows.
 import type { ClaudeMessage } from './claude-protocol';
+import { isWindowNote } from './window-note';
 export type Json = Record<string, unknown>;
 export const obj = (value: unknown): Json => value && typeof value === 'object' && !Array.isArray(value) ? value as Json : {};
 export const arr = (value: unknown): unknown[] => Array.isArray(value) ? value : [];
@@ -79,7 +80,8 @@ export function reduceDshEvent(state: DshState, event: Json, historical = false)
     // Runtime context, skill catalogs and notices are model input, not the user's words.
     const source = obj(data.source);
     if (source.kind !== 'user') return state;
-    const content = text(data.content);
+    // A window note Coffee CLI adds to a prompt (src/window_control.rs) is for the model, not the bubble.
+    const content = arr(data.content).map(obj).filter(block => block.type === 'text' && !isWindowNote(str(block.text))).map(block => str(block.text)).join('\n');
     if (!content.trim()) return state;
     upsert({ id: `user:${str(data.id) || num(event.seq)}`, role: 'user', content, turn, timestamp: time });
   } else if (type === 'assistant/message') {

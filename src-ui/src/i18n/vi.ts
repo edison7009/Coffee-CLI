@@ -50,7 +50,7 @@ export const vi = {
   "tools.tab.computer": "Điều khiển máy tính",
   "tools.tab.browser": "Điều khiển trình duyệt",
   "tools.tab.remote": "Điều khiển từ xa",
-  "ai_remote.description": "Khi bật, các phiên Claude mới có thể xem và thao tác các cửa sổ máy tính từ xa đang mở: đọc màn hình, nhập, nhấn phím và mở tab. Trong \"Điều khiển từ xa\" phía trên ô nhập, có thể cho một phiên chỉ làm việc trong một cửa sổ. Việc này giao máy tính đó cho AI; chỉ bật khi bạn tin tưởng.",
+  "ai_remote.description": "Bật cho một trợ lý bên dưới, các phiên mới của nó có thể xem và thao tác các cửa sổ máy tính từ xa đang mở: đọc màn hình, nhập, nhấn phím và mở tab. Trong \"Điều khiển từ xa\" phía trên ô nhập, có thể cho một phiên chỉ làm việc trong một cửa sổ. Việc này giao máy tính đó cho AI; chỉ bật khi bạn tin tưởng.",
   "ai_remote.pick.prefix": "Điều khiển từ xa: {name}",
   "ai_remote.pick.auto": "Tự động",
   "ai_remote.pick.none": "Chưa mở cửa sổ máy tính từ xa nào",

@@ -50,7 +50,7 @@ export const ko = {
   "tools.tab.computer": "컴퓨터 제어",
   "tools.tab.browser": "브라우저 제어",
   "tools.tab.remote": "원격 조작",
-  "ai_remote.description": "켜면 새로 연 Claude 세션이 열려 있는 원격 컴퓨터 창을 보고 조작할 수 있습니다: 화면 읽기, 입력, 키 누르기, 탭 열기. 입력창 위의 \"원격 조작\"에서 세션이 한 창에서만 작업하도록 할 수 있습니다. 그 컴퓨터를 AI에 맡기는 것이므로 신뢰할 때만 켜세요.",
+  "ai_remote.description": "아래 어시스턴트에 켜면, 그 어시스턴트의 새 세션이 열려 있는 원격 컴퓨터 창을 보고 조작할 수 있습니다: 화면 읽기, 입력, 키 누르기, 탭 열기. 입력창 위의 \"원격 조작\"에서 세션이 한 창에서만 작업하도록 할 수 있습니다. 그 컴퓨터를 AI에 맡기는 것이므로 신뢰할 때만 켜세요.",
   "ai_remote.pick.prefix": "원격 조작: {name}",
   "ai_remote.pick.auto": "자동",
   "ai_remote.pick.none": "열린 원격 컴퓨터 창이 없습니다",

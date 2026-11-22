@@ -11,9 +11,10 @@ export function useRemoteControlState(sessionId: string, active: boolean): [Wind
     let current = true;
     const refresh = () => { void commands.windowControlState(sessionId).then(value => { if (current) setStored({ session: sessionId, value }); }, () => {}); };
     refresh();
-    // A window opening or closing changes the choices, and a closed window's pick is dropped.
-    const stop = listen('remote-windows-changed', refresh);
-    return () => { current = false; void stop.then(unlisten => unlisten()); };
+    // A window opening or closing changes the choices, and a closed window's pick is dropped; the
+    // setting or this tab's window changing (src/window_control.rs) changes what the chip shows.
+    const stops = ['remote-windows-changed', 'window-control-changed'].map(event => listen(event, refresh));
+    return () => { current = false; for (const stop of stops) void stop.then(unlisten => unlisten()); };
   }, [sessionId, active]);
   const set = useCallback((value: WindowControlState) => setStored({ session: sessionId, value }), [sessionId]);
   return [active && stored?.session === sessionId ? stored.value : null, set];

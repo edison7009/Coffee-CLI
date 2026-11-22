@@ -1,4 +1,5 @@
 import type { ChatMessage } from './chat-transcript';
+import { isWindowNote } from './window-note';
 
 export type Json = Record<string, unknown>;
 export const obj = (value: unknown): Json => value && typeof value === 'object' && !Array.isArray(value) ? value as Json : {};
@@ -56,7 +57,8 @@ export function emptyCodexState(): CodexState {
   return { lastContextTokens: 0, threadPath: '', ready: false, busy: false, nativeId: '', turnId: '', messages: [], requests: [], models: [], model: '', effort: '', approvalPolicy: undefined, sandbox: {}, contextTokens: 0, contextWindow: 0, totalTokens: 0, historyCursor: null, loadingHistory: false, interrupting: false };
 }
 function itemText(item: Json): string {
-  if (item.type === 'userMessage') return arr(item.content).map(value => { const part = obj(value); return str(part.text) || str(part.path) || str(part.url); }).filter(Boolean).join('\n');
+  // A window note Coffee CLI adds to a prompt (src/window_control.rs) is for the model, not the bubble.
+  if (item.type === 'userMessage') return arr(item.content).map(value => { const part = obj(value); return isWindowNote(str(part.text)) ? '' : str(part.text) || str(part.path) || str(part.url); }).filter(Boolean).join('\n');
   if (item.type === 'reasoning') return arr(item.summary).map(pretty).join('\n') || arr(item.content).map(pretty).join('\n');
   if (item.type === 'fileChange') return arr(item.changes).map(value => { const change = obj(value); return `${str(change.path)}\n${str(change.diff)}`; }).join('\n\n');
   return str(item.text) || str(item.aggregatedOutput) || pretty(item.result ?? item.output ?? item.error) || str(item.query);

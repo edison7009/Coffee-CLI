@@ -50,7 +50,7 @@ export const zhTW = {
   "tools.tab.computer": "電腦控制",
   "tools.tab.browser": "瀏覽器控制",
   "tools.tab.remote": "遠端操控",
-  "ai_remote.description": "開啟後，新開的 Claude 會話可以查看和操作已開啟的遠端電腦視窗：讀取畫面、輸入、按鍵、新開分頁。在輸入框上方的「遠端操控」裡，可以讓一個會話只在某個視窗裡工作。這等於把那台電腦交給 AI，請只在信任時開啟。",
+  "ai_remote.description": "為下方的助手開啟後，它新開的會話可以查看和操作已開啟的遠端電腦視窗：讀取畫面、輸入、按鍵、新開分頁。在輸入框上方的「遠端操控」裡，可以讓一個會話只在某個視窗裡工作。這等於把那台電腦交給 AI，請只在信任時開啟。",
   "ai_remote.pick.prefix": "遠端操控：{name}",
   "ai_remote.pick.auto": "自動",
   "ai_remote.pick.none": "還沒有開啟遠端電腦視窗",

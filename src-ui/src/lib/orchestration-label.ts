@@ -28,11 +28,14 @@ const servers: Record<string, { search: I18nKey; labels: Record<string, I18nKey>
   },
 };
 
-/** The server and tool a name like `mcp__coffee-team__worker_start` refers to, when it is one of ours. */
+/**
+ * The server and tool a name refers to, when it is one of ours. Each assistant names a server's tools
+ * its own way: `mcp__coffee-control__tab_read` (Claude), `coffee-control_tab_read` (OpenCode),
+ * `coffee-control__tab_read`, or the bare name beside a separate server field (Codex).
+ */
 function ours(name: string, server?: string): { server: string; action: string } | undefined {
   for (const id of Object.keys(servers)) {
-    const prefix = `mcp__${id}__`;
-    if (name.startsWith(prefix)) return { server: id, action: name.slice(prefix.length) };
+    for (const prefix of [`mcp__${id}__`, `${id}__`, `${id}_`]) if (name.startsWith(prefix)) return { server: id, action: name.slice(prefix.length) };
     if (server === id) return { server: id, action: name };
   }
   return undefined;

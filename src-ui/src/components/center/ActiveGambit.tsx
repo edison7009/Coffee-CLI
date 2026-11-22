@@ -101,7 +101,8 @@ export function ActiveGambit() {
   // icon+name pairing). null session → undefined → Gambit hides the icon.
   const toolIcon = activeSession ? getToolIcon(activeSession.tool) : undefined;
   const coordinator = activeSession?.tool === 'claude' && !activeSession.parentId && orchestration.enabled && orchestration.coordinators?.includes(activeSession.id);
-  const [remote, setRemote] = useRemoteControlState(activeId ?? '', !!activeId && activeSession?.tool === 'claude' && !activeSession.parentId);
+  // The tools that can be given the window tools (src/window_control.rs TOOLS); the chip shows only once a tab has them.
+  const [remote, setRemote] = useRemoteControlState(activeId ?? '', !!activeId && ['claude', 'codex', 'opencode', 'dsh'].includes(activeSession?.tool ?? '') && !activeSession?.parentId);
 
   const handleDraftChange = useCallback((draft: string) => {
     if (!activeId) return;

@@ -48,7 +48,7 @@ export const en = {
   "tools.tab.computer": "Computer Use",
   "tools.tab.browser": "Browser Use",
   "tools.tab.remote": "Remote Control",
-  "ai_remote.description": "When on, new Claude sessions can see and operate the open remote computer windows: read the screen, type, press keys and open tabs. Use \"Remote control\" above the input box to keep one session working in one window. This hands that computer to the AI; turn it on only if you trust it.",
+  "ai_remote.description": "Turn it on for an assistant below, and its new sessions can see and operate the open remote computer windows: read the screen, type, press keys and open tabs. Use \"Remote control\" above the input box to keep one session working in one window. This hands that computer to the AI; turn it on only if you trust it.",
   "ai_remote.pick.prefix": "Remote control: {name}",
   "ai_remote.pick.auto": "Auto",
   "ai_remote.pick.none": "No remote computer windows are open",
