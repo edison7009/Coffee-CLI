@@ -915,7 +915,7 @@ export const fr = {
   "layout.work_hint": "Seulement la conversation, sans terminal : une barre d’icônes et le chat.",
   "layout.code_hint": "Onglets, barres latérales et terminaux : l’espace de travail complet.",
   "launchpad.work_title": "On fait quoi aujourd’hui ?",
-  "launchpad.work_hint": "Choisissez un assistant pour commencer une conversation.",
+  "launchpad.work_hint": "Choisissez une app d’agent pour commencer une conversation.",
   "ai_remote.summary": "Laissez les assistants piloter les fenêtres d’autres ordinateurs que vous avez ouvertes. À activer seulement pour des ordinateurs de confiance.",
   "ai_remote.windows": "Fenêtres distantes ouvertes",
   "ai_remote.assistants": "Assistants autorisés à les piloter",

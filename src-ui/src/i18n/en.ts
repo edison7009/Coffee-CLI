@@ -921,7 +921,7 @@ export const en = {
   "layout.work_hint": "Just the conversation: no terminals, an icon rail and the chat.",
   "layout.code_hint": "Tabs, sidebars and terminals: the full workspace.",
   "launchpad.work_title": "What shall we do today?",
-  "launchpad.work_hint": "Pick an assistant to start a conversation.",
+  "launchpad.work_hint": "Pick an agent app to start a conversation.",
   "ai_remote.summary": "Let assistants operate the windows of other computers you have opened. Only turn it on for computers you trust.",
   "ai_remote.windows": "Remote windows open now",
   "ai_remote.assistants": "Assistants allowed to operate them",

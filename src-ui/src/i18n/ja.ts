@@ -918,7 +918,7 @@ export const ja = {
   "layout.work_hint": "会話だけ、ターミナルなし：アイコン列と会話。",
   "layout.code_hint": "タブ、サイドバー、ターミナル：フルのワークスペース。",
   "launchpad.work_title": "今日は何をしましょう？",
-  "launchpad.work_hint": "アシスタントを選んで会話を始めます。",
+  "launchpad.work_hint": "Agent アプリを選んで会話を始めます。",
   "ai_remote.summary": "開いている他のコンピューターのウィンドウをアシスタントに操作させます。信頼できるコンピューターだけでオンにしてください。",
   "ai_remote.windows": "開いているリモートウィンドウ",
   "ai_remote.assistants": "操作を許可するアシスタント",

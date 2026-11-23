@@ -919,7 +919,7 @@ export const vi = {
   "layout.work_hint": "Chỉ cuộc trò chuyện, không terminal: một dải biểu tượng và cuộc trò chuyện.",
   "layout.code_hint": "Thẻ, thanh bên và terminal: không gian làm việc đầy đủ.",
   "launchpad.work_title": "Hôm nay làm gì nhé?",
-  "launchpad.work_hint": "Chọn một trợ lý để bắt đầu trò chuyện.",
+  "launchpad.work_hint": "Chọn một ứng dụng Agent để bắt đầu trò chuyện.",
   "ai_remote.summary": "Cho trợ lý điều khiển cửa sổ của các máy tính khác bạn đã mở. Chỉ bật cho máy tính bạn tin tưởng.",
   "ai_remote.windows": "Cửa sổ từ xa đang mở",
   "ai_remote.assistants": "Trợ lý được phép điều khiển",

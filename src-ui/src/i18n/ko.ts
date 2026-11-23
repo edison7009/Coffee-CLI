@@ -918,7 +918,7 @@ export const ko = {
   "layout.work_hint": "대화만, 터미널 없음: 아이콘 막대와 대화.",
   "layout.code_hint": "탭, 사이드바, 터미널: 전체 작업 공간.",
   "launchpad.work_title": "오늘은 무엇을 할까요?",
-  "launchpad.work_hint": "도우미를 골라 대화를 시작하세요.",
+  "launchpad.work_hint": "Agent 앱을 골라 대화를 시작하세요.",
   "ai_remote.summary": "열어 둔 다른 컴퓨터 창을 도우미가 조작하게 합니다. 신뢰하는 컴퓨터에서만 켜세요.",
   "ai_remote.windows": "열려 있는 원격 창",
   "ai_remote.assistants": "이 창을 조작할 수 있는 도우미",

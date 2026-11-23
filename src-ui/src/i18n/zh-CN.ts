@@ -920,7 +920,7 @@ export const zhCN = {
   "layout.work_hint": "只有对话，不启动终端：左侧一条图标，中间全是对话。",
   "layout.code_hint": "多标签、侧栏和终端：完整的工作区。",
   "launchpad.work_title": "今天做点什么？",
-  "launchpad.work_hint": "选一个助手，开始对话。",
+  "launchpad.work_hint": "选一个 Agent 应用，开始对话。",
   "ai_remote.summary": "让助手操作你已打开的其他电脑窗口。只对你信任的电脑开启。",
   "ai_remote.windows": "已打开的远程窗口",
   "ai_remote.assistants": "允许操作这些窗口的助手",

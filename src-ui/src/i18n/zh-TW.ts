@@ -919,7 +919,7 @@ export const zhTW = {
   "layout.work_hint": "只有對話，不啟動終端：左側一條圖示，中間全是對話。",
   "layout.code_hint": "多分頁、側欄和終端：完整的工作區。",
   "launchpad.work_title": "今天做點什麼？",
-  "launchpad.work_hint": "選一個助手，開始對話。",
+  "launchpad.work_hint": "選一個 Agent 應用，開始對話。",
   "ai_remote.summary": "讓助手操作你已開啟的其他電腦視窗。只對你信任的電腦開啟。",
   "ai_remote.windows": "已開啟的遠端視窗",
   "ai_remote.assistants": "允許操作這些視窗的助手",

@@ -915,7 +915,7 @@ export const de = {
   "layout.work_hint": "Nur die Unterhaltung, keine Terminals: eine Symbolleiste und der Chat.",
   "layout.code_hint": "Tabs, Seitenleisten und Terminals: der volle Arbeitsbereich.",
   "launchpad.work_title": "Was machen wir heute?",
-  "launchpad.work_hint": "Wähle einen Assistenten, um ein Gespräch zu beginnen.",
+  "launchpad.work_hint": "Wähle eine Agent-App, um ein Gespräch zu beginnen.",
   "ai_remote.summary": "Assistenten dürfen geöffnete Fenster anderer Computer bedienen. Nur für Computer einschalten, denen du vertraust.",
   "ai_remote.windows": "Geöffnete Remote-Fenster",
   "ai_remote.assistants": "Assistenten, die sie bedienen dürfen",

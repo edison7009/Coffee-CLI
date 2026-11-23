@@ -915,7 +915,7 @@ export const pt = {
   "layout.work_hint": "Só a conversa, sem terminais: uma barra de ícones e o chat.",
   "layout.code_hint": "Abas, barras laterais e terminais: o espaço de trabalho completo.",
   "launchpad.work_title": "O que vamos fazer hoje?",
-  "launchpad.work_hint": "Escolha um assistente para começar uma conversa.",
+  "launchpad.work_hint": "Escolha um app de agente para começar uma conversa.",
   "ai_remote.summary": "Deixe os assistentes operarem janelas de outros computadores que você abriu. Ative só para computadores confiáveis.",
   "ai_remote.windows": "Janelas remotas abertas",
   "ai_remote.assistants": "Assistentes que podem operá-las",
