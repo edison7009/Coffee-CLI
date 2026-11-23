@@ -255,9 +255,9 @@ try {
   await thinking.locator('summary').click(); await page.waitForTimeout(100);
   await page.evaluate(() => window.setSession({ messages: [window.reasoningMessage, ...Array.from({ length: 60 }, (_, i) => ({ id: 'toggle-tail-' + i, role: 'user', content: 'Another turn. '.repeat(50), timestamp: Date.now() }))] }));
   await scroll.evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
-  assert.equal(await thinking.count(), 0, 'offscreen reasoning is virtualized');
+  assert.equal(await thinking.count(), 1, 'offscreen reasoning stays mounted: scrolling away must not drop rows');
   await scroll.evaluate(el => { el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true })); el.scrollTop = 0; el.dispatchEvent(new Event('scroll')); }); await page.waitForTimeout(350);
-  assert.equal(await thinking.evaluate(el => el.open), true, 'expansion survives virtual row remounting');
+  assert.equal(await thinking.evaluate(el => el.open), true, 'expansion survives scrolling away and back');
   await page.evaluate(() => window.setSession({ messages: [{ ...window.reasoningMessage, content: '' }] }));
   assert.equal(await thinking.locator('summary').count(), 0, 'empty or withheld reasoning has no misleading expand arrow');
   await page.evaluate(() => window.setSession({ messages: [window.reasoningMessage] }));

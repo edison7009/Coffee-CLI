@@ -209,7 +209,7 @@ function ToolBody({ content, path, plain, previewHeight, expanded, bodyRef, onTo
   </div>;
 }
 
-/** Expansion outlives the row: the virtual list may unmount a block that just grew, and remounting must not collapse it. */
+/** Expansion outlives the row: a row that remounts (a reload, a replaced message) must not collapse it. */
 const toolExpansion = new Map<string, boolean>();
 const ToolExpansionKey = createContext('');
 function useToolExpanded(): [boolean, () => void] {
@@ -311,7 +311,7 @@ export const ClaudeTool = memo(function ClaudeTool({ message }: { message: Claud
   </section></ToolExpansionKey.Provider>;
 });
 
-// Which tool groups (and which calls inside them) are open, kept outside the rows: the virtual list unmounts rows scrolled away.
+// Which tool groups (and which calls inside them) are open, kept outside the rows so a remounted row keeps them.
 const openToolGroups = new Set<string>();
 
 const STEP_ICONS: Record<string, ReactNode> = {

@@ -18,7 +18,7 @@ const COLLAPSE_ABOVE = 300;
 const ENTERING_WITHIN = 3000;
 const ENTRANCE_MS = 450;
 
-/** The user's bubble. The expansion lives with the conversation, as virtual rows unmount off screen. */
+/** The user's bubble. The expansion lives with the conversation, so a remounted row keeps it. */
 export function CollapsibleUserMessage({ sentAt, expanded, onToggle, text, children }: { sentAt: number; expanded: boolean; onToggle: () => void; text?: string; children: ReactNode }) {
   // A sub-task's opening instruction is not the user's message: it shows as the task card.
   const worker = useMemo(() => text ? parseWorkerPrompt(text) : null, [text]);

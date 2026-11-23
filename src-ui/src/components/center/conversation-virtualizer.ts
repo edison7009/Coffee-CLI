@@ -1,23 +1,15 @@
 import {
-  useCallback, useEffect, useInsertionEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
   type RefObject,
 } from 'react';
 import type { ChatMessage } from '../../lib/chat-transcript';
 
-const OVERSCAN_PX = 480;
 const THREAD_TOP_PADDING_PX = 34;
-const INITIAL_TAIL_ROWS = 28;
-
-interface VirtualRange {
-  start: number;
-  end: number;
-}
 
 interface VirtualMetrics {
   offsets: number[];
   total: number;
   keys: string[];
-  indexes: Map<string, number>;
 }
 
 // Protocol reducers replace changed messages. Reuse estimates for immutable
@@ -56,160 +48,66 @@ function estimatedHeight(message: ChatMessage): number {
   return Math.min(720, 48 + lines * 22);
 }
 
-function indexAtOffset(offsets: number[], target: number): number {
-  let low = 0;
-  let high = Math.max(0, offsets.length - 1);
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (offsets[middle + 1] <= target) low = middle + 1;
-    else high = middle;
-  }
-  return low;
-}
-
-/** Variable-height window for the conversation transcript. Message Markdown
- * exists only around the viewport; cached measurements keep navigation and
- * scroll offsets stable after rows leave the DOM. */
+/** Layout for the conversation transcript. Every message stays mounted: text is cheap, and unmounting rows off
+ * screen made scrolling up drop what was below and rebuild what was above. Measured heights still give the
+ * navigation its offsets. The window-shaped return (start, end, spacers) keeps the callers unchanged. */
 export function useConversationVirtualizer(
   messages: ChatMessage[],
   scrollRef: RefObject<HTMLDivElement | null>,
 ) {
   const [heights, setHeights] = useState(() => new Map<string, number>());
   const pendingHeightsRef = useRef(new Map<string, number>());
-  const measuredRef = useRef(new Set<string>());
   const measureFrameRef = useRef<number | null>(null);
-  const scrollFrameRef = useRef<number | null>(null);
-  const [range, setRange] = useState<VirtualRange>({ start: 0, end: 0 });
 
   const metrics = useMemo<VirtualMetrics>(() => {
     const offsets = new Array<number>(messages.length + 1);
     const keys = new Array<string>(messages.length);
-    const indexes = new Map<string, number>();
     offsets[0] = 0;
     for (let index = 0; index < messages.length; index += 1) {
-      const message = messages[index];
-      const { key, height: estimate } = messageMeasurement(message);
+      const { key, height: estimate } = messageMeasurement(messages[index]);
       keys[index] = key;
-      indexes.set(key, index);
-      const height = heights.get(key) ?? estimate;
-      offsets[index + 1] = offsets[index] + height;
+      offsets[index + 1] = offsets[index] + (heights.get(key) ?? estimate);
     }
-    return { offsets, total: offsets[messages.length] ?? 0, keys, indexes };
+    return { offsets, total: offsets[messages.length] ?? 0, keys };
   }, [messages, heights]);
-  const metricsRef = useRef(metrics);
-  // Before any layout effect, as the rows below measure in theirs.
-  useInsertionEffect(() => { metricsRef.current = metrics; }, [metrics]);
-
-  const updateRange = useCallback(() => {
-    scrollFrameRef.current = null;
-    const scroll = scrollRef.current;
-    if (!scroll || messages.length === 0) {
-      setRange(current => current.start === 0 && current.end === 0
-        ? current
-        : { start: 0, end: 0 });
-      return;
-    }
-    // display:none reports a zero viewport and scrollTop. Keep the last visible
-    // rows mounted so switching back doesn't rebuild the list from its start.
-    if (scroll.clientHeight === 0) return;
-    const viewportTop = Math.max(0, scroll.scrollTop - THREAD_TOP_PADDING_PX);
-    const start = indexAtOffset(metrics.offsets, Math.max(0, viewportTop - OVERSCAN_PX));
-    const end = Math.min(
-      messages.length,
-      indexAtOffset(metrics.offsets, viewportTop + scroll.clientHeight + OVERSCAN_PX) + 1,
-    );
-    setRange(current => current.start === start && current.end === end
-      ? current
-      : { start, end });
-  }, [messages.length, metrics.offsets, scrollRef]);
-
-  const scheduleRange = useCallback(() => {
-    if (scrollFrameRef.current === null) {
-      scrollFrameRef.current = window.requestAnimationFrame(updateRange);
-    }
-  }, [updateRange]);
-
-  useEffect(() => {
-    const scroll = scrollRef.current;
-    if (!scroll) return;
-    scroll.addEventListener('scroll', scheduleRange, { passive: true });
-    const resizeObserver = typeof ResizeObserver === 'undefined'
-      ? null
-      : new ResizeObserver(scheduleRange);
-    resizeObserver?.observe(scroll);
-    scheduleRange();
-    return () => {
-      scroll.removeEventListener('scroll', scheduleRange);
-      resizeObserver?.disconnect();
-      if (scrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(scrollFrameRef.current);
-        scrollFrameRef.current = null;
-      }
-    };
-  }, [scheduleRange, scrollRef]);
-
-  useEffect(scheduleRange, [messages, scheduleRange]);
 
   const measureRow = useCallback((messageId: string, height: number) => {
     if (!Number.isFinite(height) || height <= 0) return;
-    // A row replacing its estimate above the viewport would push the text being
-    // read. Rows measure in a layout effect, so this correction lands before paint.
-    // The tail may be streaming: its key changes with every delta, never settling.
-    // At the latest message there is no text to hold, and moving would read as scrolling up.
-    const { offsets, indexes } = metricsRef.current;
-    const scroll = scrollRef.current;
-    const index = indexes.get(messageId);
-    if (scroll?.clientHeight && scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop >= 2
-      && index !== undefined && index < indexes.size - 1
-      && !measuredRef.current.has(messageId) && offsets[index + 1] <= scroll.scrollTop - THREAD_TOP_PADDING_PX) {
-      scroll.scrollTop += height - (offsets[index + 1] - offsets[index]);
-    }
-    measuredRef.current.add(messageId);
     pendingHeightsRef.current.set(messageId, height);
-    if (measureFrameRef.current === null) {
-      measureFrameRef.current = window.requestAnimationFrame(() => {
-        measureFrameRef.current = null;
-        const pending = pendingHeightsRef.current;
-        pendingHeightsRef.current = new Map();
-        setHeights(current => {
-          let next: Map<string, number> | null = null;
-          for (const [id, measured] of pending) {
-            const previous = current.get(id);
-            if (previous !== undefined && Math.abs(previous - measured) < 0.5) continue;
-            if (!next) next = new Map(current);
-            next.set(id, measured);
-          }
-          return next ?? current;
-        });
+    if (measureFrameRef.current !== null) return;
+    measureFrameRef.current = window.requestAnimationFrame(() => {
+      measureFrameRef.current = null;
+      const pending = pendingHeightsRef.current;
+      pendingHeightsRef.current = new Map();
+      setHeights(current => {
+        let next: Map<string, number> | null = null;
+        for (const [id, measured] of pending) {
+          const previous = current.get(id);
+          if (previous !== undefined && Math.abs(previous - measured) < 0.5) continue;
+          if (!next) next = new Map(current);
+          next.set(id, measured);
+        }
+        return next ?? current;
       });
-    }
-  }, [scrollRef]);
+    });
+  }, []);
 
   useEffect(() => () => {
     if (measureFrameRef.current !== null) window.cancelAnimationFrame(measureFrameRef.current);
   }, []);
 
-  const effectiveRange = range.end === 0 && messages.length > 0
-    ? { start: Math.max(0, messages.length - INITIAL_TAIL_ROWS), end: messages.length }
-    : {
-        start: Math.min(range.start, messages.length),
-        end: Math.min(Math.max(range.end, range.start), messages.length),
-      };
-
   const scrollToIndex = useCallback((index: number, behavior: ScrollBehavior = 'smooth') => {
     const scroll = scrollRef.current;
     if (!scroll || index < 0 || index >= messages.length) return;
-    scroll.scrollTo({
-      top: Math.max(0, metrics.offsets[index] + THREAD_TOP_PADDING_PX - 24),
-      behavior,
-    });
+    // Every row is mounted and measured, so the offsets are real heights.
+    scroll.scrollTo({ top: Math.max(0, metrics.offsets[index] + THREAD_TOP_PADDING_PX - 24), behavior });
   }, [messages.length, metrics.offsets, scrollRef]);
 
   return {
-    start: effectiveRange.start,
-    end: effectiveRange.end,
-    topSpacer: metrics.offsets[effectiveRange.start] ?? 0,
-    bottomSpacer: Math.max(0, metrics.total - (metrics.offsets[effectiveRange.end] ?? 0)),
+    start: 0,
+    end: messages.length,
+    topSpacer: 0,
+    bottomSpacer: 0,
     total: metrics.total,
     offsets: metrics.offsets,
     measurementKeys: metrics.keys,
