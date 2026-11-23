@@ -574,8 +574,8 @@ textarea,
     --border-focus: rgba(255, 255, 255, 0.3);
 
     --text-1: #ececee;
-    --text-2: #a8a8ad;
-    --text-3: #7a7a80;
+    --text-2: #b9b9be;
+    --text-3: #8d8d93;
 
     --accent: #a8a8ad;
     --accent-hover: #c4c4c8;
@@ -1360,9 +1360,9 @@ textarea,
     --border-input: rgba(0, 0, 0, 0.12);
     --border-focus: rgba(0, 0, 0, 0.3);
 
-    --text-1: #1f1f1f;
-    --text-2: #5f6164;
-    --text-3: #8b8d91;
+    --text-1: #18181a;
+    --text-2: #4a4c50;
+    --text-3: #6f7175;
 
     --accent: #5f6164;
     --accent-hover: #4a4c4f;
