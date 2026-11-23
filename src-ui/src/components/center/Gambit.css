@@ -342,6 +342,13 @@
 .gambit-attachment.is-image .gambit-attachment-content img { width: 100%; height: 100%; border-radius: 0; }
 .gambit-attachment.is-image .gambit-attachment-remove { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; background: rgb(0 0 0 / .55); color: #fff; }
 .gambit-attachment.is-image .gambit-attachment-remove:hover, .gambit-attachment.is-image .gambit-attachment-remove:focus-visible { background: rgb(0 0 0 / .75); color: #fff; }
+.gambit-attachment.is-image .gambit-attachment-remove, .gambit-attachment.is-file .gambit-attachment-remove { z-index: 1; }
+/* A file: a card as tall as a picture, the name over two lines and the type in a small tag beneath it. */
+.gambit-attachment.is-file { position: relative; width: 150px; height: 52px; padding: 0; border-radius: 10px; background: var(--bg-hover); }
+.gambit-attachment.is-file .gambit-attachment-content { flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 2px; width: 100%; height: 100%; padding: 5px 24px 5px 9px; text-align: left; }
+.gambit-attachment.is-file .gambit-file-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; word-break: break-all; color: var(--text-1); font-size: 11px; line-height: 13px; }
+.gambit-attachment.is-file .gambit-file-ext { padding: 0 5px; border-radius: 4px; background: color-mix(in srgb, var(--text-1) 8%, transparent); color: var(--text-3); font-size: 9.5px; font-weight: 600; line-height: 14px; letter-spacing: .02em; }
+.gambit-attachment.is-file .gambit-attachment-remove { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; }
 
 /* ─── Preview overlay (fullscreen zoom-in) ───────────────────── */
 /* Click anywhere in the dimmed background closes; clicking the

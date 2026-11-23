@@ -931,10 +931,14 @@ function GambitImpl({
         {attachments.map(({ path, image }) => {
           // An image shows as the picture itself, like other chat apps; a file (or an image that won't load) keeps its name.
           const preview = image && !brokenThumbs.has(path) ? pastedPreviews.get(path) ?? thumbUrls[path] : undefined;
-          return <div className={`gambit-attachment${preview ? ' is-image' : ''}`} key={path}>
+          // A file is a card of the same height: its name over two lines at most, its type underneath.
+          const name = path.split(/[\\/]/).pop() ?? path, dot = name.lastIndexOf('.');
+          const ext = dot > 0 ? name.slice(dot + 1).toUpperCase() : '';
+          return <div className={`gambit-attachment${preview ? ' is-image' : ' is-file'}`} key={path}>
           <button className="gambit-attachment-content" aria-label={t(image ? 'gambit.preview_attachment' : 'gambit.attachment', { path })} onClick={() => { if (image) openThumbPreview(path); }}>
-            {preview ? <img src={preview} alt="" draggable={false} onError={() => setBrokenThumbs(prev => new Set(prev).add(path))} /> : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h5M8 12h8M8 16h8" /></svg>
-            <span>{path.split(/[\\/]/).pop()}</span></>}
+            {preview ? <img src={preview} alt="" draggable={false} onError={() => setBrokenThumbs(prev => new Set(prev).add(path))} /> : <>
+            <span className="gambit-file-name">{ext ? name.slice(0, dot) : name}</span>
+            {ext && <span className="gambit-file-ext">{ext}</span>}</>}
           </button>
           <button className="gambit-attachment-remove close-button" aria-label={t('gambit.remove_attachment', { path })} onClick={() => removeAttachment(path)}><svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg></button>
         </div>;
