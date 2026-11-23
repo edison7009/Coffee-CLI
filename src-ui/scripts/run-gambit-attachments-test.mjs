@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 const result = await build({ entryPoints: ['src/lib/gambit-attachments.ts'], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} };
 runInNewContext(result.outputFiles[0].text, { module, exports: module.exports });
-const { gambitAttachments, removeGambitAttachment } = module.exports;
+const { gambitAttachments, removeGambitAttachment, ATTACH_MARK, splitDraft, joinDraft, attachToDraft, detachFromDraft, draftForSend } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 
@@ -41,5 +41,26 @@ test('single quoted POSIX and UNC paths remove their quotes too', () => {
 test('slash commands, URLs, and filenames in prose are not attachments', () => {
   assert.equal(gambitAttachments('/model https://example.com/image.png README.md').length, 0);
   assert.equal(removeGambitAttachment('keep my draft', 'C:\\missing.png'), 'keep my draft');
+});
+const same = (actual, expected, message) => assert.equal(JSON.stringify(actual), JSON.stringify(expected), message);
+test('attached files stay out of the box but go out after the words', () => {
+  let draft = attachToDraft('看看这张', ['/tmp/clip-1.png', '/Users/me/My Docs/a.pdf']);
+  same(splitDraft(draft), { text: '看看这张', tokens: ['/tmp/clip-1.png', '"/Users/me/My Docs/a.pdf"'] });
+  assert.equal(gambitAttachments(draft).length, 2, 'thumbnails still see both');
+  assert.equal(draftForSend(draft), '看看这张\n/tmp/clip-1.png "/Users/me/My Docs/a.pdf"');
+  assert.equal(attachToDraft(draft, ['/tmp/clip-1.png']), draft, 'the same file is attached once');
+  // Typing in the box keeps the attachments, trailing space included.
+  draft = joinDraft('看看这张 ', splitDraft(draft).tokens);
+  assert.equal(splitDraft(draft).text, '看看这张 ');
+  draft = detachFromDraft(draft, '/tmp/clip-1.png');
+  same(splitDraft(draft).tokens, ['"/Users/me/My Docs/a.pdf"']);
+  assert.equal(detachFromDraft(draft, '/Users/me/My Docs/a.pdf'), '看看这张 ', 'the last one takes the mark with it');
+});
+test('text appended after the attachments joins the words', () => {
+  const draft = attachToDraft('hi', ['/tmp/a.png']) + '\nvoice words';
+  same(splitDraft(draft), { text: 'hi\nvoice words', tokens: ['/tmp/a.png'] });
+  assert.equal(draftForSend(attachToDraft('', ['/tmp/a.png'])), '/tmp/a.png', 'only files: just the paths');
+  assert.equal(splitDraft('typed /tmp/a.png stays typed').text, 'typed /tmp/a.png stays typed');
+  assert.ok(!draftForSend(draft).includes(ATTACH_MARK));
 });
 console.log(`${passed} attachment checks passed`);

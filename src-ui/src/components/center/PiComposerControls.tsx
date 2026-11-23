@@ -12,6 +12,7 @@ import { useT } from '../../i18n/useT';
 import { sameFolder } from '../../lib/worktree-path';
 import './ClaudeComposerControls.css';
 import { pickFiles } from '../../lib/folder-picker';
+import { attachToDraft } from '../../lib/gambit-attachments';
 
 type Menu = 'commands' | 'model' | 'thinking' | 'context' | null;
 
@@ -50,7 +51,7 @@ export function PiComposerControls({ sessionId, draft, onDraftChange, keyHandler
   ].filter(command => !slash || command.name.includes(draft.slice(1).toLowerCase()));
   const disabled = (target: string) => target === 'compact' ? locked || s.busy : ['context', 'new'].includes(target) ? false : locked;
   const close = () => { setMenu(null); setDismissed(draft); };
-  const attach = async () => { const paths = await pickFiles(); if (paths) onDraftChange(`${draft}${draft ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
+  const attach = async () => { const paths = await pickFiles(); if (paths) onDraftChange(attachToDraft(draft, Array.isArray(paths) ? paths : [paths])); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');

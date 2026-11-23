@@ -13,6 +13,7 @@ import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
 import { useHoverOpen } from '../../lib/use-hover-open';
 import { pickFiles } from '../../lib/folder-picker';
+import { attachToDraft } from '../../lib/gambit-attachments';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
 // The presets a DeepSeek Harness SDK session has (its desktop app configures more), each with its shield.
@@ -61,7 +62,7 @@ export function DshComposerControls({ sessionId, draft, onDraftChange, keyHandle
   const tasksAnchor = useRef<HTMLButtonElement>(null);
   // Sub-tasks open on hover, as in the Claude composer.
   const tasksHover = useHoverOpen(() => { anchor.current = tasksAnchor.current; setMenu('tasks'); }, () => setMenu(null), menu === 'tasks');
-  const attach = async () => { const paths = await pickFiles(); if (paths) onDraftChange(`${draft}${draft ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
+  const attach = async () => { const paths = await pickFiles(); if (paths) onDraftChange(attachToDraft(draft, Array.isArray(paths) ? paths : [paths])); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');

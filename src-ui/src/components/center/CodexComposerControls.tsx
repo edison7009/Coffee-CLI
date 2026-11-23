@@ -15,6 +15,7 @@ import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
 import { pickFiles } from '../../lib/folder-picker';
+import { attachToDraft } from '../../lib/gambit-attachments';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'skills' | 'mcp' | null;
 export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHandler, submitHandler, quota, children }: {
@@ -135,7 +136,7 @@ export function CodexComposerControls({ sessionId, draft, onDraftChange, keyHand
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', key, true); };
   }, [shown, draft]);
   const show = (next: Menu, button: HTMLButtonElement) => { anchor.current = button; setSelected(0); if (shown === next) close(); else setMenu(next); };
-  const attach = async (text = draft) => { const paths = await pickFiles(); if (paths) onDraftChange(`${text}${text ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
+  const attach = async (text = draft) => { const paths = await pickFiles(); if (paths) onDraftChange(attachToDraft(text, Array.isArray(paths) ? paths : [paths])); };
   const permission = modes.find(mode => mode.type === str(s.sandbox.type))?.label ?? t('codex.permissions');
   return <div className="claude-composer-controls codex-composer-controls" ref={root}>
     <button type="button" className="claude-control-icon" aria-label={t('claude.attach')} onClick={() => { void attach(); }}><AttachIcon /></button>

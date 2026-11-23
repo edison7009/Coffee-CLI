@@ -15,6 +15,7 @@ import { useT } from '../../i18n/useT';
 import './ClaudeComposerControls.css';
 import { sameFolder } from '../../lib/worktree-path';
 import { pickFiles } from '../../lib/folder-picker';
+import { attachToDraft } from '../../lib/gambit-attachments';
 
 type Menu = 'commands' | 'model' | 'variant' | 'agent' | 'context' | null;
 type Command = { name: string; description: string; target: 'model' | 'variant' | 'agent' | 'context' | 'new' | 'compact' | 'copy' | 'mention' | 'native' };
@@ -60,7 +61,7 @@ export function OpenCodeComposerControls({ sessionId, draft, onDraftChange, keyH
     return !s.ready;
   };
   const close = () => { setMenu(null); setDismissed(draft); };
-  const attach = async (text = draft) => { const paths = await pickFiles(); if (paths) onDraftChange(`${text}${text ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`); };
+  const attach = async (text = draft) => { const paths = await pickFiles(); if (paths) onDraftChange(attachToDraft(text, Array.isArray(paths) ? paths : [paths])); };
   const chooseCommand = (index: number) => {
     const command = commands[index]; if (!command || disabled(command.target)) return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');

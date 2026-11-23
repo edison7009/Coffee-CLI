@@ -11,6 +11,7 @@ import { useT } from '../../i18n/useT';
 import { claudeCommandDescription, claudeEffortLabel } from '../../lib/claude-i18n';
 import './ClaudeComposerControls.css';
 import { pickFiles } from '../../lib/folder-picker';
+import { attachToDraft } from '../../lib/gambit-attachments';
 
 type Menu = 'commands' | 'model' | 'effort' | 'permissions' | 'context' | 'tasks' | null;
 /** Paperclip drawn as SVG so it centres geometrically; the fullwidth ＋ glyph sat on the font baseline. */
@@ -130,7 +131,7 @@ export function ClaudeComposerControls({ sessionId, draft, onDraftChange, keyHan
   useEffect(() => { setMenu(null); setSelected(0); setDismissed(null); }, [sessionId]);
   const attach = async () => {
     const paths = await pickFiles();
-    if (paths) onDraftChange(`${latestDraft.current}${latestDraft.current ? '\n' : ''}${(Array.isArray(paths) ? paths : [paths]).map(p => `"${p}"`).join(' ')}`);
+    if (paths) onDraftChange(attachToDraft(latestDraft.current, Array.isArray(paths) ? paths : [paths]));
   };
   const modes = [
     { value: 'default', label: t('claude.permission.manual'), description: t('claude.permission.manual_description') },

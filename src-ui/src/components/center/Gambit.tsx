@@ -24,7 +24,7 @@ import { subscribeGambitHistory, getGambitHistorySnapshot, pushGambitHistory } f
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
-import { registerFileDropTarget, formatPathsForInsert } from '../../lib/file-drop';
+import { registerFileDropTarget } from '../../lib/file-drop';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { ClaudeComposerControls, AttachIcon } from './ClaudeComposerControls';
 import { CodexComposerControls } from './CodexComposerControls';
@@ -34,7 +34,7 @@ import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { VoiceInputButton, VoiceUsageSlot } from './VoiceInputButton';
 import { useUsageQuota } from '../../lib/usage-quota';
-import { gambitAttachments, removeGambitAttachment } from '../../lib/gambit-attachments';
+import { attachToDraft, detachFromDraft, draftForSend, gambitAttachments, joinDraft, splitDraft } from '../../lib/gambit-attachments';
 import './Gambit.css';
 import { OrchestrationPicker } from './OrchestrationPicker';
 import { fileToBase64 } from '../../lib/answer-image-paste';
@@ -226,7 +226,7 @@ function GambitImpl({
   const usageMeter = <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot>;
   const suggestion = draft ? undefined : offered;
   // Whether the draft can go out as a prompt link (some text, within the link limit).
-  const canShare = canSharePrompt(draft);
+  const canShare = canSharePrompt(draftForSend(draft));
   const rootRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // When the IME composition ended, for the Enter that confirms a candidate (see onKeyDown).
@@ -397,6 +397,12 @@ function GambitImpl({
   // update automatically. Paths remain the only source of truth; they
   // travel with the text through copy/paste/send.
   const attachments = useMemo(() => Array.from(new Map(gambitAttachments(draft).map(item => [item.path, item])).values()), [draft]);
+  // The box shows only the words: attached files sit after an invisible mark at the end of the draft and show as
+  // the thumbnails above (lib/gambit-attachments.ts). Edits in the box keep them; sending puts them back as text.
+  const { text: shown } = useMemo(() => splitDraft(draft), [draft]);
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+  const setShown = useCallback((text: string) => onDraftChange(joinDraft(text, splitDraft(latestDraftRef.current).tokens)), [onDraftChange]);
   const pastedImagePaths = useMemo(() => attachments.filter(item => item.image).map(item => item.path), [attachments]);
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   // Use a stable key so the effect only re-fires when the set of paths
@@ -429,18 +435,13 @@ function GambitImpl({
   useEffect(() => { draftRef.current = draft; }, [draft]);
   useEffect(() => { onDraftChangeRef.current = onDraftChange; }, [onDraftChange]);
   const insertPaths = useCallback((paths: string[]) => {
-    const formatted = formatPathsForInsert(paths);
     const textarea = textareaRef.current;
-    const cur = draftRef.current;
-    const start = textarea?.selectionStart ?? cur.length;
-    const end = textarea?.selectionEnd ?? cur.length;
-    const next = cur.slice(0, start) + formatted + cur.slice(end);
-    onDraftChangeRef.current(next);
+    const start = textarea?.selectionStart, end = textarea?.selectionEnd;
+    onDraftChangeRef.current(attachToDraft(draftRef.current, paths));
     requestAnimationFrame(() => {
       if (!textarea) return;
       textarea.focus();
-      textarea.selectionStart = start + formatted.length;
-      textarea.selectionEnd = start + formatted.length;
+      if (start != null && end != null) textarea.setSelectionRange(start, end);
     });
   }, []);
   useEffect(() => registerFileDropTarget({ priority: 200, rect: () => rootRef.current?.getBoundingClientRect() ?? null, insert: insertPaths }), [insertPaths]);
@@ -455,7 +456,7 @@ function GambitImpl({
   // caret is conveniently placed at the path for easy Backspace-delete).
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const removeAttachment = (path: string) => {
-    onDraftChange(removeGambitAttachment(latestDraftRef.current, path));
+    onDraftChange(detachFromDraft(latestDraftRef.current, path));
     if (previewPath === path) setPreviewPath(null);
     if (!isTouchScreen()) requestAnimationFrame(() => textareaRef.current?.focus());
   };
@@ -463,7 +464,7 @@ function GambitImpl({
     setPreviewPath(path);
     const textarea = textareaRef.current;
     if (!textarea) return;
-    const idx = draft.indexOf(path);
+    const idx = shown.indexOf(path);
     if (idx < 0) return;
     textarea.setSelectionRange(idx, idx + path.length);
   };
@@ -535,6 +536,19 @@ function GambitImpl({
     setContentH(0);
     setRemeasure(n => n + 1);
   }, [layoutKey]);
+
+  // The attachment row settles its height only once its thumbnails load, after the box was sized for the draft:
+  // measure again whenever it changes size, or the row squeezes the input below it (Clean's one-line box).
+  const attachmentsRef = useRef<HTMLDivElement | null>(null);
+  const hasAttachments = attachments.length > 0;
+  useEffect(() => {
+    const row = attachmentsRef.current;
+    if (!row || typeof ResizeObserver === 'undefined') return;
+    let last = row.offsetHeight;
+    const observer = new ResizeObserver(() => { if (row.offsetHeight !== last) { last = row.offsetHeight; setRemeasure(n => n + 1); } });
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [hasAttachments]);
 
   // Auto-grow the textarea to fit its content as the user types.
   useLayoutEffect(() => {
@@ -639,7 +653,7 @@ function GambitImpl({
     if (!textarea) { setCtxMenu(null); return; }
     const start = textarea.selectionStart ?? 0;
     const end = textarea.selectionEnd ?? 0;
-    const selected = draft.slice(start, end);
+    const selected = shown.slice(start, end);
     if (selected) clipboardWrite(selected);
     setCtxMenu(null);
   };
@@ -649,11 +663,10 @@ function GambitImpl({
     if (!textarea) { setCtxMenu(null); return; }
     const start = textarea.selectionStart ?? 0;
     const end = textarea.selectionEnd ?? 0;
-    const selected = draft.slice(start, end);
+    const selected = shown.slice(start, end);
     if (selected) {
       clipboardWrite(selected);
-      const newDraft = draft.slice(0, start) + draft.slice(end);
-      onDraftChange(newDraft);
+      setShown(shown.slice(0, start) + shown.slice(end));
       requestAnimationFrame(() => {
         textarea.selectionStart = start;
         textarea.selectionEnd = start;
@@ -668,10 +681,10 @@ function GambitImpl({
     setCtxMenu(null);
     clipboardRead().then((text) => {
       if (!text) return;
-      const start = textarea.selectionStart ?? draft.length;
-      const end = textarea.selectionEnd ?? draft.length;
-      const newDraft = draft.slice(0, start) + text + draft.slice(end);
-      onDraftChange(newDraft);
+      const current = shownRef.current;
+      const start = textarea.selectionStart ?? current.length;
+      const end = textarea.selectionEnd ?? current.length;
+      setShown(current.slice(0, start) + text + current.slice(end));
       requestAnimationFrame(() => {
         textarea.focus();
         textarea.selectionStart = start + text.length;
@@ -750,7 +763,7 @@ function GambitImpl({
     // attach image bytes here — the path already sits inside `draft` and
     // would be sent twice, making the AI see the same image reference
     // duplicated in its prompt.
-    const text = draft.trim();
+    const text = draftForSend(draft).trim();
     if (!text) {
       setSendEmpty(true);
       return;
@@ -835,10 +848,6 @@ function GambitImpl({
 
     e.preventDefault();
 
-    const textarea = textareaRef.current;
-    const selStart = textarea?.selectionStart ?? draft.length;
-    const selEnd = textarea?.selectionEnd ?? draft.length;
-
     const paths: string[] = [];
     for (const { file, ext } of imageFiles) {
       try {
@@ -850,24 +859,8 @@ function GambitImpl({
     }
     if (paths.length === 0) return;
 
-    // Insert paths at the cursor as plain text. If there's adjacent
-    // non-whitespace text on either side, pad with spaces so AI CLI
-    // path detection doesn't glue the path onto surrounding prose.
-    const before = draft.slice(0, selStart);
-    const after = draft.slice(selEnd);
-    const leftPad = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
-    const rightPad = after.length > 0 && !/^\s/.test(after) ? ' ' : '';
-    const inserted = leftPad + paths.map(path => desktop && /\s/.test(path) ? `"${path}"` : path).join(' ') + rightPad;
-    const newDraft = before + inserted + after;
-    onDraftChange(newDraft);
-    requestAnimationFrame(() => {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      ta.focus();
-      const caret = selStart + inserted.length;
-      ta.selectionStart = caret;
-      ta.selectionEnd = caret;
-    });
+    // Attached, not typed: the image shows as a thumbnail and its path goes out after the words.
+    insertPaths(paths);
   };
 
   // Suppress onClose usage warning — true close is driven by parent (Explorer
@@ -919,14 +912,14 @@ function GambitImpl({
 
       {/* Save the draft for later: it goes to the right panel's pre-input tab, which opens to show it. */}
       {appState.preInputButton && !minimal && <DraftActions
-        enabled={!!draft.trim()} canShare={canShare}
+        enabled={!!draftForSend(draft).trim()} canShare={canShare}
         label={t('gambit.save_pre_input')} shareLabel={t('prompt_link.copy')} clearLabel={t('gambit.clear_draft')}
         tips={{ save: t('pre_input.tip_save'), share: t('pre_input.tip_share_draft'), clear: t('pre_input.tip_clear') }}
-        onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draft.trim() }); onDraftChange(''); }}
-        onShare={() => { void sharePrompt(draft, t('prompt_link.copied')); }}
+        onSave={() => { appDispatch({ type: 'SAVE_PRE_INPUT', text: draftForSend(draft).trim() }); onDraftChange(''); }}
+        onShare={() => { void sharePrompt(draftForSend(draft), t('prompt_link.copied')); }}
         onClear={() => onDraftChange('')} />}
 
-      {attachments.length > 0 && <div className="gambit-attachments">
+      {attachments.length > 0 && <div className="gambit-attachments" ref={attachmentsRef}>
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>
           <button className="gambit-attachment-content" aria-label={t(image ? 'gambit.preview_attachment' : 'gambit.attachment', { path })} onClick={() => { if (image) openThumbPreview(path); }}>
             {image && thumbUrls[path] ? <img src={thumbUrls[path]} alt="" draggable={false} onError={e => { e.currentTarget.style.display = 'none'; }} /> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h5M8 12h8M8 16h8" /></svg>}
@@ -958,9 +951,9 @@ function GambitImpl({
         <textarea
           ref={textareaRef}
           className="gambit-textarea"
-          value={draft}
+          value={shown}
           placeholder={suggestion ? undefined : phone || card ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
-          onChange={(e) => onDraftChange(e.target.value)}
+          onChange={(e) => setShown(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}
           onPaste={onPaste}
