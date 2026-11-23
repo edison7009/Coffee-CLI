@@ -95,37 +95,38 @@ try {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   assert.equal(await restoredMark.evaluate((element, previous) => element === previous, restoredNode), true, 'an unchanged refresh retains the same icon element');
   const working = rows.first();
-  const circle = working.locator('.history-card-working-indicator');
+  // 方案 C: a working row says so on a second line under its title.
+  const circle = working.locator('.history-card-status-spin');
   assert.equal(await circle.isVisible(), true);
-  assert.equal(await circle.locator('span').evaluate(el => getComputedStyle(el).animationName), 'history-working-spin');
+  assert.equal(await circle.evaluate(el => getComputedStyle(el).animationName), 'history-working-spin');
+  assert.match(await working.locator('.history-card-status').textContent(), /Working/);
   await page.screenshot({ path: join(directory, 'history-working.png') });
   const titleWidth = await working.locator('.history-card-title').evaluate(el => el.getBoundingClientRect().width);
   await working.hover();
-  assert.equal(await circle.isVisible(), false);
+  assert.equal(await circle.isVisible(), true, 'the status line stays while hovered');
   assert.equal(await working.locator('.history-card-delete-btn').evaluate(el => getComputedStyle(el).opacity), '1');
-  assert.equal(await working.locator('.history-card-title').evaluate(el => el.getBoundingClientRect().width), titleWidth, 'hover swaps actions without moving title');
+  assert.equal(await working.locator('.history-card-title').evaluate(el => el.getBoundingClientRect().width), titleWidth, 'hover shows delete without narrowing the title');
   await page.mouse.move(500, 300);
   await working.locator('.history-card-delete-btn').focus();
-  assert.equal(await circle.isVisible(), false, 'keyboard focus reveals delete');
+  assert.equal(await working.locator('.history-card-delete-btn').evaluate(el => getComputedStyle(el).opacity), '1', 'keyboard focus reveals delete');
   await page.locator('.history-search-trigger').focus();
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  assert.equal(await circle.locator('span').evaluate(el => getComputedStyle(el).animationName), 'none');
+  assert.equal(await circle.evaluate(el => getComputedStyle(el).animationName), 'none');
   for (const status of ['wait_input', 'idle', undefined]) {
     await page.evaluate(status => window.updateStatus(status), status);
-    await page.waitForFunction(() => !document.querySelector('.history-card-working-indicator'));
-    assert.equal(await working.locator('.history-card-attention-indicator').count(), status === 'wait_input' ? 1 : 0);
+    await page.waitForFunction(() => !document.querySelector('.history-card-status-spin'));
+    assert.equal(await working.locator('.history-card-status-wait').count(), status === 'wait_input' ? 1 : 0);
     if (status === 'wait_input') {
       assert.equal(await working.locator('.history-git-mark').count(), 0, 'waiting takes priority over PR status');
-      const label = working.locator('.history-card-attention-indicator');
+      const label = working.locator('.history-card-status-wait');
       assert.equal(await label.textContent(), 'Awaiting action');
-      assert.equal(await label.locator('svg').count(), 0, 'waiting uses a text badge');
-      assert.equal(await label.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(96, 165, 250)');
-      assert.equal(await label.evaluate(el => getComputedStyle(el).animationName), 'none', 'reduced motion disables badge entrance');
+      assert.equal(await label.locator('svg').count(), 0, 'waiting is said in words');
+      assert.equal(await label.evaluate(el => getComputedStyle(el).color), await page.evaluate(() => { const probe = document.body.appendChild(document.createElement('i')); probe.style.color = 'var(--blue)'; const value = getComputedStyle(probe).color; probe.remove(); return value; }), 'waiting is written in the blue');
       const beforeHover = await working.boundingBox();
       const titleBeforeHover = await working.locator('.history-card-title').boundingBox();
       await working.hover();
       assert.equal(await label.isVisible(), true, 'waiting label stays visible on hover');
-      assert.equal(await working.locator('.history-card-delete-btn').isVisible(), false, 'waiting shows only its badge in the right-hand slot');
+      assert.equal(await working.locator('.history-card-delete-btn').isVisible(), false, 'a conversation waiting on you offers no delete on hover');
       assert.deepEqual(await working.boundingBox(), beforeHover, 'waiting hover keeps the row geometry');
       assert.deepEqual(await working.locator('.history-card-title').boundingBox(), titleBeforeHover, 'waiting hover does not squeeze the title');
       assert.equal(await page.getByRole('tooltip').getByText('Awaiting action', { exact: false }).count(), 1, 'parent preview retains its second metadata line');
@@ -138,16 +139,18 @@ try {
   const unreadRow = page.locator('.history-card').nth(1);
   const geometryBeforeUnread = await unreadRow.boundingBox();
   await page.evaluate(() => window.recordReply('b', 'claude', 'two'));
-  const unreadDot = unreadRow.locator('.history-card-unread-indicator');
+  // 方案 C: an unread reply adds a second line under the title, so only that row grows (at the same top).
+  const unreadDot = unreadRow.locator('.history-card-status-dot');
   await unreadDot.waitFor();
-  assert.deepEqual(await unreadRow.boundingBox(), geometryBeforeUnread, 'unread markers do not move or resize a row');
-  assert.equal(await unreadRow.locator('.history-git-mark').count(), 0, 'unread replaces the PR mark in the same slot');
+  const geometryUnread = await unreadRow.boundingBox();
+  assert.equal(geometryUnread.y, geometryBeforeUnread.y, 'the row keeps its place'); assert.ok(geometryUnread.height > geometryBeforeUnread.height, 'and grows by its second line');
+  assert.equal(await unreadRow.locator('.history-git-mark').count(), 0, 'the status line replaces the PR mark');
   const dotBox = await unreadDot.boundingBox();
   const titleBox = await unreadRow.locator('.history-card-title').boundingBox();
-  assert.ok(dotBox.x >= titleBox.x + titleBox.width, 'unread dot sits to the right of the title');
-  assert.equal(await unreadDot.evaluate(el => getComputedStyle(el, '::before').backgroundColor), 'rgb(96, 165, 250)', 'unread uses waiting-state blue');
+  assert.ok(dotBox.y >= titleBox.y + titleBox.height - 1, 'the unread dot opens the line under the title');
+  assert.equal(await unreadDot.evaluate(el => getComputedStyle(el).backgroundColor), await page.evaluate(() => { const probe = document.body.appendChild(document.createElement('i')); probe.style.color = 'var(--blue)'; const value = getComputedStyle(probe).color; probe.remove(); return value; }), 'unread uses the waiting blue');
   await unreadRow.hover();
-  assert.equal(await unreadDot.isVisible(), false, 'hover swaps the blue dot for the delete action');
+  assert.equal(await unreadDot.isVisible(), true, 'the status line stays while hovered');
   assert.equal(await unreadRow.locator('.history-card-delete-btn').isVisible(), true);
   await page.mouse.move(500, 300);
   assert.equal(await page.locator('.history-card-unread').count(), 1, 'same folder and cross-tool tokens do not share unread state');
@@ -228,7 +231,7 @@ try {
     assert.match(await closed.getAttribute('title'), /main.*#43 Closed/);
     assert.equal(await merged.evaluate(el => getComputedStyle(el).color), 'rgb(163, 113, 247)');
     assert.equal(await closed.evaluate(el => getComputedStyle(el).color), 'rgb(248, 81, 73)');
-    assert.equal(await page.locator('.history-card-working-indicator').count(), 1);
+    assert.equal(await page.locator('.history-card-status-spin').count(), 1);
     if (layout === 'projects') {
       assert.equal(await page.locator('.history-project-row .history-git-mark').count(), 0, 'ordinary project branches stay hidden and do not inherit a session PR');
     }

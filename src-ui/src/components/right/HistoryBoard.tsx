@@ -1,6 +1,6 @@
 import { worktreeFromPath } from '../../lib/worktree-path';
 import { currentLayoutMode } from '../../lib/layout-mode';
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { useT } from '../../i18n/useT';
@@ -625,10 +625,19 @@ export function HistoryBoard({ searchRequested = false, onSearchOpened }: { sear
         const isUnread = !isWorking && !needsAttention && Boolean(session.session_token && unreadReplies.has(sessionReplyKey(session.tool, session.session_token)));
         const isActive = owner?.id === state.activeTerminalId && !state.diffTabActive;
         const gitStatus = gitStatuses.get(gitStatusKey(sessionGitTarget(session)));
+        // 方案 C: a second line only when there is something to say — working, waiting on you, or a reply you haven't
+        // read — written out in words, with the pull request's state beside it. Quiet rows stay one line with a time.
+        const pr = gitStatus?.pull_request;
+        const prText = pr ? `PR #${pr.number} ${t(pr.ci ? `history.git.ci_${pr.ci}` : `history.git.${pr.state}`)}` : '';
+        const statusParts = (lead: ReactNode, rest: string[]) => <>{lead}{rest.filter(Boolean).map(part => <span key={part} className="history-card-status-part">{part}</span>)}</>;
+        const statusLine = needsAttention ? statusParts(<span className="history-card-status-wait">{t('history.needs_attention')}</span>, [prText])
+          : isWorking ? statusParts(<><span className="history-card-status-spin" aria-hidden="true" />{t('claude.status.working')}</>, [workers.length ? t('claude.status.background_short', { count: workers.length }) : '', prText])
+          : isUnread ? statusParts(<><span className="history-card-status-dot" aria-hidden="true" />{t('history.unread_reply')}</>, [dateStr])
+          : null;
         return (
           <div key={`${sessionKey}:${session.file_path ?? session.saved_at}`} className="history-family">
           <div
-            className={`history-card${isWorking ? ' history-card-working' : ''}${needsAttention ? ' history-card-needs-attention' : ''}${isUnread ? ' history-card-unread' : ''}${grouped ? ' history-card-grouped' : ''}${isActive ? ' history-card-active' : ''}`}
+            className={`history-card${statusLine ? ' history-card-two' : ''}${isWorking ? ' history-card-working' : ''}${needsAttention ? ' history-card-needs-attention' : ''}${isUnread ? ' history-card-unread' : ''}${grouped ? ' history-card-grouped' : ''}${isActive ? ' history-card-active' : ''}`}
             aria-describedby={preview?.key === sessionKey ? previewId : undefined}
             onPointerDown={event => {
               if (isRenaming) return;
@@ -691,10 +700,8 @@ export function HistoryBoard({ searchRequested = false, onSearchOpened }: { sear
                 ) : (
                   <>
                     <span className="history-card-title">{displayName}</span>
-                    {needsAttention ? <span className="history-card-attention-indicator" role="img" aria-label={t('history.needs_attention')}>{t('history.needs_attention')}</span>
-                      : isWorking ? <span className="history-card-working-indicator" role="img" aria-label={t('claude.status.working')}><span /></span>
-                      : isUnread ? <span className="history-card-unread-indicator" role="img" aria-label={t('history.unread_reply')} />
-                      : <HistoryGitMark status={gitStatus} />}
+                    {/* One line: its pull request, else when it was last used. Two lines: the second line says it all. */}
+                    {!statusLine && (pr ? <HistoryGitMark status={gitStatus} /> : <span className="history-card-when">{dateStr}</span>)}
                     {/* One-click soft-delete (hide), revealed in the title row.
                         stopPropagation keeps it from resuming the session. */}
                     <button
@@ -716,6 +723,7 @@ export function HistoryBoard({ searchRequested = false, onSearchOpened }: { sear
                   </>
                 )}
               </div>
+              {statusLine && !isRenaming && <div className={`history-card-status${showIcons ? ' is-indented' : ''}`}>{statusLine}</div>}
             </div>
             {preview?.key === sessionKey && !isRenaming && createPortal(<div id={previewId} className="history-card-preview" role="tooltip" style={{ left: preview.left, top: preview.top }}>
               <div className="history-card-preview-title">{displayName}</div>
