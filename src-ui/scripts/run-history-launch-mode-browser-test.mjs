@@ -52,7 +52,7 @@ try {
     await page.waitForFunction(name => document.querySelector('[data-native-view="' + name + '"]')?.offsetParent, desktop);
     assert.equal(await activeView().getAttribute('data-native-token'), tool + '-native');
     await closeActive();
-    for (const [label, view] of [['Native terminal', 'TierTerminal'], ['IDE desktop', desktop], ['Native terminal', 'TierTerminal']]) {
+    for (const [label, view] of [['CLI · Native terminal', 'TierTerminal'], ['IDE desktop', desktop], ['CLI · Native terminal', 'TierTerminal']]) {
       // The tab strip's + opens the same launch page as the sidebar's New session.
       await page.locator('.chrome-tab-add').click();
       await modeGroup(tool).getByRole('button', { name: label, exact: true }).click();

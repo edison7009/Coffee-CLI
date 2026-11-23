@@ -1498,6 +1498,8 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 /* The faded logo already says which tool it is: no second logo on the left, so the name and its folder get the room. */
 [data-layout="code"] .launchpad-card > .launchpad-icon { display: none; }
 [data-layout="code"] .launchpad-card { padding-left: 18px; }
-/* The rest of the card keeps a fixed layer while the logo turns beside it; otherwise WebKit redraws it at a
-   sub-pixel offset and it seems to shake on hover (as on EchoBird's cards). */
-[data-layout="code"] .launchpad-card > :not(.launchpad-card-mark) { transform: translateZ(0); backface-visibility: hidden; }
+/* While the logo turns, the rest of the card keeps a fixed layer; otherwise WebKit redraws it at a sub-pixel
+   offset and it seems to shake (as on EchoBird's cards). Only while it turns: at rest the text stays on the page's
+   own layer and renders like all other text. Leaving, the layer is kept until the logo has turned back (.45s). */
+[data-layout="code"] .launchpad-card > :not(.launchpad-card-mark) { transition: transform 0s .45s; }
+[data-layout="code"] .launchpad-card-group:hover .launchpad-card > :not(.launchpad-card-mark) { transform: translateZ(0); backface-visibility: hidden; transition: none; }

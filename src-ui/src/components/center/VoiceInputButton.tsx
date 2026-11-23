@@ -15,9 +15,10 @@ type Phase = 'idle' | 'connecting' | 'recording' | 'finishing';
 
 
 /** Text spoken after existing Latin text needs a space; CJK text does not. */
-function joinDraft(draft: string, spoken: string): string {
-  // The words go after the typed words, not after the attachments riding at the end of the draft.
-  const { text: before, tokens } = splitDraft(draft);
+function joinDraft(draft: string, spoken: string, current: string): string {
+  // The words go after the typed words, not after the attachments riding at the end of the draft; and the
+  // attachments are the draft's as it is now, so one removed while recording stays removed.
+  const { text: before } = splitDraft(draft), { tokens } = splitDraft(current);
   if (!before || !spoken || /\s$/.test(before)) return joinAttached(before + spoken, tokens);
   const wide = (c: string) => c.codePointAt(0)! >= 0x2e80;
   return joinAttached(before + (wide(before.slice(-1)) || wide(spoken[0]) ? '' : ' ') + spoken, tokens);
@@ -82,7 +83,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
       if (event.kind === 'ready') { showVoiceWave(waveKey); chime('start'); readyAt.current = performance.now(); setPhase('recording'); return; }
       if (event.kind === 'processing') { setPhase('finishing'); return; }
       if (event.kind === 'text') {
-        changeRef.current(joinDraft(current.before, event.text));
+        changeRef.current(joinDraft(current.before, event.text, draftRef.current));
         if (event.done) { session.current = null; setPhase('idle'); }
         return;
       }
@@ -123,7 +124,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
     if (!current) return;
     session.current = null;
     if (current.id != null) void commands.voiceInputCancel(current.id); else current.cancelled = true;
-    changeRef.current(current.before);
+    changeRef.current(joinDraft(current.before, '', draftRef.current));
     setPhase('idle');
   };
 

@@ -188,34 +188,6 @@
 .settings-section-head:first-child { margin-top: 0; }
 .settings-section-head .settings-section-label { margin: 0; }
 
-/* Light / Night / Follow-system. Same segmented strip as the side panels'
-   "工作区 | 会话记录" rows: no container, no pill, no shadow — the active
-   segment is simply the brighter label. Panel shape draws the bordered box
-   around it from the shared rule in global.css, so the modal tab row and the
-   panel tab rows stay one look. */
-.settings-mode-tabs {
-  display: flex;
-  flex-shrink: 0;
-}
-.settings-mode-tab {
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  color: var(--text-2, rgba(255, 255, 255, 0.7));
-  font-family: var(--font, system-ui);
-  font-size: var(--type-label);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.15s ease;
-}
-.settings-mode-tab:hover:not(.active) { color: var(--text-1, #fff); }
-.settings-mode-tab.active {
-  background: transparent;
-  color: var(--text-1, #fff);
-}
-
 /* ── Appearance (方案 A): one quiet card per group ───────────────────────── */
 .settings-cards { display: flex; flex-direction: column; gap: 12px; }
 .settings-card { padding: 14px 16px 16px; border-radius: var(--radius-md, 12px); background: var(--bg-card); box-shadow: inset 0 0 0 1px var(--border); }
@@ -674,12 +646,10 @@
 .settings-modal .settings-range::-moz-range-track { height: 4px; background: linear-gradient(to right, var(--text-2) var(--range-progress), color-mix(in srgb, var(--text-3) 30%, transparent) var(--range-progress)); }
 .settings-modal .settings-range::-moz-range-thumb { background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .35); }
 /* Segmented choices (and 明亮 / 夜晚 / 跟随系统): a light track, the chosen part on bg-active. */
-.settings-modal .segmented-tabs, .settings-modal .settings-mode-tabs { gap: 2px; padding: 2px; border-radius: 7px; background: color-mix(in srgb, var(--text-1) 6%, transparent); }
+.settings-modal .segmented-tabs { gap: 2px; padding: 2px; border-radius: 7px; background: color-mix(in srgb, var(--text-1) 6%, transparent); }
 .settings-modal .segmented-tabs .tool-settings-indicator { background: var(--bg-active) !important; border-radius: 5px; }
 .settings-modal .segmented-tabs > button { color: var(--text-3); font-size: 11.5px; }
 .settings-modal .segmented-tabs > button[aria-checked="true"] { color: var(--text-1); }
-.settings-modal .settings-mode-tab { padding: 4px 10px; border-radius: 5px; color: var(--text-3); font-size: 11.5px; font-weight: 500; }
-.settings-modal .settings-mode-tab.active { background: var(--bg-active); color: var(--text-1); }
 /* Key caps: no outlines. The chosen set sits on bg-active; each key is a small bg-hover square. */
 .settings-modal .settings-key-card { border: 0 !important; background: transparent; border-radius: 7px; padding: 4px 6px; }
 .settings-modal .settings-key-card:hover { background: var(--bg-hover); }

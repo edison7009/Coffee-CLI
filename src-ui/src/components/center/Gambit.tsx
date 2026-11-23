@@ -158,8 +158,13 @@ const CARD_MIN_HEIGHT = 76; // 方案 A: the card — one line to type, one line
 const CLEAR_MIN_HEIGHT = 64; // Clear: the one-line box (36px) and the row of settings under it
 const PLACE_TAB_HEIGHT = 26; // the place tab standing on the card's top edge
 // Pasted images, shown from the pasted bytes while the draft holds their saved path: the preview is there at
-// once and doesn't depend on reading the file back. Kept for the app's lifetime (a few screenshots at most).
+// once and doesn't depend on reading the file back. Released once the image leaves the draft it was pasted
+// into (removed, sent) or that composer closes; after that the file itself is the preview.
 const pastedPreviews = new Map<string, string>();
+const releasePastedPreview = (path: string) => {
+  const url = pastedPreviews.get(path);
+  if (url) { URL.revokeObjectURL(url); pastedPreviews.delete(path); }
+};
 
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
@@ -409,6 +414,18 @@ function GambitImpl({
   const setShown = useCallback((text: string) => onDraftChange(joinDraft(text, splitDraft(latestDraftRef.current).tokens)), [onDraftChange]);
   const pastedImagePaths = useMemo(() => attachments.filter(item => item.image).map(item => item.path), [attachments]);
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
+  // The images pasted into this composer: their previews go when they leave its draft, or when it closes.
+  // An image counts as gone only once it has been in the draft: one still on its way in (being saved, its folder
+  // check pending) keeps its preview while the box changes around it.
+  const pastedHere = useRef(new Map<string, boolean>());
+  useEffect(() => {
+    const present = new Set(attachments.map(item => item.path));
+    for (const [path, seen] of pastedHere.current) {
+      if (present.has(path)) pastedHere.current.set(path, true);
+      else if (seen) { releasePastedPreview(path); pastedHere.current.delete(path); }
+    }
+  }, [attachments]);
+  useEffect(() => () => { for (const path of pastedHere.current.keys()) releasePastedPreview(path); }, []);
   const [brokenThumbs, setBrokenThumbs] = useState<ReadonlySet<string>>(() => new Set());
   // Use a stable key so the effect only re-fires when the set of paths
   // actually changes, not on every keystroke that leaves paths intact.
@@ -804,7 +821,8 @@ function GambitImpl({
       return;
     }
     // Record the user prompt so recall shows what they actually typed.
-    pushGambitHistory(text);
+    // The draft itself, attachments still after their mark, so ↑ brings them back as cards rather than as path text.
+    pushGambitHistory(draft.trim());
     // Sent -> leave history navigation mode so the next recall starts from
     // the newest entry (which is the one we just pushed).
     historyCursorRef.current = null;
@@ -877,6 +895,7 @@ function GambitImpl({
         const base64 = await fileToBase64(file);
         const path = await commands.saveClipboardImage(base64, ext);
         if (!pastedPreviews.has(path)) pastedPreviews.set(path, URL.createObjectURL(file));
+        pastedHere.current.set(path, false);
         paths.push(path);
       } catch (err) {
         console.error('[Gambit] save image failed', err);

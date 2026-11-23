@@ -52,7 +52,7 @@ try{
  await page.reload();await page.locator('.launchpad-mode-tabs').first().waitFor();
  console.log('OK cards have no settings gear; the folder button and a never-opened card open the list, aligned under the button, without launching; Remote is a name-line chip');
  const claude=page.getByRole('group',{name:'Claude launch mode'});
- await claude.getByRole('button',{name:'Native terminal',exact:true}).click();assert.equal(await page.locator('.folder-menu').count(),0);assert.equal((await state(page)).tool,null);
+ await claude.getByRole('button',{name:'CLI · Native terminal',exact:true}).click();assert.equal(await page.locator('.folder-menu').count(),0);assert.equal((await state(page)).tool,null);
  await claude.locator('..').locator('.launchpad-card-info').click();await page.locator('.folder-menu-item:not(.folder-menu-open)').nth(1).click();
  let launched=await state(page);assert.equal(launched.tool,'claude');assert.equal(launched.folderPath,'D:/Older');assert.equal(launched.claudeMode,'terminal');
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older','D:/Recent']);

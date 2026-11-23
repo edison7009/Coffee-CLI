@@ -3042,10 +3042,6 @@ html.is-windows[data-frost="frost"] #root {
 }
 
 /* Left navigation stays borderless; Panel settings retain their framed tabs. */
-[data-shape="panel"] .settings-mode-tabs {
-    border: 1px solid var(--border);
-}
-
 [data-shape="panel"] .explorer-tab {
     padding: 8px 0;
     border-radius: 0;
@@ -3053,17 +3049,7 @@ html.is-windows[data-frost="frost"] #root {
 
 /* Settings' mode tabs sit in a header row rather than a 50/50 strip, so they
    keep side padding — without it the divider would touch the label. */
-[data-shape="panel"] .settings-mode-tab {
-    padding: 6px 12px;
-    border-radius: 0;
-}
-
-[data-shape="panel"] .settings-mode-tab + .settings-mode-tab {
-    border-left: 1px solid var(--border);
-}
-
-[data-shape="panel"] .explorer-tab.active,
-[data-shape="panel"] .settings-mode-tab.active {
+[data-shape="panel"] .explorer-tab.active {
     background: var(--bg-hover);
     color: var(--text-1);
 }
