@@ -52,7 +52,7 @@ try{
  await page.reload();await page.locator('.launchpad-mode-tabs').first().waitFor();
  console.log('OK cards have no settings gear; the folder button and a never-opened card open the list, aligned under the button, without launching; Remote is a name-line chip');
  const claude=page.getByRole('group',{name:'Claude launch mode'});
- await claude.getByRole('button',{name:'Terminal',exact:true}).click();assert.equal(await page.locator('.folder-menu').count(),0);assert.equal((await state(page)).tool,null);
+ await claude.getByRole('button',{name:'Native terminal',exact:true}).click();assert.equal(await page.locator('.folder-menu').count(),0);assert.equal((await state(page)).tool,null);
  await claude.locator('..').locator('.launchpad-card-info').click();await page.locator('.folder-menu-item:not(.folder-menu-open)').nth(1).click();
  let launched=await state(page);assert.equal(launched.tool,'claude');assert.equal(launched.folderPath,'D:/Older');assert.equal(launched.claudeMode,'terminal');
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older','D:/Recent']);
@@ -60,7 +60,7 @@ try{
  await fresh(page);
  assert.equal((await claude.locator('..').locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the card shows its last folder');
  assert.equal(await claude.locator('..').locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'rtl','a long path elides its start and keeps the folder name');await page.locator('.launchpad-mode-tabs').first().waitFor();
- const codex=page.getByRole('group',{name:'Codex launch mode'});await codex.getByRole('button',{name:'Desktop',exact:true}).click();await codex.locator('..').locator('.launchpad-card-info').click();
+ const codex=page.getByRole('group',{name:'Codex launch mode'});await codex.getByRole('button',{name:'IDE desktop',exact:true}).click();await codex.locator('..').locator('.launchpad-card-info').click();
  assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
  await page.locator('.folder-menu-item:not(.folder-menu-open)').first().click();launched=await state(page);assert.equal(launched.tool,'codex');assert.equal(launched.folderPath,'D:/Older');assert.equal(launched.codexMode,'conversation');
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older','D:/Recent'],'reusing a recent path does not duplicate it');

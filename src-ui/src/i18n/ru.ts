@@ -954,4 +954,5 @@ export const ru = {
   "tools.mode.desktop": "IDE-десктоп",
   "gambit.folder": "Папка",
   "theme.section.shape_hint": "Углы, панели и фактура фона",
+  "launchpad.pick_project": "Выбрать папку проекта",
 } as const satisfies Record<I18nKey, string>;

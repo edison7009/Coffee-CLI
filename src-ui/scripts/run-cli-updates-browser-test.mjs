@@ -61,7 +61,7 @@ try{
   await page.evaluate(()=>{window.releaseUpdates.claude();window.releaseUpdates.codex()});
   await page.waitForFunction(()=>document.querySelectorAll('.cli-update-button').length===0);
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('cc-cli-updates-v1')).find(status=>status.tool==='claude').current),'1.2.0');
-  await page.getByRole('button',{name:'打开文件夹',exact:true}).click();await page.getByRole('button',{name:'Terminal',exact:true}).click();
+  await page.getByRole('button',{name:'打开文件夹',exact:true}).click();await page.getByRole('button',{name:'原生终端',exact:true}).click();
   assert.equal(await page.evaluate(()=>window.configs),1);assert.equal(await page.evaluate(()=>window.modes),1);
   // A new upstream version refreshes independently of the other tools.
   await page.evaluate(()=>{window.statuses.claude={tool:'claude',current:'1.2.0',latest:'1.3.0',available:true};window.showLauncher(false)});

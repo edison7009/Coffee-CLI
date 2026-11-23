@@ -959,4 +959,5 @@ export const zhCN = {
   "tools.mode.desktop": "IDE 桌面",
   "gambit.folder": "文件夹",
   "theme.section.shape_hint": "影响圆角、面板和背景纹理",
+  "launchpad.pick_project": "选择项目路径",
 } as const satisfies Record<I18nKey, string>;

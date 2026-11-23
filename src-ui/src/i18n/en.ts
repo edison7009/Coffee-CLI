@@ -960,6 +960,7 @@ export const en = {
   "tools.mode.desktop": "IDE desktop",
   "gambit.folder": "Folder",
   "theme.section.shape_hint": "Corners, panels and background texture",
+  "launchpad.pick_project": "Choose a project folder",
 } as const;
 
 export type I18nKey = keyof typeof en;

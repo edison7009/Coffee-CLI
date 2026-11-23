@@ -47,12 +47,12 @@ try {
   for (const tool of ['claude', 'codex']) {
     const desktop = tool === 'claude' ? 'ClaudeConversation' : 'CodexConversation';
     await page.getByRole('complementary').getByRole('button', { name: 'New session', exact: true }).click();
-    assert.equal(await modeGroup(tool).getByRole('button', { name: 'Desktop', exact: true }).getAttribute('aria-pressed'), 'true', 'fresh preference defaults to Desktop');
+    assert.equal(await modeGroup(tool).getByRole('button', { name: 'IDE desktop', exact: true }).getAttribute('aria-pressed'), 'true', 'fresh preference defaults to Desktop');
     await history(tool).click();
     await page.waitForFunction(name => document.querySelector('[data-native-view="' + name + '"]')?.offsetParent, desktop);
     assert.equal(await activeView().getAttribute('data-native-token'), tool + '-native');
     await closeActive();
-    for (const [label, view] of [['Terminal', 'TierTerminal'], ['Desktop', desktop], ['Terminal', 'TierTerminal']]) {
+    for (const [label, view] of [['Native terminal', 'TierTerminal'], ['IDE desktop', desktop], ['Native terminal', 'TierTerminal']]) {
       // The tab strip's + opens the same launch page as the sidebar's New session.
       await page.locator('.chrome-tab-add').click();
       await modeGroup(tool).getByRole('button', { name: label, exact: true }).click();

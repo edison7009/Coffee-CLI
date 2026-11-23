@@ -954,4 +954,5 @@ export const es = {
   "tools.mode.desktop": "Escritorio IDE",
   "gambit.folder": "Carpeta",
   "theme.section.shape_hint": "Esquinas, paneles y textura de fondo",
+  "launchpad.pick_project": "Elegir la carpeta del proyecto",
 } as const satisfies Record<I18nKey, string>;

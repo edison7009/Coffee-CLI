@@ -957,4 +957,5 @@ export const ko = {
   "tools.mode.desktop": "IDE 데스크톱",
   "gambit.folder": "폴더",
   "theme.section.shape_hint": "모서리, 패널, 배경 질감",
+  "launchpad.pick_project": "프로젝트 폴더 선택",
 } as const satisfies Record<I18nKey, string>;
