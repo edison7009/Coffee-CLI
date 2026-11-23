@@ -242,5 +242,10 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 .claude-thread .claude-row > .conversation-copy { position:absolute; bottom:-12px; z-index:1; }
 .claude-thread .claude-row--assistant > .conversation-copy { left:0; }
 .claude-thread .claude-row--user > .conversation-copy { right:0; }
-/* A turn that ends with its totals keeps the copy action in line above them, so the two never overlap. */
-.claude-thread .claude-row:has(> .claude-turn-summary) > .conversation-copy { position:static; }
+/* A turn that ends with its totals puts them and the copy action on one line under the reply:
+   「耗时 … · 词元 · 费用」 then the copy icon, as other desktop chat apps do. */
+.claude-thread .claude-row:has(> .claude-turn-summary) { display:flex; flex-wrap:wrap; align-items:center; column-gap:6px; }
+.claude-thread .claude-row:has(> .claude-turn-summary) > * { flex:0 0 100%; min-width:0; }
+.claude-thread .claude-row:has(> .claude-turn-summary) > .claude-turn-summary { flex:0 1 auto; order:1; margin:0; }
+.claude-thread .claude-row:has(> .claude-turn-summary) > .conversation-copy { position:static; flex:none; order:2; margin:0; }
+.claude-thread .claude-row:has(> .claude-turn-summary) > time { order:-1; }
