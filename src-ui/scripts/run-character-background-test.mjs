@@ -304,7 +304,7 @@ await test('saved Basalt selection gets Carbon chrome and its own backdrop befor
   assert.equal(attributes['data-background'], 'basalt');
 });
 
-await test('first launch opens Clean (plain shape, no texture) in dark mode before React starts; Code keeps Basalt as its saved style', async () => {
+await test('first launch opens Work (plain shape, no texture) in dark mode before React starts; Code keeps Basalt as its saved style', async () => {
   const html = await readFile(`${root}/index.html`, 'utf8');
   const attributes = {};
   runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], {

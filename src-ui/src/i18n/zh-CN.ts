@@ -915,7 +915,7 @@ export const zhCN = {
   "rail.changes": "修改记录",
   "rail.devices": "设备",
   "layout.title": "界面风格",
-  "layout.work": "Clean",
+  "layout.work": "Work",
   "layout.code": "Code",
   "layout.work_hint": "只有对话，不启动终端：左侧一条图标，中间全是对话。",
   "layout.code_hint": "多标签、侧栏和终端：完整的工作区。",

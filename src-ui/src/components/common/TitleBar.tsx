@@ -138,10 +138,11 @@ export function TitleBar() {
           <i aria-hidden="true" />{t('ai_remote.titlebar', { name: remoteWindowName(remotePicked.title, t('remote_control.window_prefix')) })}
         </button>}
         {/* 纯净 ↔ 专业, in both shells (the changelog moved to Settings, under the version). */}
-        <div className="titlebar-layout-switch" role="radiogroup" aria-label={t('layout.title')}>
+        {/* A phone's bar has no room for it beside the tabs: there it lives in Settings → Appearance. */}
+        {!compact && <div className="titlebar-layout-switch" role="radiogroup" aria-label={t('layout.title')}>
           {(['work', 'code'] as const).map(mode => <button key={mode} type="button" role="radio" aria-checked={state.layoutMode === mode}
             onClick={() => dispatch({ type: 'SET_LAYOUT_MODE', mode })}>{t(mode === 'work' ? 'layout.work' : 'layout.code')}</button>)}
-        </div>
+        </div>}
         {/* Left panel · Gambit · right panel — the three hinted chrome toggles,
             adjacent with Gambit in the MIDDLE so the row mirrors the screen
             (left panel on the left, right on the right) and the default Alt+QWE

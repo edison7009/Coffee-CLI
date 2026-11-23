@@ -910,7 +910,7 @@ export const de = {
   "rail.changes": "Änderungen",
   "rail.devices": "Geräte",
   "layout.title": "Layout",
-  "layout.work": "Clean",
+  "layout.work": "Work",
   "layout.code": "Code",
   "layout.work_hint": "Nur die Unterhaltung, keine Terminals: eine Symbolleiste und der Chat.",
   "layout.code_hint": "Tabs, Seitenleisten und Terminals: der volle Arbeitsbereich.",

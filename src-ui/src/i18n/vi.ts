@@ -914,7 +914,7 @@ export const vi = {
   "rail.changes": "Thay đổi",
   "rail.devices": "Thiết bị",
   "layout.title": "Bố cục",
-  "layout.work": "Clean",
+  "layout.work": "Work",
   "layout.code": "Code",
   "layout.work_hint": "Chỉ cuộc trò chuyện, không terminal: một dải biểu tượng và cuộc trò chuyện.",
   "layout.code_hint": "Thẻ, thanh bên và terminal: không gian làm việc đầy đủ.",

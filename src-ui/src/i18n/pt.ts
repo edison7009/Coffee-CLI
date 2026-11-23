@@ -910,7 +910,7 @@ export const pt = {
   "rail.changes": "Alterações",
   "rail.devices": "Dispositivos",
   "layout.title": "Layout",
-  "layout.work": "Clean",
+  "layout.work": "Work",
   "layout.code": "Code",
   "layout.work_hint": "Só a conversa, sem terminais: uma barra de ícones e o chat.",
   "layout.code_hint": "Abas, barras laterais e terminais: o espaço de trabalho completo.",

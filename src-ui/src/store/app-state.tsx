@@ -168,13 +168,14 @@ export interface TerminalSession {
 }
 
 /** Settings a browser shows exactly as the desktop has them; changing one there changes the desktop's. */
-export const MIRRORED_SETTINGS = ['currentTheme', 'themeMode', 'currentShape', 'currentLang', 'iconTheme', 'bgPath', 'bgType', 'wallpaperOpacity', 'termColorScheme', 'termFont', 'defaultShell', 'gambitEnterToSend', 'hotkeyScheme', 'titlebarToggleDisplay', 'preInputButton', 'diffMode'] as const;
+// layoutMode: a phone shows the desktop's own mode (Work or Code), narrowed; switching it there switches both.
+export const MIRRORED_SETTINGS = ['layoutMode', 'currentTheme', 'themeMode', 'currentShape', 'currentLang', 'iconTheme', 'bgPath', 'bgType', 'wallpaperOpacity', 'termColorScheme', 'termFont', 'defaultShell', 'gambitEnterToSend', 'hotkeyScheme', 'titlebarToggleDisplay', 'preInputButton', 'diffMode'] as const;
 export type MirroredSettings = Pick<AppState, typeof MIRRORED_SETTINGS[number]>;
 export function pickMirroredSettings(state: AppState): MirroredSettings {
   return Object.fromEntries(MIRRORED_SETTINGS.map(key => [key, state[key]])) as MirroredSettings;
 }
 /** The actions that change those settings. */
-export const SETTINGS_ACTIONS = new Set<Action['type']>(['SET_THEME', 'SET_THEME_MODE', 'SET_SHAPE', 'SET_ICON_THEME', 'SET_LANG', 'SET_BG', 'CLEAR_BG', 'SET_WALLPAPER_OPACITY', 'SET_TERM_SCHEME', 'SET_TERM_FONT', 'SET_DEFAULT_SHELL', 'SET_GAMBIT_ENTER_TO_SEND', 'SET_HOTKEY_SCHEME', 'SET_TITLEBAR_TOGGLE_DISPLAY', 'SET_PRE_INPUT_BUTTON', 'SET_DIFF_MODE']);
+export const SETTINGS_ACTIONS = new Set<Action['type']>(['SET_LAYOUT_MODE', 'SET_THEME', 'SET_THEME_MODE', 'SET_SHAPE', 'SET_ICON_THEME', 'SET_LANG', 'SET_BG', 'CLEAR_BG', 'SET_WALLPAPER_OPACITY', 'SET_TERM_SCHEME', 'SET_TERM_FONT', 'SET_DEFAULT_SHELL', 'SET_GAMBIT_ENTER_TO_SEND', 'SET_HOTKEY_SCHEME', 'SET_TITLEBAR_TOGGLE_DISPLAY', 'SET_PRE_INPUT_BUTTON', 'SET_DIFF_MODE']);
 
 /** A desktop terminal a browser mirrors (see SYNC_MIRROR_TABS). */
 export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string; status?: AgentStatus }

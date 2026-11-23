@@ -577,6 +577,16 @@ function GambitImpl({
     observer.observe(row);
     return () => observer.disconnect();
   }, [hasAttachments]);
+  // Likewise the settings row under the box: on a narrow window (a phone) it wraps once its controls load,
+  // after the box was sized, and would squeeze the input above it.
+  useEffect(() => {
+    const meta = rootRef.current?.querySelector<HTMLElement>('.gambit-meta');
+    if (!meta || typeof ResizeObserver === 'undefined') return;
+    let last = -1;
+    const observer = new ResizeObserver(() => { if (meta.offsetHeight !== last) { last = meta.offsetHeight; setRemeasure(n => n + 1); } });
+    observer.observe(meta);
+    return () => observer.disconnect();
+  }, [workLayout, cardShell]);
 
   // Auto-grow the textarea to fit its content as the user types.
   useLayoutEffect(() => {
