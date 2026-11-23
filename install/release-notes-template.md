@@ -1,59 +1,69 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v4.0.7 · 让 AI 操作远程窗口
+### Coffee CLI v4.0.8 · 全新 Work 模式
 
-- **让 AI 操作远程窗口（全新）：** 在「设置 → 设备连接」打开「允许本机 AI 操作远程电脑窗口」后，新开的 Claude 标签就能查看和操作已打开的远程电脑窗口：读屏幕、输入、按键、新开标签。窗口被操作时顶部会提示，可以随时暂停。默认关闭。
-- **Codex 对话活动提示：** 桌面版 Codex 对话会显示它正在做什么，例如运行命令、读取文件、搜索、编辑；Claude 对话会显示正在运行的工具名，OpenCode 换上了新的工作中图标。
-- **修复：** 操控其他电脑时，新开的终端不再在提示符后出现「[?1;2c」之类的乱码，第一条命令可以正常执行。
-- **修复：** 设备菜单第一次悬停时文字不再跳动；更新下载提示不再被侧边栏挡住。
+- **全新 Work 模式：** 只有对话、不启动终端：左侧一条图标，中间全是对话。在「设置 → 外观 → 界面风格」里可以在 Work 和 Code 之间切换，手机端跟随电脑的模式。
+- **Code 模式焕新：** 启动页每张工具卡片记住各自上次的项目文件夹，可选 IDE 桌面或 CLI 原生终端；子任务收在父对话的数量下面，标签栏更清爽。
+- **输入框与对话：** 附加的图片显示为缩略图，文件和文件夹显示为卡片；⌘S / Ctrl+S 把草稿存进预输入；子任务对话开头显示任务卡片；Work 模式的标题菜单可以重命名、关闭对话。
+- **更新先看日志：** 点击更新会先显示新版本的更新日志，点「开始更新」再继续；Windows 先下载、再由你点击安装。
+- **远程操控：** Codex、OpenCode、DeepSeek Harness 也可以操作远程电脑窗口，在应用配置里有独立的「远程操控」页；远程窗口里的语音输入使用本机的麦克风。
+- **修复：** 输入框不再上下抖动几像素；粘贴的图片预览正确；未安装的工具可以一键前往 EchoBird 安装。
 
 </details>
 
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v4.0.7 · Let AI Operate Remote Windows
+### Coffee CLI v4.0.8 · The New Work Layout
 
-- **Let AI operate remote windows (new):** Turn on "Let AI on this computer operate remote windows" under Settings → Devices, and Claude tabs opened afterwards can see and operate the open remote computer windows: read the screen, type, press keys and open tabs. A window being operated says so at the top and can be paused at any time. Off by default.
-- **Codex activity in conversations:** Codex desktop conversations show what it is doing, such as running a command, reading files, searching or editing; Claude conversations show the tool that is running, and OpenCode has a new working indicator.
-- **Fixes:** When controlling another computer, new terminals no longer start with stray text such as "[?1;2c" on the prompt, so the first command runs normally.
-- **Fixes:** The device menu's labels no longer jump on first hover, and the update download tip is no longer cut off by the sidebar.
+- **New Work layout:** Just the conversation, no terminals: an icon rail on the left and the chat filling the rest. Switch between Work and Code under Settings → Appearance → Layout; a phone follows the desktop's layout.
+- **Code refreshed:** Each tool card on the start page remembers its own last project folder and opens in the IDE desktop or the native CLI terminal; sub-windows sit under their parent's count, keeping the tab strip tidy.
+- **Composer and conversations:** Attached images show as thumbnails, files and folders as cards; ⌘S / Ctrl+S keeps the draft in pre-input; a sub-task conversation opens with its task card; in Work, the title menu renames or closes the conversation.
+- **Notes before updating:** The update button first shows the new version's changelog, and Start update goes on from there; on Windows the installer downloads first and installs when you click.
+- **Remote control:** Codex, OpenCode and DeepSeek Harness can operate remote computer windows too, with their own Remote Control page in app config; voice input in a remote window uses this computer's microphone.
+- **Fixes:** The composer no longer shifts by a few pixels, pasted images preview correctly, and a tool that isn't installed links to EchoBird to install it.
 
 </details>
 
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v4.0.7 · 讓 AI 操作遠端視窗
+### Coffee CLI v4.0.8 · 全新 Work 模式
 
-- **讓 AI 操作遠端視窗（全新）：** 在「設定 → 裝置連線」開啟「允許本機 AI 操作遠端電腦視窗」後，新開的 Claude 分頁就能查看和操作已開啟的遠端電腦視窗：讀取畫面、輸入、按鍵、新開分頁。視窗被操作時頂部會提示，可以隨時暫停。預設關閉。
-- **Codex 對話活動提示：** 桌面版 Codex 對話會顯示它正在做什麼，例如執行命令、讀取檔案、搜尋、編輯；Claude 對話會顯示正在執行的工具名稱，OpenCode 換上了新的工作中圖示。
-- **修正：** 操控其他電腦時，新開的終端不再在提示字元後出現「[?1;2c」之類的亂碼，第一條命令可以正常執行。
-- **修正：** 裝置選單第一次懸停時文字不再跳動；更新下載提示不再被側邊欄擋住。
+- **全新 Work 模式：** 只有對話、不啟動終端：左側一條圖示，中間全是對話。在「設定 → 外觀 → 介面風格」裡可以在 Work 和 Code 之間切換，手機端跟隨電腦的模式。
+- **Code 模式煥新：** 啟動頁每張工具卡片記住各自上次的專案資料夾，可選 IDE 桌面或 CLI 原生終端；子任務收在父對話的數量下面，分頁列更清爽。
+- **輸入框與對話：** 附加的圖片顯示為縮圖，檔案和資料夾顯示為卡片；⌘S / Ctrl+S 把草稿存進預輸入；子任務對話開頭顯示任務卡片；Work 模式的標題選單可以重新命名、關閉對話。
+- **更新先看日誌：** 點擊更新會先顯示新版本的更新日誌，點「開始更新」再繼續；Windows 先下載、再由你點擊安裝。
+- **遠端操控：** Codex、OpenCode、DeepSeek Harness 也可以操作遠端電腦視窗，在應用設定裡有獨立的「遠端操控」頁；遠端視窗裡的語音輸入使用本機的麥克風。
+- **修正：** 輸入框不再上下抖動幾像素；貼上的圖片預覽正確；未安裝的工具可以一鍵前往 EchoBird 安裝。
 
 </details>
 
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v4.0.7 · AI にリモートウィンドウを操作させる
+### Coffee CLI v4.0.8 · 新しい Work レイアウト
 
-- **AI にリモートウィンドウを操作させる（新機能）：** 「設定 → デバイス接続」で「このPCのAIにリモート画面の操作を許可」をオンにすると、その後に開いた Claude タブが、開いているリモートPCのウィンドウを表示・操作できます（画面の読み取り、入力、キー操作、タブを開く）。操作中のウィンドウには上部に表示が出て、いつでも一時停止できます。初期設定はオフです。
-- **Codex の会話でアクティビティ表示：** デスクトップ版 Codex の会話で、コマンドの実行、ファイルの読み取り、検索、編集など、いま何をしているかが表示されます。Claude の会話では実行中のツール名が表示され、OpenCode には新しい作業中アイコンが付きました。
-- **修正：** ほかのコンピューターを操作しているとき、新しいターミナルのプロンプトに「[?1;2c」のような文字が入らなくなり、最初のコマンドが正しく実行されます。
-- **修正：** デバイスメニューの文字が最初のホバーで動かなくなり、更新のダウンロード案内がサイドバーで切れなくなりました。
+- **新しい Work レイアウト：** 会話だけ、ターミナルなし。左にアイコン列、残りはすべて会話です。「設定 → 外観 → レイアウト」で Work と Code を切り替えられ、スマホはパソコンのレイアウトに合わせます。
+- **Code を刷新：** スタートページの各ツールカードがそれぞれ前回のプロジェクトフォルダーを覚え、IDE デスクトップか CLI ネイティブターミナルで開きます。サブウィンドウは親の件数の下にまとまり、タブ列がすっきりしました。
+- **入力欄と会話：** 添付した画像はサムネイル、ファイルとフォルダーはカードで表示されます。⌘S / Ctrl+S で下書きをプレ入力に保存。サブタスクの会話はタスクカードから始まり、Work ではタイトルメニューから名前の変更や会話を閉じることができます。
+- **更新前に更新履歴：** 更新ボタンはまず新バージョンの更新履歴を表示し、「更新を開始」で進みます。Windows ではまずダウンロードし、クリックしたときにインストールします。
+- **リモート操作：** Codex、OpenCode、DeepSeek Harness もリモートPCのウィンドウを操作でき、アプリ設定に専用の「リモート操作」ページがあります。リモートウィンドウの音声入力はこのPCのマイクを使います。
+- **修正：** 入力欄が数ピクセルずれなくなり、貼り付けた画像が正しくプレビューされ、未インストールのツールは EchoBird からインストールできます。
 
 </details>
 
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v4.0.7 · AI가 원격 창을 조작
+### Coffee CLI v4.0.8 · 새로운 Work 레이아웃
 
-- **AI가 원격 창을 조작(신규):** "설정 → 기기 연결"에서 "이 컴퓨터의 AI가 원격 창을 조작하도록 허용"을 켜면, 그 뒤에 연 Claude 탭이 열려 있는 원격 컴퓨터 창을 보고 조작할 수 있습니다: 화면 읽기, 입력, 키 누르기, 탭 열기. 조작 중인 창 위쪽에 안내가 표시되며 언제든 일시 중지할 수 있습니다. 기본값은 꺼짐입니다.
-- **Codex 대화 활동 표시:** 데스크톱 Codex 대화에서 명령 실행, 파일 읽기, 검색, 편집 등 지금 하는 일을 보여 줍니다. Claude 대화에서는 실행 중인 도구 이름이 표시되고, OpenCode에는 새 작업 중 아이콘이 생겼습니다.
-- **수정:** 다른 컴퓨터를 제어할 때 새 터미널의 프롬프트에 "[?1;2c" 같은 문자가 붙지 않아 첫 명령이 정상적으로 실행됩니다.
-- **수정:** 기기 메뉴의 글자가 처음 마우스를 올릴 때 움직이지 않고, 업데이트 다운로드 안내가 사이드바에 잘리지 않습니다.
+- **새로운 Work 레이아웃:** 터미널 없이 대화만: 왼쪽에 아이콘 막대, 나머지는 모두 대화입니다. "설정 → 외관 → 레이아웃"에서 Work와 Code를 전환할 수 있고, 휴대폰은 컴퓨터의 레이아웃을 따릅니다.
+- **Code 새 단장:** 시작 페이지의 도구 카드마다 지난번 프로젝트 폴더를 기억하고 IDE 데스크톱 또는 CLI 네이티브 터미널로 엽니다. 하위 창은 상위 대화의 개수 아래에 모여 탭 줄이 깔끔해졌습니다.
+- **입력창과 대화:** 첨부한 이미지는 썸네일로, 파일과 폴더는 카드로 표시됩니다. ⌘S / Ctrl+S로 초안을 미리 입력에 저장합니다. 하위 작업 대화는 작업 카드로 시작하고, Work에서는 제목 메뉴로 대화 이름을 바꾸거나 닫을 수 있습니다.
+- **업데이트 전에 내역 확인:** 업데이트 버튼은 먼저 새 버전의 업데이트 내역을 보여 주고 "업데이트 시작"으로 진행합니다. Windows에서는 먼저 내려받고 클릭할 때 설치합니다.
+- **원격 조작:** Codex, OpenCode, DeepSeek Harness도 원격 컴퓨터 창을 조작할 수 있으며 앱 설정에 전용 "원격 조작" 페이지가 있습니다. 원격 창의 음성 입력은 이 컴퓨터의 마이크를 사용합니다.
+- **수정:** 입력창이 몇 픽셀씩 움직이지 않고, 붙여넣은 이미지가 올바르게 미리 보이며, 설치되지 않은 도구는 EchoBird에서 설치할 수 있습니다.
 
 </details>
