@@ -513,7 +513,7 @@ export const zhCN = {
   'gambit.send': '发送',
   'gambit.stop': '停止',
   "gambit.placeholder_short": "输入消息…",
-  'gambit.placeholder': '静心琢磨，再落子... ({send} 发送, {newline} 换行, 可粘贴图片, Alt+↑↓ 翻历史)',
+  'gambit.placeholder': "{send} 发送 · {newline} 换行 · {save} 存入预输入 · Alt+↑↓ 历史",
   'gambit.clear_draft': "清空",
   'gambit.save_pre_input': '保存到预输入',
   'gambit.send_failed_hint': '请先打开活动会话',

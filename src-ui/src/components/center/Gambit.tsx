@@ -1022,7 +1022,7 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={shown}
-          placeholder={suggestion ? undefined : phone ? t('gambit.placeholder_short') : card ? t('gambit.placeholder_save', { save: `${ctxMod}${isMac ? '' : '+'}S` }) : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ? undefined : phone ? t('gambit.placeholder_short') : card ? t('gambit.placeholder_save', { save: `${ctxMod}${isMac ? '' : '+'}S` }) : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo, save: `${ctxMod}${isMac ? '' : '+'}S` })}
           onChange={(e) => setShown(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}

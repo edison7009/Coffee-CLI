@@ -512,7 +512,7 @@ export const ko = {
   'gambit.send': '전송',
   'gambit.stop': '중지',
   "gambit.placeholder_short": "메시지 입력…",
-  'gambit.placeholder': '한 수를 고르는 중... ({send} 전송, {newline} 줄바꿈, 이미지 붙여넣기, Alt+↑↓ 기록)',
+  'gambit.placeholder': "{send} 전송 · {newline} 줄바꿈 · {save} 사전 입력에 저장 · Alt+↑↓ 기록",
   'gambit.clear_draft': "지우기",
   'gambit.save_pre_input': '사전 입력에 저장',
   'gambit.send_failed_hint': '활성 세션을 먼저 여세요',

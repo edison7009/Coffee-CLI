@@ -510,7 +510,7 @@ export const ru = {
   'gambit.send': 'Отправить',
   'gambit.stop': 'Остановить',
   "gambit.placeholder_short": "Сообщение…",
-  'gambit.placeholder': 'Продумайте ход... ({send} — отправить, {newline} — новая строка, можно вставлять изображения, Alt+↑↓ — история)',
+  'gambit.placeholder': "{send} отправить · {newline} новая строка · {save} на потом · Alt+↑↓ история",
   'gambit.clear_draft': "Очистить",
   'gambit.save_pre_input': 'Сохранить в предввод',
   'gambit.send_failed_hint': 'Сначала откройте активную сессию',

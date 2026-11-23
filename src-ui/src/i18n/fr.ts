@@ -510,7 +510,7 @@ export const fr = {
   'gambit.send': 'Envoyer',
   'gambit.stop': 'Arrêter',
   "gambit.placeholder_short": "Message…",
-  'gambit.placeholder': 'Préparez votre coup... ({send} pour envoyer, {newline} pour une nouvelle ligne, collez des images, Alt+↑↓ pour l’historique)',
+  'gambit.placeholder': "{send} envoyer · {newline} nouvelle ligne · {save} garder pour plus tard · Alt+↑↓ historique",
   'gambit.clear_draft': "Effacer",
   'gambit.save_pre_input': 'Enregistrer dans la pré-saisie',
   'gambit.send_failed_hint': "Ouvrez d'abord une session active",

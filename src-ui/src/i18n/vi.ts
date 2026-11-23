@@ -514,7 +514,7 @@ export const vi = {
   'gambit.send': 'Gửi',
   'gambit.stop': 'Dừng',
   "gambit.placeholder_short": "Nhập tin nhắn…",
-  'gambit.placeholder': 'Cân nhắc nước cờ... ({send} để gửi, {newline} xuống dòng, dán ảnh được, Alt+↑↓ xem lịch sử)',
+  'gambit.placeholder': "{send} gửi · {newline} xuống dòng · {save} lưu dùng sau · Alt+↑↓ lịch sử",
   'gambit.clear_draft': "Xóa",
   'gambit.save_pre_input': 'Lưu vào nhập trước',
   'gambit.send_failed_hint': 'Hãy mở một phiên hoạt động trước',

@@ -510,7 +510,7 @@ export const es = {
   'gambit.send': 'Enviar',
   'gambit.stop': 'Detener',
   "gambit.placeholder_short": "Mensaje…",
-  'gambit.placeholder': 'Piensa tu jugada... ({send} para enviar, {newline} para una nueva línea, pega imágenes, Alt+↑↓ para el historial)',
+  'gambit.placeholder': "{send} enviar · {newline} nueva línea · {save} guardar para luego · Alt+↑↓ historial",
   'gambit.clear_draft': "Vaciar",
   'gambit.save_pre_input': 'Guardar en pre-entrada',
   'gambit.send_failed_hint': 'Abre primero una sesión activa',

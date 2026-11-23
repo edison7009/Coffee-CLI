@@ -515,7 +515,7 @@ export const en = {
   'gambit.send': 'Send',
   'gambit.stop': 'Stop',
   "gambit.placeholder_short": "Message…",
-  'gambit.placeholder': 'Compose your move... ({send} to send, {newline} for newline, paste images, Alt+↑↓ for history)',
+  'gambit.placeholder': "{send} send · {newline} new line · {save} save for later · Alt+↑↓ history",
   'gambit.clear_draft': "Clear",
   'gambit.save_pre_input': 'Save to pre-input',
   'gambit.send_failed_hint': 'Open an active session first',

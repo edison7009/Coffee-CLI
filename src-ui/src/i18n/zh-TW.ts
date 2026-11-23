@@ -513,7 +513,7 @@ export const zhTW = {
   'gambit.send': '傳送',
   'gambit.stop': '停止',
   "gambit.placeholder_short": "輸入訊息…",
-  'gambit.placeholder': '靜心琢磨，再落子... ({send} 發送, {newline} 換行, 可貼上圖片, Alt+↑↓ 翻歷史)',
+  'gambit.placeholder': "{send} 發送 · {newline} 換行 · {save} 存入預輸入 · Alt+↑↓ 歷史",
   'gambit.clear_draft': "清空",
   'gambit.save_pre_input': '儲存到預輸入',
   'gambit.send_failed_hint': '請先開啟活動工作階段',

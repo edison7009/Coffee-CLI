@@ -512,7 +512,7 @@ export const ja = {
   'gambit.send': '送信',
   'gambit.stop': '停止',
   "gambit.placeholder_short": "メッセージを入力…",
-  'gambit.placeholder': '静かに一手を思案... ({send}で送信、{newline}で改行、画像貼付可、Alt+↑↓で履歴)',
+  'gambit.placeholder': "{send} 送信 · {newline} 改行 · {save} 事前入力に保存 · Alt+↑↓ 履歴",
   'gambit.clear_draft': "クリア",
   'gambit.save_pre_input': '事前入力に保存',
   'gambit.send_failed_hint': 'アクティブなセッションを先に開いてください',
