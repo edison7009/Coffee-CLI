@@ -36,7 +36,18 @@ export function UsageMeter({ quotas, onRefresh, compact = false }: { quotas: Quo
     const w = node.offsetWidth;
     node.style.left = `${Math.round(Math.max(8, Math.min(tipAt.x - w / 2, window.innerWidth - w - 8)))}px`;
     node.style.top = `${Math.round(tipAt.y - node.offsetHeight - 8)}px`;
+  });
+  // Put away when the window loses focus, scrolls or resizes (as the rail's tips are), and when the readings go.
+  useEffect(() => {
+    if (!tipAt) return;
+    const hide = () => setTipAt(null);
+    window.addEventListener('blur', hide); window.addEventListener('scroll', hide, true); window.addEventListener('resize', hide);
+    return () => { window.removeEventListener('blur', hide); window.removeEventListener('scroll', hide, true); window.removeEventListener('resize', hide); };
   }, [tipAt]);
+  // No readings: the meter is gone, and its tip with it (no stale card when readings come back).
+  const hasReadings = visibleQuotas(quotas).length > 0;
+  const [hadReadings, setHadReadings] = useState(hasReadings);
+  if (hadReadings !== hasReadings) { setHadReadings(hasReadings); if (!hasReadings) setTipAt(null); }
   useEffect(() => {
     if (!ticking) return;
     // The meter can mount long before a reset time arrives; resync on the next tick.
@@ -78,7 +89,7 @@ export function UsageMeter({ quotas, onRefresh, compact = false }: { quotas: Quo
     const show = (el: HTMLElement) => { const r = el.getBoundingClientRect(); setTipAt({ x: r.left + r.width / 2, y: r.top }); };
     return <>
       <button type="button" className="usage-meter usage-meter--compact" aria-label={`${t('usage.label')}: ${labels.join('; ')}`} onClick={onRefresh} disabled={!onRefresh}
-        onMouseEnter={event => show(event.currentTarget)} onMouseLeave={() => setTipAt(null)} onFocus={event => show(event.currentTarget)} onBlur={() => setTipAt(null)}>
+        onMouseEnter={event => show(event.currentTarget)} onMouseLeave={() => setTipAt(null)} onFocus={event => { if (event.currentTarget.matches(':focus-visible')) show(event.currentTarget); }} onBlur={() => setTipAt(null)}>
         {percent !== undefined ? <><Ring percent={percent} /><span className="usage-meter-percent" data-tone={tone(percent)}>{percent}%</span></>
           : balance ? <strong>{formatBalance(balance)}</strong> : null}
       </button>
