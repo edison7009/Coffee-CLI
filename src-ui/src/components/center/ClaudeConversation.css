@@ -173,7 +173,6 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-working .claude-morph .claude-working-word { min-width:0; }
 .claude-empty-meta { display:flex; align-items:center; justify-content:center; gap:10px; width:fit-content; max-width:100%; margin:14px auto 0; font-size:14px; }
 .claude-empty-directory { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; text-align:right; }
-.claude-empty-directory svg { flex-shrink:0; }
 .claude-empty-separator { flex-shrink:0; color:var(--text-3); }
 .claude-empty-directory bdi, .claude-empty-model { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .claude-empty-model { min-width:0; text-align:left; }

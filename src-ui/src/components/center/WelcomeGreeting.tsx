@@ -5,10 +5,10 @@ import { welcomeGreeting } from '../../lib/welcome-greeting';
 
 let computerName: Promise<string> | undefined;
 
+/** The folder and model under the greeting: the path speaks for itself, no folder icon to line up beside it. */
 export function WelcomeSessionMeta({ cwd, model }: { cwd: string | null; model?: string }) {
   return <div className="claude-empty-meta">
     <span className="claude-empty-directory">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
       <bdi dir="ltr">{cwd || '—'}</bdi>
     </span>
     {model && <>
