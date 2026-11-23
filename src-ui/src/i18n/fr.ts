@@ -949,4 +949,6 @@ export const fr = {
   "ai_remote.titlebar": "Pilote {name}",
   "place.local": "Cet ordinateur",
   "gambit.more": "Plus",
+  "tools.mode.terminal": "Terminal",
+  "tools.modes": "Fonctionne dans : {modes}",
 } as const satisfies Record<I18nKey, string>;

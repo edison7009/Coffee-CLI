@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
 import { AutomationsPage } from './AutomationsPage';
 import { addProjectFolder, getProjectFolders, removeProjectFolder, subscribeProjectFolders } from '../../lib/project-folders';
 import { REMOTE } from '../../remote/bridge';
@@ -1481,44 +1481,35 @@ export function CenterPanel() {
         {usageOpen && <UsageDashboard />}
         {state.automationsOpen && <AutomationsPage />}
         <ToolSettingsPage active={state.toolSettingsOpen} tools={AGENT_CATALOG.filter(item => pinnedItems.includes(`agent:${item.key}`)).map(item => ({ value: item.key as string, label: item.label, icon: item.icon, installed: item.key === 'terminal' || toolsInstalled[item.key ?? ''] !== false }))} count={pinnedItems.length} limit={MAX_PINS}>
-          {[true, false].map(enabled => {
-            const items = AGENT_CATALOG.filter(item => item.type === 'ai-cli' && pinnedItems.includes(`agent:${item.key}`) === enabled);
-            return items.length > 0 ? <Fragment key={String(enabled)}>
-              {!enabled && pinnedItems.length > 0 && <hr className="library-divider" />}
-              <div className="library-grid" data-enabled={enabled}>
-                {items.map(item => {
-                  const pinId = `agent:${item.key}`;
-                  const isPinned = pinnedItems.includes(pinId);
-                  const hasGear = CONFIGURABLE_AGENT_TOOLS.has(item.key);
-                  return (
-                    <div
-                      key={item.key}
-                      className={`library-item ${isPinned ? 'is-pinned' : ''}`}
-                      onClick={() => togglePin(pinId)}
-                    >
-                      <div className="library-item-icon">{item.icon}</div>
-                      <span className="library-item-name">{item.label}</span>
-                      {hasGear && (
-                        <span
-                          className="library-gear-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfigModalTool({ key: item.key as string, label: item.label });
-                          }}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {/* 常用 (方案 B): one row per tool in a fixed order — a switch never moves its row. In the middle, where
+              the tool runs: Clean (its desktop conversation), Code (every tool) and the native terminal. */}
+          <div className="library-list" role="list">
+            {AGENT_CATALOG.filter(item => item.type === 'ai-cli').map(item => {
+              const pinId = `agent:${item.key}`;
+              const isPinned = pinnedItems.includes(pinId);
+              const hasGear = CONFIGURABLE_AGENT_TOOLS.has(item.key);
+              const modes: [string, boolean][] = [['Clean', workLaunchable(item.key)], ['Code', true], [t('tools.mode.terminal'), item.key !== 'dsh']];
+              return (
+                <div key={item.key} role="listitem" className={`library-item library-row ${isPinned ? 'is-pinned' : ''}`} onClick={() => togglePin(pinId)}>
+                  <div className="library-item-icon">{item.icon}</div>
+                  <span className="library-item-name">{item.label}</span>
+                  <span className="library-modes" aria-label={t('tools.modes', { modes: modes.filter(([, on]) => on).map(([label]) => label).join(' · ') })}>
+                    {modes.map(([label, on]) => <span key={label} className={`library-mode${on ? ' is-on' : ''}`} aria-hidden="true">{label}</span>)}
+                  </span>
+                  <span className="library-row-fill" />
+                  {hasGear && (
+                    <span className="library-gear-btn" onClick={(e) => { e.stopPropagation(); setConfigModalTool({ key: item.key as string, label: item.label }); }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="3"/>
                             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                           </svg>
-                        </span>
-                      )}
-                      <div className={`library-toggle${isPinned ? ' on' : ''}`}><div className="library-toggle-knob" /></div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Fragment> : null;
-          })}
+                    </span>
+                  )}
+                  <div className={`library-toggle${isPinned ? ' on' : ''}`}><div className="library-toggle-knob" /></div>
+                </div>
+              );
+            })}
+          </div>
         </ToolSettingsPage>
         {isLaunchpadMode && activeTerminalId && contentActive && (
           <div className={`launchpad-container${hasBg && bgUrl ? ' launchpad-has-bg' : ''}`} style={{ position: 'relative' }}>

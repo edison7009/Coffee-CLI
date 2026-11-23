@@ -952,4 +952,6 @@ export const ja = {
   "ai_remote.titlebar": "{name} を操作中",
   "place.local": "このコンピューター",
   "gambit.more": "その他",
+  "tools.mode.terminal": "ターミナル",
+  "tools.modes": "利用可能：{modes}",
 } as const satisfies Record<I18nKey, string>;

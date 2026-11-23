@@ -954,4 +954,6 @@ export const zhCN = {
   "ai_remote.titlebar": "正在操控 {name}",
   "place.local": "本机",
   "gambit.more": "更多",
+  "tools.mode.terminal": "终端",
+  "tools.modes": "可用：{modes}",
 } as const satisfies Record<I18nKey, string>;
