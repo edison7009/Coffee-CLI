@@ -1,6 +1,6 @@
 // 工作式's left edge: one narrow column of icons in place of the sidebar. Conversations open as a
 // list beside it; everything else opens the same pages the sidebar opens in 代码式.
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { createPortal } from 'react-dom';
@@ -38,6 +38,14 @@ type TipExtras = { onClose: () => void; label: string; kids?: TabChild[]; onPick
 function useRailTip() {
   const [tip, setTip] = useState<RailTip | null>(null);
   const hideTimer = useRef<number | undefined>(undefined);
+  // Centred on its button in whole pixels: a translateY(-50%) on an odd height put the text on a half pixel,
+  // which WebKit draws soft.
+  const tipRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const node = tipRef.current;
+    if (!tip || !node) return;
+    node.style.top = `${Math.round(Math.max(8, Math.min(tip.top - node.offsetHeight / 2, window.innerHeight - node.offsetHeight - 8)))}px`;
+  }, [tip]);
   const cancelHide = () => window.clearTimeout(hideTimer.current);
   const hideSoon = () => { cancelHide(); hideTimer.current = window.setTimeout(() => setTip(null), 180); };
   useEffect(() => () => window.clearTimeout(hideTimer.current), []);
@@ -57,11 +65,11 @@ function useRailTip() {
     onFocus: (e: React.FocusEvent<HTMLElement>) => show(e.currentTarget, label, detail, close),
     onMouseLeave: () => close ? hideSoon() : setTip(null), onBlur: () => close ? hideSoon() : setTip(null),
   });
-  const node = tip && createPortal(<span className={`icon-rail-tip${tip.onClose ? ' has-action' : ''}${tip.kids?.length ? ' has-kids' : ''}`} role="tooltip" style={{ top: tip.top, left: tip.left }}
+  const node = tip && createPortal(<span ref={tipRef} className={`icon-rail-tip${tip.onClose ? ' has-action' : ''}${tip.kids?.length ? ' has-kids' : ''}`} role="tooltip" style={{ top: tip.top, left: Math.round(tip.left) }}
     onMouseEnter={tip.onClose ? cancelHide : undefined} onMouseLeave={tip.onClose ? hideSoon : undefined}>
     <span className="icon-rail-tip-head">
       <span className="icon-rail-tip-text"><strong>{tip.label}</strong>{tip.detail && <small>{tip.detail}</small>}</span>
-      {tip.onClose && <button type="button" className="icon-rail-tip-close" aria-label={tip.closeLabel} onClick={() => { const close = tip.onClose; setTip(null); close?.(); }}>
+      {tip.onClose && <button type="button" className="icon-rail-tip-close close-button" aria-label={tip.closeLabel} onClick={() => { const close = tip.onClose; setTip(null); close?.(); }}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
       </button>}
     </span>

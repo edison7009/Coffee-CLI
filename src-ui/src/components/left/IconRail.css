@@ -90,7 +90,7 @@
 }
 
 /* Tips open to the right of the rail, level with the icon they name (the app's tip card look). */
-.icon-rail-tip { position: fixed; z-index: 10000; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; max-width: 280px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); line-height: 1.35; pointer-events: none; box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 20px rgba(0, 0, 0, .22); }
+.icon-rail-tip { position: fixed; z-index: 10000; display: flex; align-items: center; gap: 10px; max-width: 280px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); line-height: 1.35; pointer-events: none; box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 20px rgba(0, 0, 0, .22); }
 .icon-rail-tip-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 /* The tip's title line, then (for a parent) its sub-windows: each a row with its state, clickable. */
 .icon-rail-tip { flex-direction: column; align-items: stretch; gap: 4px; }
@@ -104,10 +104,9 @@
 .icon-rail-tip-kid-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon-rail-tip.has-action { pointer-events: auto; padding-right: 4px; }
 .icon-rail-tip-close { display: grid; place-items: center; width: 24px; height: 24px; flex: none; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; transition: background-color .15s, color .15s; }
-.icon-rail-tip-close:hover { background: var(--bg-hover); color: var(--text-1); }
 .icon-rail-tip-close svg { width: 14px; height: 14px; }
-.icon-rail-tip strong { font-weight: 500; overflow-wrap: anywhere; }
-.icon-rail-tip small { color: var(--text-3); font-size: 12px; }
+.icon-rail-tip strong { color: var(--text-1); font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.icon-rail-tip small { color: var(--text-2); font-size: 12px; }
 
 /* Open conversations (Clear 方案 A): the title's first character on a quiet tile, the tool's mark in the
    lower corner, the state in the upper one. The open one sits on a deeper tile with a short bar at the edge. */
