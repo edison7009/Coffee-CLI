@@ -422,8 +422,6 @@ export const pt = {
   'interaction.question': 'Resposta necessária',
   'interaction.custom_placeholder': 'Digite sua resposta…',
   'interaction.submit': 'Enviar',
-  'settings.feedback': 'Bugs e sugestões',
-  'settings.feedback.desc': 'Encontrou um bug ou tem uma sugestão? Clique abaixo para enviar seu problema:',
   'settings.wallpaper.pick': 'Escolher imagem ou vídeo',
   'settings.wallpaper.clear': 'Remover papel de parede',
   'settings.wallpaper.opacity': 'Opacidade',

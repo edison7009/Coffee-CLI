@@ -422,8 +422,6 @@ export const zhTW = {
   'interaction.question': '需要你的回答',
   'interaction.custom_placeholder': '輸入你的補充說明…',
   'interaction.submit': '提交',
-  'settings.feedback': 'BUG / 建議',
-  'settings.feedback.desc': '遇到 BUG 或建議，點擊下方提交你的問題：',
   'settings.wallpaper.pick': '選擇圖片或影片',
   'settings.wallpaper.clear': '移除桌布',
   'settings.wallpaper.opacity': '透明度',

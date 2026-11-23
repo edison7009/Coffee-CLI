@@ -24,11 +24,20 @@ export function notesForLocale(notes: string, locale: string): string {
   return picked[2].trim();
 }
 
-export function cachedReleaseNotes(version: string): string {
+// Notes kept per version (the installed one and an update's), so reading an update's notes doesn't evict the
+// installed version's. An older single-entry cache ({ version, notes }) is still read.
+function readCache(): Record<string, string> {
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) ?? 'null');
-    if (cached?.version === version && typeof cached.notes === 'string' && cached.notes.trim()) return cached.notes;
+    if (cached && typeof cached.version === 'string' && typeof cached.notes === 'string') return { [cached.version]: cached.notes };
+    if (cached && typeof cached === 'object') return Object.fromEntries(Object.entries(cached).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
   } catch { /* Optional local cache. */ }
+  return {};
+}
+
+export function cachedReleaseNotes(version: string): string {
+  const notes = readCache()[version];
+  if (notes?.trim()) return notes;
   return version === BUNDLED_VERSION ? bundledNotes : '';
 }
 
@@ -44,6 +53,11 @@ export async function loadReleaseNotes(version: string, signal: AbortSignal): Pr
     notes = release.body;
   }
   if (!notes.trim()) throw new Error('Release notes are empty');
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ version, notes })); } catch { /* Optional local cache. */ }
+  // The newest few versions only.
+  try {
+    const next = { ...readCache(), [version]: notes };
+    const keep = Object.keys(next).sort((a, b) => b.localeCompare(a, undefined, { numeric: true })).slice(0, 4);
+    localStorage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(keep.map(key => [key, next[key]]))));
+  } catch { /* Optional local cache. */ }
   return notes;
 }

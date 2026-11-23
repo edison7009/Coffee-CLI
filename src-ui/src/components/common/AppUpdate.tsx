@@ -1,36 +1,16 @@
-import { useEffect, useState } from 'react';
 import { useT } from '../../i18n/useT';
 import { useSelfUpdate } from '../../lib/use-self-update';
 import { IS_WINDOWS } from '../../lib/platform';
-import { fetchLatestManifest, isNewerVersion } from '../../lib/update-manifest';
 import { ReleaseNotesDialog } from './ReleaseNotesDialog';
 
 /** The app's own update, wherever it sits: Code's sidebar footer or Work's icon rail (`rail`). It checks once for
  *  a newer version and shows nothing until there is one. The first click downloads; the step that installs (the
  *  second click on Windows, the first elsewhere, where the download opens the installer) first shows the new
  *  version's notes with 开始更新. See lib/use-self-update.ts. */
-export function AppUpdateButton({ rail = false }: { rail?: boolean }) {
+export function AppUpdateButton({ rail = false, tip }: { rail?: boolean; tip?: (label: string) => Record<string, unknown> }) {
   const t = useT();
-  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
-  const [installed, setInstalled] = useState('');
-  useEffect(() => {
-    const checkUpdate = async () => {
-      try {
-        const { getVersion } = await import('@tauri-apps/api/app');
-        // Domestic mirrors and the website are asked together; the newest
-        // version any of them reports wins (see lib/update-manifest.ts).
-        const [local, remote] = await Promise.all([getVersion(), fetchLatestManifest()]);
-        setInstalled(local);
-        if (remote && isNewerVersion(remote.version, local)) setUpdateVersion(remote.version.replace(/^v/, ''));
-      } catch { /* offline or fetch failed — silent */ }
-    };
-    checkUpdate();
-  }, []);
-
-  // In-app self-update: the first click downloads (a ring fills); on Windows
-  // the button then reads "Install" and only a second click closes Coffee CLI
-  // and runs the installer. See lib/use-self-update.ts.
-  const selfUpdate = useSelfUpdate(updateVersion, setUpdateVersion);
+  const selfUpdate = useSelfUpdate();
+  const updateVersion = selfUpdate.version, installed = selfUpdate.installed;
   const installPhase = selfUpdate.progress?.status ?? null;
   const installPct = selfUpdate.progress?.percent ?? 0;
   const installing = installPhase !== null;
@@ -55,7 +35,8 @@ export function AppUpdateButton({ rail = false }: { rail?: boolean }) {
       disabled={installing}
       aria-label={updateLabel}
       aria-busy={installing}
-      data-tip={updateLabel}
+      data-tip={rail ? undefined : updateLabel}
+      {...(rail && tip ? tip(updateLabel) : {})}
     >
       {restarting ? (
         /* Lucide rotate-cw; license in /icons/LICENSE-lucide.txt. */
@@ -92,6 +73,11 @@ export function AppUpdateButton({ rail = false }: { rail?: boolean }) {
                 : 2 * Math.PI * 9 * (1 - installPct / 100)
             }
           />
+        </svg>
+      ) : readyToInstall && rail ? (
+        /* On the rail the tile has no room for the word: Lucide package-check (license in /icons/LICENSE-lucide.txt). */
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m16 16 2 2 4-4" /><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><path d="M3.29 7 12 12l8.71-5" /><path d="M12 22V12" />
         </svg>
       ) : readyToInstall ? (
         <span className="update-install-label" aria-hidden="true">{t('self_update.install_short')}</span>

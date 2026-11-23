@@ -422,8 +422,6 @@ export const en = {
   'interaction.question': 'Input required',
   'interaction.custom_placeholder': 'Add your own answer…',
   'interaction.submit': 'Submit',
-  'settings.feedback': 'Bug / Feedback',
-  'settings.feedback.desc': 'Found a bug or have a suggestion? Click below to submit your issue:',
   'settings.wallpaper.pick': 'Choose image or video',
   'settings.wallpaper.clear': 'Remove wallpaper',
   'settings.wallpaper.opacity': 'Opacity',

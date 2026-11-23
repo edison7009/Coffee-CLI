@@ -422,8 +422,6 @@ export const zhCN = {
   'interaction.question': '需要你的回答',
   'interaction.custom_placeholder': '输入你的补充说明…',
   'interaction.submit': '提交',
-  'settings.feedback': 'BUG / 建议',
-  'settings.feedback.desc': '遇到 BUG 或建议，点击下方提交你的问题：',
   'settings.wallpaper.pick': '选择图片或视频',
   'settings.wallpaper.clear': '移除壁纸',
   'settings.wallpaper.opacity': '透明度',

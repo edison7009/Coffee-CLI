@@ -422,8 +422,6 @@ export const ru = {
   'interaction.question': 'Требуется ответ',
   'interaction.custom_placeholder': 'Введите свой ответ…',
   'interaction.submit': 'Отправить',
-  'settings.feedback': 'Баги и предложения',
-  'settings.feedback.desc': 'Нашли баг или есть предложение? Нажмите ниже, чтобы отправить проблему:',
   'settings.wallpaper.pick': 'Выбрать изображение или видео',
   'settings.wallpaper.clear': 'Убрать обои',
   'settings.wallpaper.opacity': 'Непрозрачность',

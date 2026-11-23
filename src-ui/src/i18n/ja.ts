@@ -422,8 +422,6 @@ export const ja = {
   'interaction.question': '回答が必要です',
   'interaction.custom_placeholder': '回答を入力…',
   'interaction.submit': '送信',
-  'settings.feedback': 'バグ・フィードバック',
-  'settings.feedback.desc': 'バグを見つけた、またはご提案がある場合は、下のリンクから内容を送信してください：',
   'settings.wallpaper.pick': '画像または動画を選択',
   'settings.wallpaper.clear': '壁紙を削除',
   'settings.wallpaper.opacity': '不透明度',

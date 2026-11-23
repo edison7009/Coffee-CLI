@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useT } from '../../i18n/useT';
 import { BUNDLED_VERSION, RELEASE_NOTES_SEEN, shouldShowReleaseNotes } from '../../lib/release-notes';
 import { ReleaseNotesDialog } from './ReleaseNotesDialog';
@@ -21,17 +21,16 @@ export function Changelog({ className = 'titlebar-btn changelog-trigger' }: { cl
     return () => { cancelled = true; };
   }, []);
 
-  // Shown once for this version: remember it, so the next start doesn't show it again.
-  useEffect(() => {
-    if (!open) return;
+  // Seen once its notes are actually on screen (not merely opened offline): the next start doesn't show them again.
+  const markSeen = useCallback(() => {
     try { if (shouldShowReleaseNotes(version, localStorage.getItem(RELEASE_NOTES_SEEN))) localStorage.setItem(RELEASE_NOTES_SEEN, version); }
     catch { /* Optional version preference. */ }
-  }, [open, version]);
+  }, [version]);
 
   return <>
     <button type="button" className={className} aria-label={t('changelog.title')} aria-expanded={open} onClick={() => setOpen(true)}>
       {t('changelog.title')}
     </button>
-    {open && <ReleaseNotesDialog version={version} onClose={() => setOpen(false)} />}
+    {open && <ReleaseNotesDialog version={version} onClose={() => setOpen(false)} onShown={markSeen} />}
   </>;
 }

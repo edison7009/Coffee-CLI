@@ -380,54 +380,6 @@
 .settings-lang-check { display: flex; color: var(--accent, #c4956a); }
 .settings-lang-check svg { width: 14px; height: 14px; }
 
-/* ── Feedback (Bug / suggestions) ──────────────────────────────────────── */
-.settings-feedback-desc {
-  margin: 0 0 14px;
-  font-size: var(--type-body);
-  line-height: 1.5;
-  color: var(--text-2, rgba(255, 255, 255, 0.7));
-}
-.settings-feedback-cards { display: flex; gap: 12px; }
-.settings-feedback-card {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 92px;
-  padding: 20px;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-  background: transparent;
-  border-radius: var(--radius-md, 12px);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.14s ease;
-}
-.settings-feedback-card:hover {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--accent, #c4956a) 14%, transparent);
-}
-.settings-feedback-card-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-1, #fff);
-}
-.settings-feedback-card-icon svg { width: 26px; height: 26px; }
-.settings-feedback-card-label { font-size: 20px; font-weight: 600; color: var(--text-1, #fff); }
-.settings-feedback-card-arrow {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 15px;
-  height: 15px;
-  color: var(--text-3, rgba(255, 255, 255, 0.4));
-  transition: color 0.14s ease;
-}
-.settings-feedback-card:hover .settings-feedback-card-arrow { color: var(--accent, #c4956a); }
-
 /* ── Terminal font picker (custom themed dropdown) ─────────────────────── */
 .settings-font-trigger {
   display: flex;

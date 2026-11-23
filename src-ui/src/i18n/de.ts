@@ -422,8 +422,6 @@ export const de = {
   'interaction.question': 'Antwort erforderlich',
   'interaction.custom_placeholder': 'Eigene Antwort eingeben…',
   'interaction.submit': 'Senden',
-  'settings.feedback': 'Fehler & Feedback',
-  'settings.feedback.desc': 'Einen Fehler gefunden oder einen Vorschlag? Klicke unten, um dein Problem zu melden:',
   'settings.wallpaper.pick': 'Bild oder Video wählen',
   'settings.wallpaper.clear': 'Hintergrund entfernen',
   'settings.wallpaper.opacity': 'Deckkraft',

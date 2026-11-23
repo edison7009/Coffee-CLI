@@ -45,7 +45,7 @@ await build({
   nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   define: { 'process.env.NODE_ENV': '"development"', __IS_LINUX__: 'false' },
   plugins: [{ name: 'self-update-boundaries', setup(builder) {
-    builder.onResolve({ filter: /(?:store\/app-state|tauri|lib\/(?:git-status|history-cache|clipboard|explorer-drag|update-manifest|release-notes)|right\/HistoryBoard|@tauri-apps\/api\/(?:event|app))$/ }, () => ({ path: 'mock', namespace: 'fixture' }));
+    builder.onResolve({ filter: /(?:store\/app-state|tauri|(?:lib|\.)\/(?:git-status|history-cache|clipboard|explorer-drag|update-manifest|release-notes)|right\/HistoryBoard|@tauri-apps\/api\/(?:event|app))$/ }, () => ({ path: 'mock', namespace: 'fixture' }));
     builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: mock, resolveDir: project, loader: 'js' }));
   } }],
 });

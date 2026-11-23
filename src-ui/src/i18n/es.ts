@@ -422,8 +422,6 @@ export const es = {
   'interaction.question': 'Respuesta requerida',
   'interaction.custom_placeholder': 'Escribe tu propia respuesta…',
   'interaction.submit': 'Enviar',
-  'settings.feedback': 'Errores y sugerencias',
-  'settings.feedback.desc': '¿Encontraste un error o tienes una sugerencia? Haz clic abajo para enviar tu problema:',
   'settings.wallpaper.pick': 'Elegir imagen o vídeo',
   'settings.wallpaper.clear': 'Quitar fondo',
   'settings.wallpaper.opacity': 'Opacidad',

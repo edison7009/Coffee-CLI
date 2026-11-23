@@ -10,12 +10,16 @@ import './Changelog.css';
 /** One version's release notes (as EchoBird shows them). Plain: the changelog, closed with 我知道了. With `update`:
  *  the notes of the version about to be installed, titled 从 vX 更新到 vY, and 开始更新 goes on. Either way the footer
  *  offers feedback (GitHub; GitCode too in Chinese), which used to be a page in Settings. */
-export function ReleaseNotesDialog({ version, onClose, update }: {
+export function ReleaseNotesDialog({ version, onClose, update, onShown }: {
   version: string; onClose: () => void;
+  /** Once this version's notes are on screen (not merely opened): the changelog marks them seen then. */
+  onShown?: () => void;
   update?: { from: string; to: string; starting: boolean; onStart: () => void };
 }) {
   const t = useT(), language = useAppLanguage(), titleId = useId();
-  const [notes, setNotes] = useState(() => cachedReleaseNotes(version));
+  // Kept with the version they belong to: when the version changes, its own (cached) notes show, never the last one's.
+  const [loaded, setLoaded] = useState(() => ({ version, notes: cachedReleaseNotes(version) }));
+  const notes = loaded.version === version ? loaded.notes : cachedReleaseNotes(version);
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   const dialog = useRef<HTMLDivElement>(null);
@@ -24,13 +28,18 @@ export function ReleaseNotesDialog({ version, onClose, update }: {
   const close = () => { if (!starting) onClose(); };
 
   useEffect(() => {
+    // `cancelled` is this effect going away; the controller is also aborted by the 10s timeout, which is a failure
+    // to show (with Retry), not a cancel.
+    let cancelled = false;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 10_000);
-    loadReleaseNotes(version, controller.signal).then(loaded => { if (!controller.signal.aborted) { setNotes(loaded); setFailed(false); } })
-      .catch(() => { if (!controller.signal.aborted) setFailed(true); })
+    loadReleaseNotes(version, controller.signal).then(text => { if (!cancelled) { setLoaded({ version, notes: text }); setFailed(false); } })
+      .catch(() => { if (!cancelled) setFailed(true); })
       .finally(() => window.clearTimeout(timeout));
-    return () => { controller.abort(); window.clearTimeout(timeout); };
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout); };
   }, [version, retry]);
+  const shown = useRef(false);
+  useEffect(() => { if (content && !shown.current) { shown.current = true; onShown?.(); } }, [content, onShown]);
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;

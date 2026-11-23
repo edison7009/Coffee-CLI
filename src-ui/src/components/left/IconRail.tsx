@@ -171,7 +171,7 @@ export function IconRail() {
     </div>
     <span className="icon-rail-spacer" />
     {/* A newer Coffee CLI: the same update as Code's sidebar (download, then its notes before installing). */}
-    <AppUpdateButton rail />
+    <AppUpdateButton rail tip={label => tipFor(label)} />
     {/* Everything else. */}
     {button('automations', t('automation.title'), () => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: !state.automationsOpen }), !!state.automationsOpen)}
     {button('usage', t('usage.title'), () => dispatch({ type: 'SET_USAGE_OPEN', open: !state.usageOpen }), !!state.usageOpen)}

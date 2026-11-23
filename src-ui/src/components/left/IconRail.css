@@ -173,5 +173,4 @@
    that sat on the left), and the ready "安装" label fits the tile. */
 .icon-rail-button.icon-rail-update.update-available { display: grid; place-items: center; }
 .icon-rail-button.icon-rail-update.is-ready { width: 34px; padding: 0; }
-.icon-rail-button.icon-rail-update .update-install-label { font-size: 10.5px; }
 .icon-rail-button.icon-rail-update[data-tip]:hover::after, .icon-rail-button.icon-rail-update[data-tip]:focus-visible::after { display: none; }
