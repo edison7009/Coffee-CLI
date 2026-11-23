@@ -15,6 +15,7 @@ import { getUnreadSessionReplies, sessionReplyKey, subscribeSessionReplies } fro
 import { useOrchestration } from '../../lib/orchestration';
 import { tabFamilies, type TabChild } from '../../lib/tab-family';
 import { NewSessionMenu } from './NewSessionMenu';
+import { AppUpdateButton } from '../common/AppUpdate';
 import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
@@ -169,6 +170,8 @@ export function IconRail() {
         onPick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })} /></div>)}
     </div>
     <span className="icon-rail-spacer" />
+    {/* A newer Coffee CLI: the same update as Code's sidebar (download, then its notes before installing). */}
+    <AppUpdateButton rail />
     {/* Everything else. */}
     {button('automations', t('automation.title'), () => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: !state.automationsOpen }), !!state.automationsOpen)}
     {button('usage', t('usage.title'), () => dispatch({ type: 'SET_USAGE_OPEN', open: !state.usageOpen }), !!state.usageOpen)}

@@ -967,4 +967,9 @@ export const zhTW = {
   "titlebar.conversation_menu": "對話選單",
   "menu.close_conversation": "關閉對話",
   "gambit.placeholder_save": "輸入訊息…  {save} 存入預輸入",
+  "changelog.update_title": "從 {from} 更新到 {to}，您將體驗到的新內容：",
+  "changelog.start_update": "開始更新",
+  "changelog.got_it": "我知道了",
+  "changelog.feedback": "問題回報",
+  "changelog.close": "關閉",
 } as const satisfies Record<I18nKey, string>;

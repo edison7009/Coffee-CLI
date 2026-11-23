@@ -963,4 +963,9 @@ export const es = {
   "titlebar.conversation_menu": "Menú de la conversación",
   "menu.close_conversation": "Cerrar conversación",
   "gambit.placeholder_save": "Mensaje…  {save} para guardar para luego",
+  "changelog.update_title": "Actualizar de {from} a {to}: novedades",
+  "changelog.start_update": "Empezar a actualizar",
+  "changelog.got_it": "Entendido",
+  "changelog.feedback": "Comentarios",
+  "changelog.close": "Cerrar",
 } as const satisfies Record<I18nKey, string>;

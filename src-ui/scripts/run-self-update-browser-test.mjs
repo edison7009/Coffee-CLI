@@ -35,6 +35,9 @@ const mock = `
   export function useFileStats(){return null} export function useDirtyDirs(){return new Set()}
   export function refreshHistory(){} export function clipboardWrite(){} export function beginExplorerDrag(){}
   export function HistoryBoard(){return null}
+  export const BUNDLED_VERSION='4.0.7', RELEASE_NOTES_SEEN='seen'; export function shouldShowReleaseNotes(){return false}
+  export function cachedReleaseNotes(){return ''} export function notesForLocale(n){return n}
+  export async function loadReleaseNotes(version){window.calls.push(['notes',version]);return '### 新内容 v'+version}
 `;
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `import{createRoot}from'react-dom/client';import{Explorer}from'./src/components/left/Explorer';import'./src/styles/global.css';createRoot(document.getElementById('root')).render(<Explorer/>);` },
@@ -42,7 +45,7 @@ await build({
   nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   define: { 'process.env.NODE_ENV': '"development"', __IS_LINUX__: 'false' },
   plugins: [{ name: 'self-update-boundaries', setup(builder) {
-    builder.onResolve({ filter: /(?:store\/app-state|tauri|lib\/(?:git-status|history-cache|clipboard|explorer-drag|update-manifest)|right\/HistoryBoard|@tauri-apps\/api\/(?:event|app))$/ }, () => ({ path: 'mock', namespace: 'fixture' }));
+    builder.onResolve({ filter: /(?:store\/app-state|tauri|lib\/(?:git-status|history-cache|clipboard|explorer-drag|update-manifest|release-notes)|right\/HistoryBoard|@tauri-apps\/api\/(?:event|app))$/ }, () => ({ path: 'mock', namespace: 'fixture' }));
     builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: mock, resolveDir: project, loader: 'js' }));
   } }],
 });
@@ -101,9 +104,16 @@ try {
     const box = await button.boundingBox(), panel = await page.locator('.panel-left').boundingBox();
     assert.ok(box.x + box.width <= panel.x + panel.width, 'the wider Install button stays inside the sidebar');
 
+    // The install step shows the new version's notes first; only 开始更新 installs.
     await button.click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByText('从 v4.0.7 更新到 v9.9.9', { exact: false }).waitFor();
+    await dialog.getByText('新内容 v9.9.9').waitFor();
+    assert.deepEqual(await calls('install'), [], 'opening the notes installs nothing');
+    await dialog.getByRole('button', { name: '开始更新' }).click();
     await page.waitForFunction(() => window.pending.install);
     assert.deepEqual(await calls('install'), [['install', '9.9.9']]);
+    assert.equal(await dialog.getByRole('button', { name: '开始更新' }).isDisabled(), true, 'the notes stay, waiting, while the app closes');
     assert.equal(await label(), '正在重启');
     await settle('install', 'resolve', true);
     await page.waitForTimeout(50);
@@ -111,7 +121,7 @@ try {
     assert.deepEqual(await calls('open'), []);
     assert.deepEqual(errors, []);
     await page.close();
-    console.log(`OK Windows downloads first and installs on the second click (screenshots: ${directory})`);
+    console.log(`OK Windows downloads first; the second click shows the notes and 开始更新 installs (screenshots: ${directory})`);
   }
 
   // Windows: an installer that disappeared goes back to Download; a failed download opens the website.
@@ -120,9 +130,11 @@ try {
     await page.getByText('安装', { exact: true }).waitFor();
     assert.deepEqual(await calls('download'), [], 'an earlier download is offered for installation straight away');
     await button.click();
+    await page.getByRole('dialog').getByRole('button', { name: '开始更新' }).click();
     await page.waitForFunction(() => window.pending.install);
     await page.evaluate(() => { window.downloaded = null; });
     await settle('install', 'resolve', false);
+    await page.waitForFunction(() => !document.querySelector('[role="dialog"]'));
     await page.evaluate(() => { window.pending = {}; });
     await page.waitForFunction(() => document.querySelector('.update-check-btn').getAttribute('aria-label') === '下载更新 v9.9.9');
 
@@ -147,8 +159,16 @@ try {
   // macOS: the DMG opens after downloading and the button returns to idle; nothing to install here.
   {
     const { page, errors, button, label, calls, settle } = await open('MacIntel');
+    // Here the download opens the installer, so the notes come first: Close keeps it from starting.
     await button.click();
-    await page.waitForFunction(() => window.pending.download);
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '开始更新' }).waitFor();
+    await dialog.getByRole('button', { name: '关闭' }).click();
+    await page.waitForFunction(() => !document.querySelector('[role="dialog"]'));
+    assert.deepEqual(await calls('download'), [], 'closing the notes starts nothing');
+    await button.click();
+    await page.getByRole('dialog').getByRole('button', { name: '开始更新' }).click();
+    await page.waitForFunction(() => window.pending.download && !document.querySelector('[role="dialog"]'));
     await settle('download', 'resolve', null);
     await page.waitForFunction(() => !document.querySelector('.update-check-btn').disabled);
     assert.equal(await label(), '下载更新 v9.9.9');
@@ -156,7 +176,7 @@ try {
     assert.deepEqual(await calls('install'), []);
     assert.deepEqual(errors, []);
     await page.close();
-    console.log('OK macOS / Linux keep opening the download directly');
+    console.log('OK macOS / Linux show the notes first, then download and open it');
   }
 } finally {
   await browser.close();

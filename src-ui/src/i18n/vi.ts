@@ -967,4 +967,9 @@ export const vi = {
   "titlebar.conversation_menu": "Menu cuộc trò chuyện",
   "menu.close_conversation": "Đóng cuộc trò chuyện",
   "gambit.placeholder_save": "Tin nhắn…  {save} để lưu dùng sau",
+  "changelog.update_title": "Cập nhật từ {from} lên {to}: có gì mới",
+  "changelog.start_update": "Bắt đầu cập nhật",
+  "changelog.got_it": "Đã hiểu",
+  "changelog.feedback": "Góp ý",
+  "changelog.close": "Đóng",
 } as const satisfies Record<I18nKey, string>;

@@ -966,4 +966,9 @@ export const ko = {
   "titlebar.conversation_menu": "대화 메뉴",
   "menu.close_conversation": "대화 닫기",
   "gambit.placeholder_save": "메시지…  {save} 사전 입력에 저장",
+  "changelog.update_title": "{from}에서 {to}로 업데이트: 새로운 내용",
+  "changelog.start_update": "업데이트 시작",
+  "changelog.got_it": "확인",
+  "changelog.feedback": "피드백",
+  "changelog.close": "닫기",
 } as const satisfies Record<I18nKey, string>;

@@ -32,15 +32,9 @@ import { setUiScale, useUiScale } from '../../lib/ui-scale';
 import { THEME_COLORS, THEME_MODES, THEME_SHAPES, ICON_ART_THEMES, LANGUAGES, isMaskTintTheme } from '../../lib/personalization';
 import './SettingsModal.css';
 
-type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'mobile' | 'language' | 'feedback';
-const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'mobile', 'language', 'feedback'];
-
-// Trailing "opens outside the app" affordance on the feedback cards.
-const ExternalLinkArrow = () => (
-  <svg className="settings-feedback-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M7 17 17 7" /><path d="M7 7h10v10" />
-  </svg>
-);
+// Feedback moved to the changelog's footer (as EchoBird's), so it no longer has a page of its own.
+type Section = 'general' | 'appearance' | 'wallpaper' | 'terminal' | 'gambit' | 'sound' | 'voice' | 'mobile' | 'language';
+const SECTION_IDS: Section[] = ['general', 'appearance', 'wallpaper', 'terminal', 'gambit', 'sound', 'voice', 'mobile', 'language'];
 
 // Read a `cc-*` boolean localStorage preference. Module-level
 // so the SettingsModal sound toggles can seed their useState initializers.
@@ -106,15 +100,6 @@ const ICONS: Record<Section, ReactNode> = {
   sound: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-    </svg>
-  ),
-  feedback: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m8 2 1.88 1.88" /><path d="M14.12 3.88 16 2" />
-      <path d="M9 7.13V6a3 3 0 1 1 6 0v1.13" />
-      <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6Z" />
-      <path d="M12 20v-9" /><path d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path d="M6 13H2" /><path d="M6 17c-1.7 0-3 1.3-3 3" />
-      <path d="M17.47 9c1.93-.2 3.53-1.9 3.53-4" /><path d="M18 13h4" /><path d="M18 17c1.7 0 3 1.3 3 3" />
     </svg>
   ),
 };
@@ -303,7 +288,6 @@ export function SettingsModal() {
     // Web 端 access is managed on the desktop, never from a browser.
     ...(REMOTE ? [] : [{ id: 'mobile' as const, label: t('settings.mobile') }]),
     { id: 'language',   label: t('settings.language') },
-    { id: 'feedback',   label: t('settings.feedback') },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
   // A dialog over the window in Clean and Code alike; a narrow window (a phone) keeps the full page.
@@ -706,37 +690,6 @@ export function SettingsModal() {
                   </button>
                 ))}
               </div>
-            )}
-
-            {section === 'feedback' && (
-              <>
-                <p className="settings-feedback-desc">{t('settings.feedback.desc')}</p>
-                <div className="settings-feedback-cards">
-                  <button
-                    type="button"
-                    className="settings-feedback-card"
-                    onClick={() => commands.openUrl('https://github.com/edison7009/Coffee-CLI/issues').catch(() => {})}
-                  >
-                    <span className="settings-feedback-card-icon">
-                      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-                      </svg>
-                    </span>
-                    <span className="settings-feedback-card-label">GitHub</span>
-                    <ExternalLinkArrow />
-                  </button>
-                  {state.currentLang === 'zh-CN' && (
-                    <button
-                      type="button"
-                      className="settings-feedback-card"
-                      onClick={() => commands.openUrl('https://gitcode.com/edison7009/Coffee-CLI/issues').catch(() => {})}
-                    >
-                      <span className="settings-feedback-card-label">国内访问：GitCode</span>
-                      <ExternalLinkArrow />
-                    </button>
-                  )}
-                </div>
-              </>
             )}
           </div>
         </section>

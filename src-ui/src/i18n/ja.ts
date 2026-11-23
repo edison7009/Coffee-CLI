@@ -966,4 +966,9 @@ export const ja = {
   "titlebar.conversation_menu": "会話メニュー",
   "menu.close_conversation": "会話を閉じる",
   "gambit.placeholder_save": "メッセージ…  {save} で事前入力に保存",
+  "changelog.update_title": "{from} から {to} へ更新：新しい内容",
+  "changelog.start_update": "更新を開始",
+  "changelog.got_it": "了解",
+  "changelog.feedback": "フィードバック",
+  "changelog.close": "閉じる",
 } as const satisfies Record<I18nKey, string>;

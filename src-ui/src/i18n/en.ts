@@ -969,6 +969,11 @@ export const en = {
   "titlebar.conversation_menu": "Conversation menu",
   "menu.close_conversation": "Close conversation",
   "gambit.placeholder_save": "Message…  {save} to save for later",
+  "changelog.update_title": "Updating from {from} to {to}: what’s new",
+  "changelog.start_update": "Start update",
+  "changelog.got_it": "Got it",
+  "changelog.feedback": "Feedback",
+  "changelog.close": "Close",
 } as const;
 
 export type I18nKey = keyof typeof en;

@@ -968,4 +968,9 @@ export const zhCN = {
   "titlebar.conversation_menu": "对话菜单",
   "menu.close_conversation": "关闭对话",
   "gambit.placeholder_save": "输入消息…  {save} 存入预输入",
+  "changelog.update_title": "从 {from} 更新到 {to}，您将体验到的新内容：",
+  "changelog.start_update": "开始更新",
+  "changelog.got_it": "我知道了",
+  "changelog.feedback": "问题反馈",
+  "changelog.close": "关闭",
 } as const satisfies Record<I18nKey, string>;

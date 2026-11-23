@@ -963,4 +963,9 @@ export const ru = {
   "titlebar.conversation_menu": "Меню разговора",
   "menu.close_conversation": "Закрыть разговор",
   "gambit.placeholder_save": "Сообщение…  {save} — сохранить на потом",
+  "changelog.update_title": "Обновление с {from} до {to}: что нового",
+  "changelog.start_update": "Начать обновление",
+  "changelog.got_it": "Понятно",
+  "changelog.feedback": "Обратная связь",
+  "changelog.close": "Закрыть",
 } as const satisfies Record<I18nKey, string>;
