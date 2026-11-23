@@ -1,0 +1,58 @@
+/* Clear's two colours. Clear has no palettes or styles to choose from: a quiet neutral day and night, the same
+   on every machine (Code keeps every palette and style). Day: a pale grey window with a white page; night: a
+   dark grey window with a near-black page. The window itself is the "ground" the rail and title bar sit on. */
+:root[data-layout="work"][data-mode="light"] {
+  --clear-ground: #f7f7f8;
+  --bg-app: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-card: #f4f4f5;
+  --bg-input: #ffffff;
+  --bg-input-focus: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.045);
+  --bg-active: rgba(0, 0, 0, 0.075);
+  --bg-terminal: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-input: rgba(0, 0, 0, 0.12);
+  --border-focus: rgba(0, 0, 0, 0.3);
+  --text-1: #1f1f1f;
+  --text-2: #5f6164;
+  --text-3: #8b8d91;
+  --accent: #5f6164;
+  --accent-hover: #4a4c4f;
+  --accent-active: #3a3c3f;
+  --accent-bg: #f0f0f1;
+  --green: #1e8e3e;
+  --red: #c5221f;
+  --blue: #1a73e8;
+  --shadow-rgb: 0, 0, 0;
+  --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+:root[data-layout="work"][data-mode="dark"] {
+  --clear-ground: #18181a;
+  --bg-app: #0b0b0c;
+  --bg-panel: #18181a;
+  --bg-card: #161618;
+  --bg-input: #161618;
+  --bg-input-focus: #19191b;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --bg-terminal: #0b0b0c;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-input: rgba(255, 255, 255, 0.12);
+  --border-focus: rgba(255, 255, 255, 0.3);
+  --text-1: #ececee;
+  --text-2: #a8a8ad;
+  --text-3: #7a7a80;
+  --accent: #a8a8ad;
+  --accent-hover: #c4c4c8;
+  --accent-active: #8e8e93;
+  --accent-bg: #232326;
+  --green: #81c995;
+  --red: #f28b82;
+  --blue: #8ab4f8;
+  --shadow-rgb: 0, 0, 0;
+  --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+/* The window paints the ground; no wallpaper behind the conversation in Clear. */
+:root[data-layout="work"] body, :root[data-layout="work"] #root { background: var(--clear-ground) !important; background-image: none !important; }
+:root[data-layout="work"] :is(.conversation-background, .launchpad-bg) { display: none !important; }

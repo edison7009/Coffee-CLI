@@ -109,9 +109,9 @@
 .icon-rail-session[aria-current="true"]::before { content: ''; position: absolute; left: -7px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--text-1); }
 .icon-rail-letter { font: 600 13px/1 var(--font-nav, var(--font)); color: var(--text-2); }
 .icon-rail-session:hover .icon-rail-letter, .icon-rail-session[aria-current="true"] .icon-rail-letter { color: var(--text-1); }
-.icon-rail-tool-badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 5px; background: var(--bg-app); }
+.icon-rail-tool-badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 5px; background: var(--clear-ground, var(--bg-app)); }
 .icon-rail-tool-badge > *, .icon-rail-tool-badge svg, .icon-rail-tool-badge img { width: 11px !important; height: 11px !important; }
-.icon-rail-state { position: absolute; right: -3px; top: -3px; display: grid; place-items: center; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-app); }
+.icon-rail-state { position: absolute; right: -3px; top: -3px; display: grid; place-items: center; width: 12px; height: 12px; border-radius: 50%; background: var(--clear-ground, var(--bg-app)); }
 .icon-rail-state > i { display: block; border-radius: 50%; }
 .icon-rail-state.is-working > i { width: 8px; height: 8px; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--text-3) 40%, transparent); border-top-color: var(--text-1); animation: icon-rail-spin 1s linear infinite; }
 .icon-rail-state.is-unread > i { width: 6px; height: 6px; background: var(--blue); }
@@ -122,13 +122,11 @@
 /* Clear 方案 A window layers: the window (title bar, rail, the margin around the content) sits one step darker,
    and the conversation is a panel on it — 8px corners, a 1px line drawn with box-shadow, 6px clear of the
    window's right and bottom edges (none on the rail's side). The darker ground is the panel's own wide shadow,
-   so textured shapes keep their texture underneath. */
-:root[data-layout="work"] { --clear-ground: rgb(0 0 0 / .12); }
-:root[data-layout="work"][data-mode="light"] { --clear-ground: rgb(0 0 0 / .06); }
+   which paints the window's ground colour (styles/clear-palette.css) everywhere around the panel. */
 :root[data-layout="work"] .titlebar { background-image: linear-gradient(var(--clear-ground), var(--clear-ground)); }
 :root[data-layout="work"] .app-layout:not(.is-compact) { overflow: hidden; }
 :root[data-layout="work"] .app-layout:not(.is-compact) > .panel-center {
-  margin: 0 6px 6px 0; border-radius: 8px; overflow: hidden;
+  margin: 0 6px 6px 0; border-radius: 8px; overflow: hidden; background: var(--bg-app);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent), 0 0 0 100vmax var(--clear-ground);
 }
 

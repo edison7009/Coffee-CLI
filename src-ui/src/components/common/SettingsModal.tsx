@@ -377,6 +377,8 @@ export function SettingsModal() {
                     ))}
                   </div>
                 </div>
+                {/* Clear has its own two colours and no styles (styles/clear-palette.css): palettes and styles apply to Code. */}
+                {state.layoutMode !== 'work' && <>
                 <div className="settings-theme-grid">
                   {THEME_COLORS.map(c => {
                     const active = c.code === state.currentTheme;
@@ -433,6 +435,7 @@ export function SettingsModal() {
                     </button>
                   ))}
                 </div>
+                </>}
 
                 <div className="settings-section-label">{t('theme.section.icons')}</div>
                 <div className="settings-chip-row settings-icon-row">
@@ -472,6 +475,7 @@ export function SettingsModal() {
                     </div>
                   </div>
                 </div>
+                {state.layoutMode !== 'work' && <>
                 <div className="settings-group-gap" aria-hidden="true" />
                 <div className="settings-section-label">{t('settings.wallpaper')}</div>
                 <div className="settings-wallpaper-actions">
@@ -497,6 +501,7 @@ export function SettingsModal() {
                   disabled={!hasBg}
                   label={t('settings.wallpaper.opacity')}
                 />
+                </>}
               </>
             )}
 

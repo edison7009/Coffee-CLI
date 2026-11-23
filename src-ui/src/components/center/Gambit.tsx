@@ -155,6 +155,7 @@ function DraftActions({ enabled, canShare, label, shareLabel, clearLabel, tips, 
 }
 
 const CARD_MIN_HEIGHT = 76; // 方案 A: the card — one line to type, one line of controls
+const CLEAR_MIN_HEIGHT = 64; // Clear: the one-line box (36px) and the row of settings under it
 const PLACE_TAB_HEIGHT = 26; // the place tab standing on the card's top edge
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
@@ -280,7 +281,7 @@ function GambitImpl({
   // Height the draft needs. The dragged height stays the floor, so clearing the draft returns to it.
   const [contentH, setContentH] = useState(0);
   // 纯净: one line that grows with the draft; the dragged height applies to 专业 only.
-  const effectiveH = Math.max(cardShell ? CARD_MIN_HEIGHT : dockedH, contentH);
+  const effectiveH = Math.max(cardShell ? (workLayout ? CLEAR_MIN_HEIGHT : CARD_MIN_HEIGHT) : dockedH, contentH);
   // Caches the latest height written to the DOM during a resize drag, so
   // onUp commits it back to React state once without thrashing intermediate
   // renders. Null when no resize is in progress.

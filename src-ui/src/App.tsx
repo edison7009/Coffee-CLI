@@ -30,6 +30,7 @@ import { FolderPickerHost } from './components/common/FolderPicker';
 import { RightPanel } from './components/right/Compiler';
 import { IconRail } from './components/left/IconRail';
 import { saveLayoutMode } from './lib/layout-mode';
+import './styles/clear-palette.css';
 import { GitStatusProvider } from './lib/git-status';
 import './styles/global.css';
 import { AppCloseHost } from './components/common/AppCloseHost';
@@ -391,16 +392,19 @@ export function App() {
     // "glass" and expose the variant via data-frost (see [data-frost=...]
     // in global.css). Must mirror the inline script in index.html.
     const el = document.documentElement;
-    const frost = isFrostShape(state.currentShape);
+    // Clear has no styles of its own to pick: always the plain shape, no textures, frost or wallpaper
+    // (its two colours come from global.css [data-layout="work"]). The chosen style stays saved for Code.
+    const shape = state.layoutMode === 'work' ? 'soft' : state.currentShape;
+    const frost = isFrostShape(shape);
     if (frost) {
       el.setAttribute('data-shape', 'glass');
-      el.setAttribute('data-frost', state.currentShape);
+      el.setAttribute('data-frost', shape);
     } else {
       // Character flow and Basalt reuse Carbon's transparent chrome, each with its own background instead of the mesh.
-      el.setAttribute('data-shape', state.currentShape === 'characters' || state.currentShape === 'basalt' ? 'carbon' : state.currentShape);
+      el.setAttribute('data-shape', shape === 'characters' || shape === 'basalt' ? 'carbon' : shape);
       el.removeAttribute('data-frost');
     }
-    if (state.currentShape === 'characters' || state.currentShape === 'basalt') el.setAttribute('data-background', state.currentShape);
+    if (shape === 'characters' || shape === 'basalt') el.setAttribute('data-background', shape);
     else el.removeAttribute('data-background');
     try { localStorage.setItem('cc-shape', state.currentShape); } catch { /* Best-effort operation; failure is non-fatal. */ }
 
@@ -416,7 +420,7 @@ export function App() {
         followSystem: state.themeMode === 'system',
       }).catch(() => {});
     }
-  }, [state.currentShape, state.currentTheme, state.themeMode, resolvedMode]);
+  }, [state.currentShape, state.currentTheme, state.themeMode, resolvedMode, state.layoutMode]);
 
   // Sync the UI language to the <html> lang attribute so CSS :lang(zh)
   // selectors can fire. This is what swaps the splash-label out of the
@@ -522,7 +526,7 @@ export function App() {
 
   return (
     <>
-      {state.currentShape === 'characters' && <CharacterBackground selectedId={activeTabId} />}
+      {state.currentShape === 'characters' && state.layoutMode !== 'work' && <CharacterBackground selectedId={activeTabId} />}
       {/* Custom titlebar — drag region + minimize / maximize / close */}
       <TitleBar />
       {/* The desktop's background agent, orchestration and pairing run only in the desktop app. */}
