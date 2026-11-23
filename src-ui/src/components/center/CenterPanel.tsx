@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
-import { useHoverTip } from '../common/HoverTip';
+import { InstallChip } from './InstallChip';
 import { AutomationsPage } from './AutomationsPage';
 import { addProjectFolder, getProjectFolders, removeProjectFolder, subscribeProjectFolders } from '../../lib/project-folders';
 import { REMOTE } from '../../remote/bridge';
@@ -383,7 +383,6 @@ const CONFIGURABLE_AGENT_TOOLS = new Set<ToolType>([
 export function CenterPanel() {
   const { state, dispatch } = useAppState();
   const orchestration = useOrchestration();
-  const installTip = useHoverTip();
   // A tab's sub-windows (方案 B, revised): not tabs of their own; the parent shows how many, and hovering the number
   // lists them. The menu stays while the pointer is on the number or on the menu.
   const families = useMemo(() => tabFamilies(state.terminals, orchestration.tasks), [state.terminals, orchestration.tasks]);
@@ -1653,8 +1652,7 @@ export function CenterPanel() {
                                       <span className="launchpad-card-name">{tool.label}</span>
                                       {!isTerminal && tool.key && <CliUpdateButton tool={tool.key} active={!utilityPageOpen && !configModalTool} installed={installed} />}
                                       {/* Not installed: EchoBird's assistant installs and sets it up (environment, sign-in, models), like 切换模型. */}
-                                      {!installed && !isTerminal && <button type="button" className="launchpad-install" {...installTip.tipFor(t('launchpad.install_tip', { tool: tool.label }))}
-                                        onClick={event => { event.stopPropagation(); commands.openUrl('https://echobird.ai/').catch(() => {}); }}>{t('launchpad.install')}</button>}
+                                      {!installed && !isTerminal && <InstallChip tool={tool.label} />}
                                       {isTerminal && <button type="button" className="launchpad-chip" onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}>{t('launchpad.remote')}</button>}
                                     </div>
                                     {tool.requiresCwd && (tool.key && lastFolders[tool.key]
@@ -1888,7 +1886,6 @@ export function CenterPanel() {
           onClose={() => setConfigModalTool(null)}
         />
       )}
-      {installTip.tip}
       {folderMenu && (
         <RecentFolderMenu
           x={folderMenu.x}

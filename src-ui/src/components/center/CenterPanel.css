@@ -1513,11 +1513,20 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   transform: translateY(1px); transition: background .15s;
 }
 .launchpad-card .launchpad-install:hover { background: color-mix(in srgb, var(--accent) 28%, transparent); }
-.launchpad-card .launchpad-install:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.launchpad-card .launchpad-install:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 .launchpad-card-group.launchpad-card-disabled { opacity: 1; }
 .launchpad-card-disabled .launchpad-card > :not(.launchpad-card-info, .launchpad-card-mark),
 .launchpad-card-disabled .launchpad-card-info > :not(.launchpad-card-title),
 .launchpad-card-disabled .launchpad-card-title > :not(.launchpad-install) { opacity: .35; }
 [data-layout="code"] .launchpad-card-group.launchpad-card-disabled { --brand-tint: 6%; }
+/* The material shapes, a wallpaper and Panel draw the card's own ground and frame at full strength: a veil in the
+   page's colour dims the whole card there, with the chip lifted above it; and no hover accent on a card that can't
+   be started. */
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"], [data-shape="panel"]) .launchpad-card-group.launchpad-card-disabled,
+.launchpad-has-bg .launchpad-card-group.launchpad-card-disabled { position: relative; }
+:is([data-shape="glass"], [data-shape="carbon"], [data-shape="monogram"], [data-shape="panel"]) .launchpad-card-group.launchpad-card-disabled::after,
+.launchpad-has-bg .launchpad-card-group.launchpad-card-disabled::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: inherit; background: color-mix(in srgb, var(--bg-app) 45%, transparent); pointer-events: none; }
+.launchpad-card-disabled .launchpad-install { position: relative; z-index: 3; }
+[data-shape="panel"] .launchpad-card-group.launchpad-card-disabled:hover { border-color: var(--border) !important; }
 /* The faded logo keeps its own faintness, halved. */
 [data-layout="code"] .launchpad-card-disabled .launchpad-card-mark { opacity: calc(var(--brand-mark) * .5); }
