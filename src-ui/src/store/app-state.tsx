@@ -769,8 +769,8 @@ function reducer(state: AppState, action: Action): AppState {
       // the tab's close button and the overlay's close button.
       return { ...state, diffSelection: null, diffTabActive: false };
     case 'SET_LAYOUT_MODE':
-      // The right panel opens on demand in 工作式, so it starts closed there.
-      return action.mode === state.layoutMode ? state : { ...state, layoutMode: action.mode, rightPanelHidden: action.mode === 'work' ? true : state.rightPanelHidden };
+      // Clear never shows the right column (App.tsx), so Code's own open/closed choice is left as it was.
+      return action.mode === state.layoutMode ? state : { ...state, layoutMode: action.mode };
     case 'SET_DIFF_MODE': {
       try { localStorage.setItem('cc-diff-mode', action.mode); } catch { /* Best-effort operation; failure is non-fatal. */ }
       // Entering tab mode focuses the diff tab; leaving blurs it. Keeps the
@@ -962,8 +962,6 @@ function getInitialState(): AppState {
   try {
     leftPanelHidden = localStorage.getItem('cc-left-hidden') === '1';
     rightPanelHidden = localStorage.getItem('cc-right-hidden') !== '0';
-    // 工作式 opens the right panel on demand only.
-    if (layoutMode === 'work') rightPanelHidden = true;
     preInputButton = localStorage.getItem('cc-pre-input-button') !== '0';
     // The board has one view now; forget the old view choice.
     localStorage.removeItem('cc-task-view');

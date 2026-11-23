@@ -524,6 +524,18 @@ function GambitImpl({
     return () => { observer.disconnect(); mutations.disconnect(); };
   }, [cardShell, sessionId]);
 
+  // Switching Clear / Code changes the box around the draft: forget the height measured for the old one,
+  // then measure again once the new layout has rendered (or the old height lingers in the new layout).
+  const [remeasure, setRemeasure] = useState(0);
+  const layoutKey = `${workLayout}:${cardShell}`;
+  const lastLayoutKey = useRef(layoutKey);
+  useLayoutEffect(() => {
+    if (lastLayoutKey.current === layoutKey) return;
+    lastLayoutKey.current = layoutKey;
+    setContentH(0);
+    setRemeasure(n => n + 1);
+  }, [layoutKey]);
+
   // Auto-grow the textarea to fit its content as the user types.
   useLayoutEffect(() => {
     const ta = textareaRef.current;
@@ -561,7 +573,7 @@ function GambitImpl({
       ta.selectionStart === ta.value.length &&
       ta.selectionEnd === ta.value.length;
     scroller.scrollTop = followCaretToBottom ? scroller.scrollHeight : prevScrollTop;
-  }, [draft]);
+  }, [draft, remeasure]);
 
 
   // ─── Context menu ─────────────────────────────────────────────
