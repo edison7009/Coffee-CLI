@@ -15,7 +15,7 @@ import { useEffect } from 'react';
 import { commands, isTauri } from '../../tauri';
 import { useAppState, useAppDispatch, schemeLabels } from '../../store/app-state';
 import { IS_MACOS } from '../../lib/platform';
-import { IS_WEB, useCompact } from '../../lib/viewport';
+import { IS_WEB, useCompact, usePhone } from '../../lib/viewport';
 import { useT } from '../../i18n/useT';
 import { isConversationSession } from '../../lib/chat-tools';
 import './TitleBar.css';
@@ -54,6 +54,8 @@ export function TitleBar() {
   // collapsed window" effect for zero flicker — the right call.
   // Narrow: the panels are drawers, so the buttons show and toggle the open drawer instead.
   const compact = useCompact();
+  // Only a phone's bar is too narrow for the Work / Code switch; a narrow desktop window keeps it.
+  const phone = usePhone();
   // 工作式 has no tab strip or sidebar: the bar shows the conversation's name, and the rail holds the rest.
   const work = state.layoutMode === 'work' && !compact;
   const leftShown = !work && (compact ? state.drawer === 'left' : !state.leftPanelHidden);
@@ -139,7 +141,7 @@ export function TitleBar() {
         </button>}
         {/* 纯净 ↔ 专业, in both shells (the changelog moved to Settings, under the version). */}
         {/* A phone's bar has no room for it beside the tabs: there it lives in Settings → Appearance. */}
-        {!compact && <div className="titlebar-layout-switch" role="radiogroup" aria-label={t('layout.title')}>
+        {!phone && <div className="titlebar-layout-switch" role="radiogroup" aria-label={t('layout.title')}>
           {(['work', 'code'] as const).map(mode => <button key={mode} type="button" role="radio" aria-checked={state.layoutMode === mode}
             onClick={() => dispatch({ type: 'SET_LAYOUT_MODE', mode })}>{t(mode === 'work' ? 'layout.work' : 'layout.code')}</button>)}
         </div>}

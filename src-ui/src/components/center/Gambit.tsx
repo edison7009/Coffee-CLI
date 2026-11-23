@@ -582,7 +582,8 @@ function GambitImpl({
   useEffect(() => {
     const meta = rootRef.current?.querySelector<HTMLElement>('.gambit-meta');
     if (!meta || typeof ResizeObserver === 'undefined') return;
-    let last = -1;
+    // Its present height is what the box was sized with: only a change after that remeasures.
+    let last = meta.offsetHeight;
     const observer = new ResizeObserver(() => { if (meta.offsetHeight !== last) { last = meta.offsetHeight; setRemeasure(n => n + 1); } });
     observer.observe(meta);
     return () => observer.disconnect();
