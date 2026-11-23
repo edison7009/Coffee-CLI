@@ -40,7 +40,7 @@ export function ToolRemoteControlPanel({ active, tools }: { active: boolean; too
     finally { setPending(null); }
   };
   const shown = tools.slice(0, 6);
-  // Tools without the window tools are named once, not given a switch that can never turn on.
+  // Only the agent apps that take the window tools get a switch; the rest are left out.
   const listed = shown.filter(tool => SUPPORTED.has(tool.value));
   return <div className="tool-control remote-control-page" aria-busy={pending !== null || (!enabled && !failed)}>
     <div className="remote-control-head">
