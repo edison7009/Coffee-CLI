@@ -910,7 +910,7 @@ export const fr = {
   "rail.changes": "Modifications",
   "rail.devices": "Appareils",
   "layout.title": "Disposition",
-  "layout.work": "Clear",
+  "layout.work": "Clean",
   "layout.code": "Code",
   "layout.work_hint": "Seulement la conversation, sans terminal : une barre d’icônes et le chat.",
   "layout.code_hint": "Onglets, barres latérales et terminaux : l’espace de travail complet.",

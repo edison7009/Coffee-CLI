@@ -913,7 +913,7 @@ export const ko = {
   "rail.changes": "변경 기록",
   "rail.devices": "기기",
   "layout.title": "레이아웃",
-  "layout.work": "Clear",
+  "layout.work": "Clean",
   "layout.code": "Code",
   "layout.work_hint": "대화만, 터미널 없음: 아이콘 막대와 대화.",
   "layout.code_hint": "탭, 사이드바, 터미널: 전체 작업 공간.",

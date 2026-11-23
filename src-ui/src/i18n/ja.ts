@@ -913,7 +913,7 @@ export const ja = {
   "rail.changes": "変更履歴",
   "rail.devices": "デバイス",
   "layout.title": "レイアウト",
-  "layout.work": "Clear",
+  "layout.work": "Clean",
   "layout.code": "Code",
   "layout.work_hint": "会話だけ、ターミナルなし：アイコン列と会話。",
   "layout.code_hint": "タブ、サイドバー、ターミナル：フルのワークスペース。",

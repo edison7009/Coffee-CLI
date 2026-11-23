@@ -916,7 +916,7 @@ export const en = {
   "rail.changes": "Changes",
   "rail.devices": "Devices",
   "layout.title": "Layout",
-  "layout.work": "Clear",
+  "layout.work": "Clean",
   "layout.code": "Code",
   "layout.work_hint": "Just the conversation: no terminals, an icon rail and the chat.",
   "layout.code_hint": "Tabs, sidebars and terminals: the full workspace.",

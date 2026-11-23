@@ -914,7 +914,7 @@ export const zhTW = {
   "rail.changes": "修改記錄",
   "rail.devices": "裝置",
   "layout.title": "介面風格",
-  "layout.work": "Clear",
+  "layout.work": "Clean",
   "layout.code": "Code",
   "layout.work_hint": "只有對話，不啟動終端：左側一條圖示，中間全是對話。",
   "layout.code_hint": "多分頁、側欄和終端：完整的工作區。",

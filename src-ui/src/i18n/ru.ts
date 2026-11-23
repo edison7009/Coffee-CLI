@@ -910,7 +910,7 @@ export const ru = {
   "rail.changes": "Изменения",
   "rail.devices": "Устройства",
   "layout.title": "Интерфейс",
-  "layout.work": "Clear",
+  "layout.work": "Clean",
   "layout.code": "Code",
   "layout.work_hint": "Только разговор, без терминалов: полоса значков и чат.",
   "layout.code_hint": "Вкладки, боковые панели и терминалы: полное рабочее пространство.",
