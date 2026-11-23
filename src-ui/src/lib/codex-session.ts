@@ -77,6 +77,7 @@ export function retainCodexSession(id: string, cwd: string | null, resumeToken?:
           if (clients.get(id) === c && c.owners && c.generation === generation && c.state.ready) setSessionControls(id, generation, value);
         });
         publish(c, true);
+        void drainCodexHistory(id, c);
         void rpc(c, id, 'collaborationMode/list', {}).then(result => {
           if (clients.get(id) !== c || !c.owners || !c.state.ready || c.generation !== generation) return;
           const modes = arr(result.data).map(obj);
@@ -249,12 +250,20 @@ export async function respondCodex(id: string, requestId: string | number, respo
   await invoke('codex_session_respond', { id, generation: c.generation, requestId, response, reject });
   c.state = { ...c.state, requests: c.state.requests.filter(r => r.id !== requestId) }; publish(c, true);
 }
+/** Opening a conversation shows all of it: the older pages follow on their own instead of waiting on a button. */
+async function drainCodexHistory(id: string, c: Client) {
+  while (clients.get(id) === c && c.state.historyCursor && !c.state.loadingHistory) {
+    const before = c.state.historyCursor;
+    await loadCodexHistory(id);
+    if (c.state.historyCursor === before) return;
+  }
+}
 export async function loadCodexHistory(id: string): Promise<void> {
   if (REMOTE) return mirrorCall('codex', 'loadCodexHistory', [id]);
   const c = client(id); if (!c.state.historyCursor || c.state.loadingHistory) return;
   c.state = { ...c.state, loadingHistory: true }; publish(c, true);
   try {
-    const page = await rpc(c, id, 'thread/turns/list', { cursor: c.state.historyCursor, itemsView: 'full', sortDirection: 'desc', limit: 20 });
+    const page = await rpc(c, id, 'thread/turns/list', { cursor: c.state.historyCursor, itemsView: 'full', sortDirection: 'desc', limit: 100 });
     const turns = arr(page.data).reverse().map(obj), turnIds = new Set(turns.map(turn => str(turn.id)));
     const existing = new Map(c.state.messages.map(m => [m.id, m]));
     const messages = turns.flatMap(turn => {

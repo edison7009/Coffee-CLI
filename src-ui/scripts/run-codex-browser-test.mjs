@@ -464,7 +464,8 @@ try {
   await page.waitForTimeout(200);
   assert.ok(Math.abs((await metrics()).top-reading.top)<2,'streaming preserves upward reading position');
   const navigation=page.locator('.host:visible .conversation-navigation');
-  assert.equal(await navigation.locator('button').count(),48,'only user turns become navigation ticks, including history with grouped tools');
+  assert.equal(await navigation.locator('button').count(),68,'only user turns become navigation ticks, including history with grouped tools and the older page loaded on open');
+  assert.equal(await page.locator('.host:visible .claude-expand').count(),0,'opening loads the whole history: no load-earlier button is left');
   const turn=navigation.locator('[data-conversation-navigation-target="history-10:u"]');
   await turn.hover();
   assert.ok((await navigation.getByRole('tooltip').textContent()).startsWith('history-10 '),'hover previews the user prompt');
@@ -480,9 +481,7 @@ try {
   const manual=await metrics();await page.waitForTimeout(150);
   assert.ok(manual.top<jumped.top-30&&Math.abs((await metrics()).top-manual.top)<2,'manual scrolling releases the navigation anchor');
   await scroller.evaluate(el=>{el.scrollTop=0;el.dispatchEvent(new Event('scroll'))});await page.waitForTimeout(300);
-  const first=page.locator('[data-message-id="history-0:u"]'),before=await first.boundingBox();
-  await page.getByRole('button',{name:'Load earlier messages',exact:true}).click();await page.waitForTimeout(500);
-  const after=await first.boundingBox();assert.ok(after&&Math.abs(after.y-before.y)<2,`history prepend preserves its visible anchor: ${JSON.stringify({before,after,metrics:await metrics()})}`);
+  assert.equal(await page.locator('[data-message-id="older-0:u"]').count(),1,'the older page is already in the transcript at the top, without a click');
   assert.equal(await navigation.locator('button').count(),68,'navigation includes newly loaded history');
   await turn.focus();await turn.press('Enter');await page.waitForTimeout(300);
   assert.ok(Math.abs(await targetOffset()-24)<2,'keyboard navigation still finds the same turn after history is prepended');

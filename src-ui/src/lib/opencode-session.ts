@@ -108,6 +108,7 @@ export function retainOpenCodeSession(id: string, cwd: string | null, resumeToke
           if (clients.get(id) === c && c.owners && c.generation === generation && c.state.ready) setSessionControls(id, generation, value);
         });
         publish(c, true);
+        void drainOpenCodeHistory(id, c);
         return;
       } catch (error) {
         if (directoryFailure(error) || attempt === 2 || /not installed|version|2\.0/.test(String(error))) { c.state = { ...c.state, ready: false, error: String(error) }; publish(c, true); return; }
@@ -194,6 +195,14 @@ export async function runOpenCodeCommand(id: string, command: 'compact' | { name
     else await request(c, id, 'command', { name: command.name, text: command.text ?? '' });
   } catch (error) { c.state = { ...c.state, busy: false, startedAt: undefined, error: String(error) }; throw error; }
   finally { c.sending = false; publish(c, true); }
+}
+/** Opening a conversation shows all of it: the older pages follow on their own instead of waiting on a button. */
+async function drainOpenCodeHistory(id: string, c: Client) {
+  while (clients.get(id) === c && c.state.cursor && !c.state.loadingHistory) {
+    const before = c.state.cursor;
+    await loadOpenCodeHistory(id);
+    if (c.state.cursor === before) return;
+  }
 }
 export async function loadOpenCodeHistory(id: string): Promise<void> {
   if (REMOTE) return mirrorCall('opencode', 'loadOpenCodeHistory', [id]);

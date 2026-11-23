@@ -256,7 +256,9 @@ fn transcript_among_projects(expected: std::path::PathBuf) -> std::path::PathBuf
 fn history_page(path: &std::path::Path, before: Option<u64>) -> Result<Value, String> {
     let mut file = std::fs::File::open(path).map_err(|e| e.to_string())?;
     let end = before.unwrap_or(file.metadata().map_err(|e| e.to_string())?.len());
-    let start = end.saturating_sub(512 * 1024);
+    // Opening a conversation reads the whole transcript: text is cheap, and paging made older turns wait on a
+    // button. Paging (`before`) stays for a client that still asks for an earlier page.
+    let start = if before.is_some() { end.saturating_sub(512 * 1024) } else { 0 };
     file.seek(SeekFrom::Start(start)).map_err(|e| e.to_string())?;
     let mut bytes = Vec::new();
     file.take(end - start).read_to_end(&mut bytes).map_err(|e| e.to_string())?;
@@ -271,7 +273,7 @@ pub async fn claude_session_history(sessions: State<'_, ClaudeSessions>, id: Str
     tauri::async_runtime::spawn_blocking(move || history_page(&s.history_path, Some(before))).await.map_err(|e| e.to_string())?
 }
 
-/// The newest history page of a resumed conversation, read straight from disk so the tab can show it while
+/// The whole history of a resumed conversation, read straight from disk so the tab can show it while
 /// `claude --resume` is still loading the whole transcript before it answers `initialize`.
 #[tauri::command]
 pub async fn claude_session_preview(cwd: Option<String>, resume_token: String) -> Result<Value, String> {
@@ -411,7 +413,10 @@ mod tests {
         let path = std::env::temp_dir().join(format!("coffee-claude-{}.jsonl", uuid::Uuid::new_v4()));
         let data: String = (0..700).map(|id| format!("{}\n", json!({"id":id,"text":"字".repeat(500)}))).collect();
         std::fs::write(&path, data).unwrap();
-        let mut cursor = None;
+        let whole = history_page(&path, None).unwrap();
+        assert_eq!(whole["cursor"].as_u64(), Some(0), "opening reads the whole transcript");
+        assert_eq!(whole["data"].as_str().unwrap().lines().count(), 700);
+        let mut cursor = Some(std::fs::metadata(&path).unwrap().len());
         let mut ids = std::collections::HashSet::new();
         loop {
             let page = history_page(&path, cursor).unwrap();
@@ -421,7 +426,7 @@ mod tests {
             }
             let next = page["cursor"].as_u64().unwrap();
             if next == 0 { break; }
-            assert!(cursor.is_none_or(|previous| next < previous));
+            assert!(cursor.is_some_and(|previous| next < previous));
             cursor = Some(next);
         }
         assert_eq!(ids.len(), 700);
