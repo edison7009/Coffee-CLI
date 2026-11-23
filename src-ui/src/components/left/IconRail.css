@@ -119,8 +119,9 @@
 .icon-rail-session[aria-current="true"]::before { content: ''; position: absolute; left: -7px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--text-1); }
 .icon-rail-letter { font: 600 13px/1 var(--font-nav, var(--font)); color: var(--text-2); }
 .icon-rail-session:hover .icon-rail-letter, .icon-rail-session[aria-current="true"] .icon-rail-letter { color: var(--text-1); }
-.icon-rail-tool-badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 5px; background: var(--clear-ground, var(--bg-app)); }
-.icon-rail-tool-badge > *, .icon-rail-tool-badge svg, .icon-rail-tool-badge img { width: 11px !important; height: 11px !important; }
+/* The tool's mark sits on the tile's corner as it is, no plate behind it. */
+.icon-rail-tool-badge { position: absolute; right: -4px; bottom: -4px; display: grid; place-items: center; width: 16px; height: 16px; }
+.icon-rail-tool-badge > *, .icon-rail-tool-badge svg, .icon-rail-tool-badge img { width: 16px !important; height: 16px !important; }
 .icon-rail-state { position: absolute; right: -3px; top: -3px; display: grid; place-items: center; width: 12px; height: 12px; border-radius: 50%; background: var(--clear-ground, var(--bg-app)); }
 .icon-rail-state > i { display: block; border-radius: 50%; }
 .icon-rail-state.is-working > i { width: 8px; height: 8px; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--text-3) 40%, transparent); border-top-color: var(--text-1); animation: icon-rail-spin 1s linear infinite; }
