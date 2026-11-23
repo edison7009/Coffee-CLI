@@ -576,7 +576,18 @@ function GambitImpl({
     ta.style.height = `${ta.scrollHeight}px`;
     if (!scroller) return;
     const dock = rootRef.current;
-    if (dock) setContentH(Math.min(dock.offsetHeight - scroller.clientHeight + ta.scrollHeight, Math.floor(window.innerHeight * DOCK_AUTO_HEIGHT_RATIO)));
+    if (dock) {
+      // Clean's box doesn't stretch its input to fill, so "box minus input plus text" would hold at any taller
+      // height (a removed attachment left it tall): there, measure the chrome around the input at its natural height.
+      let needed = dock.offsetHeight - scroller.clientHeight + ta.scrollHeight;
+      if (workLayout && cardShell) {
+        const fixed = dock.style.height;
+        dock.style.height = 'auto';
+        needed = dock.offsetHeight - scroller.offsetHeight + ta.scrollHeight;
+        dock.style.height = fixed;
+      }
+      setContentH(Math.min(needed, Math.floor(window.innerHeight * DOCK_AUTO_HEIGHT_RATIO)));
+    }
     // Remeasuring via height:'auto' momentarily collapses the (rows=1) textarea
     // for the synchronous reflow that reading scrollHeight forces; while
     // collapsed the scroll container has almost no content, so the browser
@@ -596,6 +607,7 @@ function GambitImpl({
       ta.selectionStart === ta.value.length &&
       ta.selectionEnd === ta.value.length;
     scroller.scrollTop = followCaretToBottom ? scroller.scrollHeight : prevScrollTop;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- a layout switch remeasures through `remeasure`
   }, [draft, remeasure]);
 
 
