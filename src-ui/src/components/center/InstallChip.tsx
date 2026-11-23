@@ -7,7 +7,7 @@ import { useHoverTip } from '../common/HoverTip';
  *  goes with the chip when the tool turns up installed. */
 export function InstallChip({ tool }: { tool: string }) {
   const t = useT();
-  const { tipFor, tip } = useHoverTip();
+  const { tipFor, tip } = useHoverTip('hover-tip--wide');
   const tipText = t('launchpad.install_tip', { tool });
   const handlers = tipFor(tipText);
   return <>

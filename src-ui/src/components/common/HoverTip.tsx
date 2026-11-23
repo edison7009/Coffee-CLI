@@ -14,7 +14,8 @@ type Handlers = {
 /** Gap between the pointer's hotspot and the tip, clear of the cursor arrow. */
 const BELOW_POINTER = 20;
 
-export function useHoverTip(): { tipFor: (label: string) => Handlers; tip: ReactNode } {
+/** `variant`: an extra class on the tip, for a longer text that wants more room (`hover-tip--wide`). */
+export function useHoverTip(variant?: string): { tipFor: (label: string) => Handlers; tip: ReactNode } {
   const [tip, setTip] = useState<Tip | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   // Centered on the pointer, then nudged by its real size so it stays 8px inside the window
@@ -44,6 +45,6 @@ export function useHoverTip(): { tipFor: (label: string) => Handlers; tip: React
       onFocus: e => { const r = e.currentTarget.getBoundingClientRect(); setTip({ label, x: r.left + r.width / 2, y: r.bottom - BELOW_POINTER + 8 }); },
       onBlur: hide,
     }),
-    tip: tip && createPortal(<span ref={ref} className="hover-tip" role="tooltip" style={{ left: tip.x, top: tip.y + BELOW_POINTER }}>{tip.label}</span>, document.body),
+    tip: tip && createPortal(<span ref={ref} className={`hover-tip${variant ? ` ${variant}` : ''}`} role="tooltip" style={{ left: tip.x, top: tip.y + BELOW_POINTER }}>{tip.label}</span>, document.body),
   };
 }
