@@ -20,7 +20,7 @@ const REMOTE_PAGE = /[?&]remote(?:[=&]|$)/.test(SEARCH);
 export const CONTROL = REMOTE_PAGE && /[?&]control(?:[=&]|$)/.test(SEARCH) && !!window.__TAURI_INTERNALS__;
 export const REMOTE = REMOTE_PAGE && (CONTROL || !window.__TAURI_INTERNALS__);
 
-type LocalIpc = { invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown>; transformCallback(callback: (payload: unknown) => void, once?: boolean): number };
+type LocalIpc = { invoke(cmd: string, args?: Record<string, unknown>): Promise<unknown>; transformCallback(callback: (payload: unknown) => void, once?: boolean): number; unregisterCallback?(id: number): void };
 /** This computer's own IPC, for what stays local in a control window: clipboard, links, the relayed connection, saved keys. */
 const LOCAL = CONTROL ? (window.__TAURI_INTERNALS__ as unknown as LocalIpc) : null;
 function local<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T> {
@@ -129,9 +129,30 @@ async function invoke(cmd: string, args: Record<string, unknown> = {}): Promise<
   }
   // A control window copies and pastes with this computer's clipboard.
   if (CONTROL && cmd.startsWith('plugin:clipboard-manager|')) return local(cmd, args);
+  // Voice input listens with this computer's microphone and account: the words land in the draft, which goes out as usual.
+  if (CONTROL && cmd.startsWith('voice_')) return local(cmd, localVoiceArgs(args));
   if (cmd.startsWith('plugin:')) throw new Error(`${cmd} is not available on a phone`);
   const c = await connected();
   return c.request('ui.invoke', { cmd, args });
+}
+
+/** A control window's voice arguments for this computer: the folder is the other computer's (dropped), and a
+ *  channel made through the bridge is relayed through one of this computer's IPC, which is what calls it back. */
+function localVoiceArgs(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...args };
+  if ('cwd' in out) out.cwd = null;
+  for (const [key, value] of Object.entries(out)) {
+    const ref = (value as { toJSON?: () => unknown } | null)?.toJSON?.();
+    const match = typeof ref === 'string' && /^__CHANNEL__:(\d+)$/.exec(ref);
+    if (!match) continue;
+    const bridged = Number(match[1]);
+    const relay: number = LOCAL!.transformCallback(message => {
+      callbacks.get(bridged)?.(message);
+      if (message && typeof message === 'object' && 'end' in message) LOCAL!.unregisterCallback?.(relay);
+    });
+    out[key] = `__CHANNEL__:${relay}`;
+  }
+  return out;
 }
 
 /** Installs the replacement before the UI modules load. */

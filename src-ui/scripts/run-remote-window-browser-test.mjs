@@ -23,6 +23,7 @@ try {
   await page.addInitScript(link => {
     window.localCalls = [];
     const callbacks = {}; let next = 0;
+    window.localCallbacks = callbacks;
     window.linkEvents = handler => (window.linkHandler = handler);
     Object.defineProperty(window, '__TAURI_INTERNALS__', { value: Object.freeze({
       plugins: {},
@@ -63,6 +64,23 @@ try {
   assert.ok(kept.includes('plugin:clipboard-manager|write_text'), 'clipboard stays on this computer');
   assert.ok(kept.includes('open_url'), 'links open on this computer');
   console.log('OK @tauri-apps/api goes through the bridge; clipboard and links stay local');
+
+  // Voice input listens on this computer: the command stays here, the other computer's folder is dropped,
+  // and the waveform/transcript channel is relayed through this computer's own IPC callbacks.
+  const voice = await page.evaluate(async () => {
+    const core = await import('/node_modules/@tauri-apps/api/core.js');
+    const got = [];
+    const channel = new core.Channel(message => got.push(message));
+    await core.invoke('voice_input_start', { tool: 'claude', cwd: '/Users/other/project', language: 'zh', device: null, onEvent: channel });
+    const call = window.localCalls.find(c => c.cmd === 'voice_input_start');
+    const relay = Number(String(call?.args.onEvent).replace('__CHANNEL__:', ''));
+    window.localCallbacks[relay]?.({ index: 0, message: { kind: 'level', level: 0.5 } });
+    return { cwd: call?.args.cwd, channel: String(call?.args.onEvent), got };
+  });
+  assert.equal(voice.cwd, null, 'the other computer\'s folder is not looked up here');
+  assert.match(voice.channel, /^__CHANNEL__:\d+$/);
+  assert.deepEqual(voice.got, [{ kind: 'level', level: 0.5 }], 'events from this computer reach the composer');
+  console.log('OK voice input runs on this computer and its events come back through a relayed channel');
 
   // This computer's requests to the window (src/window_control.rs) are heard and answered on this
   // computer's own IPC, not routed to the other computer like everything else.
