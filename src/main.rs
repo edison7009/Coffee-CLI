@@ -33,6 +33,7 @@ mod remote_window;
 mod window_control;
 mod tools;
 mod update_sources;
+mod self_update;
 mod usage_stats;
 mod usage_quota;
 mod voice_input;

@@ -654,6 +654,8 @@ export const vi = {
   'self_update.download': 'Tải bản cập nhật v{version}',
   'self_update.connecting': 'Đang kết nối',
   'self_update.downloading': 'Đang tải bản cập nhật {percent}%',
+  'self_update.install': 'Cài đặt bản cập nhật v{version}',
+  'self_update.install_short': 'Cài đặt',
   'self_update.restarting': 'Đang khởi động lại',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Cập nhật thất bại. Kiểm tra mạng và quyền cài đặt rồi thử lại.',

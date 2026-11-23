@@ -649,6 +649,8 @@ export const ru = {
   'self_update.download': 'Скачать обновление v{version}',
   'self_update.connecting': 'Подключение',
   'self_update.downloading': 'Загрузка обновления {percent}%',
+  'self_update.install': 'Установить обновление v{version}',
+  'self_update.install_short': 'Установить',
   'self_update.restarting': 'Перезапуск',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Не удалось обновить. Проверьте сеть и права установки, затем повторите.',

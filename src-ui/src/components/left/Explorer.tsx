@@ -16,7 +16,8 @@ import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { getFileIconSrc } from '../../lib/file-icons';
 import { useFileStats, useDirtyDirs } from '../../lib/git-status';
 import { refreshHistory } from '../../lib/history-cache';
-import { commands, onSelfUpdateProgress } from '../../tauri';
+import { commands } from '../../tauri';
+import { useSelfUpdate } from '../../lib/use-self-update';
 import { IS_WINDOWS } from '../../lib/platform';
 import type { DirEntryInfo } from '../../tauri';
 import { HistoryBoard } from '../right/HistoryBoard';
@@ -610,44 +611,13 @@ export function Explorer() {
     checkUpdate();
   }, []);
 
-  // In-app self-update. Click the logo's update icon → a circular ring fills
-  // as the installer downloads into the Downloads folder. Windows then runs
-  // the installer silently and relaunches; macOS opens the DMG and Linux opens the
-  // folder, and the app keeps running. On failure fall back to the page.
-  const [installing, setInstalling] = useState(false);
-  const [installPct, setInstallPct] = useState(0);
-  const [installPhase, setInstallPhase] = useState<
-    'speed_test' | 'downloading' | 'launching' | 'downloaded' | 'error' | null
-  >(null);
-  const handleSelfUpdate = useCallback(async () => {
-    if (installing) return;
-    setInstalling(true);
-    setInstallPhase('speed_test');
-    setInstallPct(0);
-    let unlisten: (() => void) | undefined;
-    try {
-      unlisten = await onSelfUpdateProgress((p) => {
-        setInstallPhase(p.status);
-        setInstallPct(p.percent);
-      });
-      await commands.downloadAndInstallUpdate();
-      // Windows: the installer launched and the app is about to exit, so
-      // leave the ring until the window goes away. macOS / Linux keep
-      // running with the DMG or Downloads folder open: reset the button.
-      if (!IS_WINDOWS) {
-        setInstalling(false);
-        setInstallPhase(null);
-        setInstallPct(0);
-      }
-    } catch {
-      commands.openUrl('https://coffeecli.com');
-      setInstalling(false);
-      setInstallPhase(null);
-      setInstallPct(0);
-    } finally {
-      unlisten?.();
-    }
-  }, [installing]);
+  // In-app self-update: the first click downloads (a ring fills); on Windows
+  // the button then reads "Install" and only a second click closes Coffee CLI
+  // and runs the installer. See lib/use-self-update.ts.
+  const selfUpdate = useSelfUpdate(updateVersion, setUpdateVersion);
+  const installPhase = selfUpdate.progress?.status ?? null;
+  const installPct = selfUpdate.progress?.percent ?? 0;
+  const installing = installPhase !== null;
 
   // Keep the last-selected view across panel collapse and application restarts.
   const [activeTab, setActiveTab] = useState<'history' | 'workspace'>(() => {
@@ -714,8 +684,9 @@ export function Explorer() {
   // Windows installs silently and relaunches, so "launching" means restarting;
   // macOS / Linux only open the DMG or folder, so keep showing 100%.
   const restarting = IS_WINDOWS && installPhase === 'launching';
+  const readyToInstall = selfUpdate.ready && !installing;
   const updateLabel = !installing
-    ? t('self_update.download', { version: updateVersion ?? '' })
+    ? t(readyToInstall ? 'self_update.install' : 'self_update.download', { version: updateVersion ?? '' })
     : installPhase === 'speed_test'
       ? t('self_update.connecting')
       : restarting
@@ -723,8 +694,8 @@ export function Explorer() {
         : t('self_update.downloading', { percent: Math.max(0, Math.min(100, installPct)) });
   const updateButton = updateVersion ? (
     <button
-      className={`sidebar-footer-button update-check-btn update-available${installing ? ' is-installing' : ''}`}
-      onClick={handleSelfUpdate}
+      className={`sidebar-footer-button update-check-btn update-available${installing ? ' is-installing' : ''}${readyToInstall ? ' is-ready' : ''}`}
+      onClick={selfUpdate.activate}
       disabled={installing}
       aria-label={updateLabel}
       aria-busy={installing}
@@ -766,6 +737,8 @@ export function Explorer() {
             }
           />
         </svg>
+      ) : readyToInstall ? (
+        <span className="update-install-label" aria-hidden="true">{t('self_update.install_short')}</span>
       ) : (
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

@@ -649,6 +649,8 @@ export const de = {
   'self_update.download': 'Update herunterladen v{version}',
   'self_update.connecting': 'Verbindung wird hergestellt',
   'self_update.downloading': 'Update wird heruntergeladen {percent} %',
+  'self_update.install': 'Update installieren v{version}',
+  'self_update.install_short': 'Installieren',
   'self_update.restarting': 'Neustart',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Update fehlgeschlagen. Netzwerk und Installationsrechte prüfen und erneut versuchen.',

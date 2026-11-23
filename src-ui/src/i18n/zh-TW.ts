@@ -653,6 +653,8 @@ export const zhTW = {
   'self_update.download': '下載更新 v{version}',
   'self_update.connecting': '正在連線',
   'self_update.downloading': '正在下載更新 {percent}%',
+  'self_update.install': '安裝更新 v{version}',
+  'self_update.install_short': '安裝',
   'self_update.restarting': '正在重新啟動',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '更新失敗，請檢查網路或安裝權限後重試。',
