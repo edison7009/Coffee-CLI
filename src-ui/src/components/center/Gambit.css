@@ -653,3 +653,38 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit-footer--card :is(.gambit-capability, .claude-model-control) { overflow: visible !important; }
 /* The top effort level keeps its accent: it marks a costly setting, not decoration. */
 .gambit-footer .claude-effort-trigger.is-ultracode { color: var(--accent) !important; }
+
+/* Clear: one rounded line — ＋, the draft, mic, send — growing upward with the draft, and under it, outside the
+   line, every setting on one quiet row (folder, permissions | collaboration | remote …… usage | model · effort).
+   Code keeps the card with its place tab. */
+.gambit.gambit--card.gambit--minimal {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "files files files files files" "attach input more voice send" "hint hint hint hint hint" "meta meta meta meta meta";
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    align-content: end;
+    column-gap: 2px;
+    padding: 0;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+.gambit--card.gambit--minimal::before {
+    content: ''; grid-area: attach / attach / send / send; z-index: -1;
+    border-radius: 22px; background: var(--bg-input);
+    box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgb(0 0 0 / .12);
+}
+.gambit--card.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; }
+.gambit--card.gambit--minimal > .gambit-input { grid-area: input; align-self: center; max-height: 100%; }
+.gambit.gambit--docked.gambit--card.gambit--minimal .gambit-textarea { padding: 12px 6px 8px; }
+.gambit--card.gambit--minimal > .gambit-footer { display: contents; }
+.gambit--card.gambit--minimal .gambit-pill-attach { grid-area: attach; align-self: end; width: 30px; height: 30px; margin: 0 0 6px 7px; border-radius: 50%; }
+.gambit--card.gambit--minimal .gambit-more { grid-area: more; align-self: end; margin-bottom: 10px; }
+.gambit--card.gambit--minimal .gambit-voice-anchor { grid-area: voice; align-self: end; margin: 0 0 6px; }
+.gambit--card.gambit--minimal .gambit-voice { width: 30px; height: 30px; border-radius: 50%; }
+.gambit--card.gambit--minimal .gambit-send { grid-area: send; align-self: end; width: 30px; height: 30px; margin: 0 7px 6px 2px; border-radius: 50%; }
+.gambit--card.gambit--minimal .gambit-send-hint { grid-area: hint; justify-self: end; padding: 4px 12px 0; }
+.gambit--card.gambit--minimal .gambit-meta { grid-area: meta; display: flex; align-items: center; gap: 1px; min-width: 0; padding: 6px 4px 0; flex-wrap: wrap; row-gap: 2px; overflow: visible; }
+/* Below the line the folder is shown again (Code shows it on the place tab). */
+.gambit-footer--card.gambit-footer--card .gambit-meta > .gambit-workspace { display: none; }
+.gambit--minimal .gambit-footer--card .gambit-meta > .gambit-workspace { display: inline-flex !important; }

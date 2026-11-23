@@ -334,12 +334,12 @@ function GambitImpl({
     const body = document.body;
     body.classList.add('gambit-docked');
     // The card's place tab stands above it, so the conversation keeps clear of the tab too.
-    root.style.setProperty('--gambit-dock-h', `calc(${effectiveH + (cardShell ? PLACE_TAB_HEIGHT : 0)}px + ${SAFE_BOTTOM})`);
+    root.style.setProperty('--gambit-dock-h', `calc(${effectiveH + (cardShell && !workLayout ? PLACE_TAB_HEIGHT : 0)}px + ${SAFE_BOTTOM})`);
     return () => {
       body.classList.remove('gambit-docked');
       root.style.removeProperty('--gambit-dock-h');
     };
-  }, [effectiveH, cardShell]);
+  }, [effectiveH, cardShell, workLayout]);
 
   // Persist dock height. Cheap to write — runs only on settle.
   useEffect(() => {
@@ -923,7 +923,7 @@ function GambitImpl({
         </div>)}
       </div>}
 
-      {card && <PlaceTab device={placeDevice ?? null} folder={workspaceName} toolIcon={toolIcon} switchable={!!remoteControl} onPick={() => rootRef.current?.querySelector<HTMLButtonElement>('.gambit-capability.is-remote')?.click()} />}
+      {card && !minimal && <PlaceTab device={placeDevice ?? null} folder={workspaceName} toolIcon={toolIcon} switchable={!!remoteControl} onPick={() => rootRef.current?.querySelector<HTMLButtonElement>('.gambit-capability.is-remote')?.click()} />}
 
       {/* Input box: the textarea auto-grows to fit its content. */}
       <div
