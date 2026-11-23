@@ -953,4 +953,5 @@ export const es = {
   "tools.modes": "Funciona en: {modes}",
   "tools.mode.desktop": "Escritorio IDE",
   "gambit.folder": "Carpeta",
+  "theme.section.shape_hint": "Esquinas, paneles y textura de fondo",
 } as const satisfies Record<I18nKey, string>;

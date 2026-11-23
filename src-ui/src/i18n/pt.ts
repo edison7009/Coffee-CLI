@@ -953,4 +953,5 @@ export const pt = {
   "tools.modes": "Funciona em: {modes}",
   "tools.mode.desktop": "Desktop IDE",
   "gambit.folder": "Pasta",
+  "theme.section.shape_hint": "Cantos, painéis e textura do fundo",
 } as const satisfies Record<I18nKey, string>;

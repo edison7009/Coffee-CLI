@@ -956,4 +956,5 @@ export const ko = {
   "tools.modes": "사용 가능: {modes}",
   "tools.mode.desktop": "IDE 데스크톱",
   "gambit.folder": "폴더",
+  "theme.section.shape_hint": "모서리, 패널, 배경 질감",
 } as const satisfies Record<I18nKey, string>;

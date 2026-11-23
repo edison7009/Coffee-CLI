@@ -958,4 +958,5 @@ export const zhCN = {
   "tools.modes": "可用：{modes}",
   "tools.mode.desktop": "IDE 桌面",
   "gambit.folder": "文件夹",
+  "theme.section.shape_hint": "影响圆角、面板和背景纹理",
 } as const satisfies Record<I18nKey, string>;

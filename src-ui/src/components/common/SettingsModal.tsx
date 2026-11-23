@@ -14,7 +14,7 @@
 
 import { Changelog } from './Changelog';
 import { useCompact } from '../../lib/viewport';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
 import { playNotifySound } from '../../lib/notify-sound';
@@ -306,11 +306,11 @@ export function SettingsModal() {
     { id: 'feedback',   label: t('settings.feedback') },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
-  const dialog = state.layoutMode === 'work' && !compactWindow;
+  // A dialog over the window in Clean and Code alike; a narrow window (a phone) keeps the full page.
+  const dialog = !compactWindow;
 
   return (
-    // A page over the centre area, like usage and tool settings, not a dialog over the whole window.
-    // 工作式: a dialog over the window instead of a page; a click on the dimmed backdrop closes it.
+    // A click on the dimmed backdrop closes the dialog.
     <div
       className={`settings-page${dialog ? ' settings-page--dialog' : ''}${open ? '' : ' settings-page--closing'}`}
       onAnimationEnd={e => { if (e.target === e.currentTarget && !open) setMounted(false); }}
@@ -355,154 +355,113 @@ export function SettingsModal() {
           </header>
 
           <div className="settings-body">
+            {/* 方案 A: one quiet card per group. Colours carry the day/night switch as a segmented control; a palette is
+                drawn with its own variables (data-theme / data-mode on the swatch), and the chosen one sits on a deeper
+                ground with a small check instead of an outline. Clean has its own two colours and no styles or
+                wallpaper (styles/clear-palette.css), so it shows only what applies to it. */}
             {section === 'appearance' && (
-              <>
-                <div className="settings-section-head">
-                  <span className="settings-section-label">{t('theme.section.color')}</span>
-                  {/* Mode lives on the section header: it picks which half of
-                      every family below is applied, so it reads left-to-right
-                      "colors, then which half". */}
-                  <div className="settings-mode-tabs" role="tablist">
-                    {THEME_MODES.map(m => (
+              <div className="settings-cards">
+                <div className="settings-card">
+                  <div className="settings-card-head">
+                    <span className="settings-card-title">{t('theme.section.color')}</span>
+                    <SegmentedTabs compact label={t('theme.section.color')} value={state.themeMode} onChange={setThemeMode}
+                      options={THEME_MODES.map(m => ({ value: m.code, content: t(m.labelKey) }))} />
+                  </div>
+                  {state.layoutMode !== 'work' && <div className="settings-palettes">
+                    {THEME_COLORS.map(c => {
+                      const active = c.code === state.currentTheme;
+                      // Follow-system stands for the whole family: its swatch shows the day half beside the night half.
+                      const halves = state.themeMode === 'system' ? ['light', 'dark'] : [state.themeMode === 'light' ? 'light' : 'dark'];
+                      return (
+                        <button key={c.code} type="button" className={`settings-palette${active ? ' active' : ''}`} onClick={() => setTheme(c.code)} aria-pressed={active}>
+                          <span className="settings-palette-art">
+                            {halves.map(mode => <span key={mode} className="settings-palette-swatch" data-theme={c.code} data-mode={mode}>
+                              <span className="settings-palette-side" /><span className="settings-palette-accent" /><span className="settings-palette-line" />
+                            </span>)}
+                            {active && <span className="settings-palette-check" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                            </span>}
+                          </span>
+                          <span className="settings-palette-name">{t(c.labelKey)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>}
+                </div>
+
+                {state.layoutMode !== 'work' && <div className="settings-card">
+                  <div className="settings-card-head">
+                    <span className="settings-card-title">{t('theme.section.shape')}</span>
+                    <span className="settings-card-hint">{t('theme.section.shape_hint')}</span>
+                  </div>
+                  <div className="settings-chip-row">
+                    {THEME_SHAPES.map(sh => (
+                      <button key={sh.code} type="button" className={`settings-chip${sh.code === state.currentShape ? ' active' : ''}`} aria-pressed={sh.code === state.currentShape} onClick={() => setShape(sh.code)}>
+                        {t(sh.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>}
+
+                <div className="settings-card">
+                  <div className="settings-card-head"><span className="settings-card-title">{t('theme.section.icons')}</span></div>
+                  <div className="settings-chip-row settings-icon-row">
+                    {ICON_ART_THEMES.map(({ id, folderSrc }) => (
                       <button
-                        key={m.code}
+                        key={id}
                         type="button"
-                        role="tab"
-                        aria-selected={state.themeMode === m.code}
-                        className={`settings-mode-tab${state.themeMode === m.code ? ' active' : ''}`}
-                        onClick={() => setThemeMode(m.code)}
+                        className={`settings-icon-chip${state.iconTheme === id ? ' active' : ''}`}
+                        aria-pressed={state.iconTheme === id}
+                        onClick={() => setIconTheme(id)}
                       >
-                        {t(m.labelKey)}
+                        {isMaskTintTheme(id) ? (
+                          <span
+                            className="settings-icon-mask"
+                            style={{ WebkitMaskImage: `url("${folderSrc}")`, maskImage: `url("${folderSrc}")` }}
+                            aria-label={id}
+                          />
+                        ) : (
+                          <img src={folderSrc} alt={id} width="24" height="24" />
+                        )}
                       </button>
                     ))}
                   </div>
                 </div>
-                {/* Clear has its own two colours and no styles (styles/clear-palette.css): palettes and styles apply to Code. */}
-                {state.layoutMode !== 'work' && <>
-                <div className="settings-theme-grid">
-                  {THEME_COLORS.map(c => {
-                    const active = c.code === state.currentTheme;
-                    // Follow-system cards stand for a family rather than one
-                    // half, so their preview is the day/night split; the label
-                    // stays the family's single name in every tab.
-                    const follow = state.themeMode === 'system';
-                    // The night tab shows the night half only; the day tab and
-                    // the follow tab both start from the day half.
-                    const showDay = follow || state.themeMode === 'light';
-                    const bg = showDay ? c.daySwatch : c.swatch;
-                    const ring = showDay ? c.dayRing : c.ring;
-                    return (
-                      <button
-                        key={c.code}
-                        className={`settings-theme-card${active ? ' active' : ''}`}
-                        onClick={() => setTheme(c.code)}
-                        aria-pressed={active}
-                      >
-                        <span className={`settings-theme-preview${follow ? ' split' : ''}`} style={{ '--ring': ring } as CSSProperties}>
-                          <span className="settings-theme-half">
-                            <span className="settings-theme-band-bg" style={{ background: bg }} />
-                            <span className="settings-theme-band-accent" style={{ background: ring }} />
-                          </span>
-                          {follow && (
-                            <span className="settings-theme-half">
-                              <span className="settings-theme-band-bg" style={{ background: c.swatch }} />
-                              <span className="settings-theme-band-accent" style={{ background: c.ring }} />
-                            </span>
-                          )}
-                          {active && (
-                            <span className="settings-theme-check">
-                              <svg viewBox="0 0 24 24" fill="none" stroke={bg} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                            </span>
-                          )}
-                        </span>
-                        <span className="settings-theme-name">
-                          {t(c.labelKey)}
-                        </span>
-                      </button>
-                    );
-                  })}
+
+                {/* Clean / Code: which shell wraps the same conversations (lib/layout-mode.ts). */}
+                <div className="settings-card">
+                  <div className="settings-card-head">
+                    <span className="settings-card-title">{t('layout.title')}</span>
+                    <SegmentedTabs compact label={t('layout.title')} value={state.layoutMode} onChange={mode => dispatch({ type: 'SET_LAYOUT_MODE', mode })}
+                      options={[{ value: 'work', content: t('layout.work') }, { value: 'code', content: t('layout.code') }]} />
+                  </div>
+                  <div className="settings-card-hint">{t(state.layoutMode === 'work' ? 'layout.work_hint' : 'layout.code_hint')}</div>
                 </div>
 
-                <div className="settings-section-label">{t('theme.section.shape')}</div>
-                <div className="settings-chip-row">
-                  {THEME_SHAPES.map(s => (
-                    <button
-                      key={s.code}
-                      className={`settings-chip${s.code === state.currentShape ? ' active' : ''}`}
-                      onClick={() => setShape(s.code)}
-                    >
-                      {t(s.labelKey)}
-                    </button>
-                  ))}
-                </div>
-                </>}
-
-                <div className="settings-section-label">{t('theme.section.icons')}</div>
-                <div className="settings-chip-row settings-icon-row">
-                  {ICON_ART_THEMES.map(({ id, folderSrc }) => (
-                    <button
-                      key={id}
-                      className={`settings-icon-chip${state.iconTheme === id ? ' active' : ''}`}
-                      onClick={() => setIconTheme(id)}
-                    >
-                      {isMaskTintTheme(id) ? (
-                        <span
-                          className="settings-icon-mask"
-                          style={{ WebkitMaskImage: `url("${folderSrc}")`, maskImage: `url("${folderSrc}")` }}
-                          aria-label={id}
-                        />
-                      ) : (
-                        <img src={folderSrc} alt={id} width="24" height="24" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* The window is roomy now: wallpaper sits under appearance, sounds under general. */}
-            {section === 'appearance' && (
-              <>
-                {/* 工作式 / 代码式: which shell wraps the same conversations (lib/layout-mode.ts). */}
-                <div className="settings-group-gap" aria-hidden="true" />
-                <div className="settings-sound-list">
-                  <div className="settings-sound-row settings-choice-row">
-                    <div className="settings-sound-title">{t('layout.title')}</div>
-                    <div className="settings-choice">
-                      <SegmentedTabs compact label={t('layout.title')} value={state.layoutMode} onChange={mode => dispatch({ type: 'SET_LAYOUT_MODE', mode })}
-                        options={[{ value: 'work', content: t('layout.work') }, { value: 'code', content: t('layout.code') }]} />
-                      <div className="settings-choice-hint">{t(state.layoutMode === 'work' ? 'layout.work_hint' : 'layout.code_hint')}</div>
+                {state.layoutMode !== 'work' && <div className="settings-card">
+                  <div className="settings-card-head">
+                    <span className="settings-card-title">{t('settings.wallpaper')}</span>
+                    <div className="settings-wallpaper-actions">
+                      <button className="settings-btn" onClick={pickBg}>{t('settings.wallpaper.pick')}</button>
+                      {hasBg && <button className="settings-btn settings-btn-danger" onClick={clearBg}>{t('settings.wallpaper.clear')}</button>}
                     </div>
                   </div>
-                </div>
-                {state.layoutMode !== 'work' && <>
-                <div className="settings-group-gap" aria-hidden="true" />
-                <div className="settings-section-label">{t('settings.wallpaper')}</div>
-                <div className="settings-wallpaper-actions">
-                  <button className="settings-btn" onClick={pickBg}>{t('settings.wallpaper.pick')}</button>
-                  {hasBg && (
-                    <button className="settings-btn settings-btn-danger" onClick={clearBg}>
-                      {t('settings.wallpaper.clear')}
-                    </button>
-                  )}
-                </div>
-
-                <div className="settings-section-head">
-                  <label className="settings-section-label" htmlFor="settings-wallpaper-opacity">{t('settings.wallpaper.opacity')}</label>
-                  <div className="settings-scale-actions"><output htmlFor="settings-wallpaper-opacity">{state.wallpaperOpacity}%</output></div>
-                </div>
-                <SettingsSlider
-                  id="settings-wallpaper-opacity"
-                  min={0} max={100} step={5}
-                  ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
-                  marks={[0, 50, 100]}
-                  value={state.wallpaperOpacity}
-                  onChange={setOpacity}
-                  disabled={!hasBg}
-                  label={t('settings.wallpaper.opacity')}
-                />
-                </>}
-              </>
+                  <div className="settings-section-head">
+                    <label className="settings-section-label" htmlFor="settings-wallpaper-opacity">{t('settings.wallpaper.opacity')}</label>
+                    <div className="settings-scale-actions"><output htmlFor="settings-wallpaper-opacity">{state.wallpaperOpacity}%</output></div>
+                  </div>
+                  <SettingsSlider
+                    id="settings-wallpaper-opacity"
+                    min={0} max={100} step={5}
+                    ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                    marks={[0, 50, 100]}
+                    value={state.wallpaperOpacity}
+                    onChange={setOpacity}
+                    disabled={!hasBg}
+                    label={t('settings.wallpaper.opacity')}
+                  />
+                </div>}
+              </div>
             )}
 
             {section === 'terminal' && (

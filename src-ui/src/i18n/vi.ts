@@ -957,4 +957,5 @@ export const vi = {
   "tools.modes": "Dùng được trong: {modes}",
   "tools.mode.desktop": "IDE máy tính",
   "gambit.folder": "Thư mục",
+  "theme.section.shape_hint": "Góc bo, bảng và họa tiết nền",
 } as const satisfies Record<I18nKey, string>;

@@ -959,6 +959,7 @@ export const en = {
   "tools.modes": "Runs in: {modes}",
   "tools.mode.desktop": "IDE desktop",
   "gambit.folder": "Folder",
+  "theme.section.shape_hint": "Corners, panels and background texture",
 } as const;
 
 export type I18nKey = keyof typeof en;

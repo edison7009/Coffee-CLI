@@ -953,4 +953,5 @@ export const fr = {
   "tools.modes": "Fonctionne dans : {modes}",
   "tools.mode.desktop": "Bureau IDE",
   "gambit.folder": "Dossier",
+  "theme.section.shape_hint": "Coins, panneaux et texture du fond",
 } as const satisfies Record<I18nKey, string>;

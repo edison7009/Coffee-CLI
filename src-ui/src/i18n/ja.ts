@@ -956,4 +956,5 @@ export const ja = {
   "tools.modes": "利用可能：{modes}",
   "tools.mode.desktop": "IDE デスクトップ",
   "gambit.folder": "フォルダ",
+  "theme.section.shape_hint": "角丸、パネル、背景の質感",
 } as const satisfies Record<I18nKey, string>;

@@ -953,4 +953,5 @@ export const ru = {
   "tools.modes": "Работает в: {modes}",
   "tools.mode.desktop": "IDE-десктоп",
   "gambit.folder": "Папка",
+  "theme.section.shape_hint": "Углы, панели и фактура фона",
 } as const satisfies Record<I18nKey, string>;

@@ -216,68 +216,33 @@
   color: var(--text-1, #fff);
 }
 
-/* ── Two-tone theme cards (surface band + accent band, label below) ────── */
-.settings-theme-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 4px;
-}
-.settings-theme-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  /* The selected card sits on a slightly deeper fill; the padding is always there so nothing moves. */
-  padding: 4px 4px 6px;
-  border: none;
-  border-radius: var(--radius-md, 12px);
-  background: transparent;
-  cursor: pointer;
-  transition: background-color 0.14s ease;
-}
-.settings-theme-preview {
-  position: relative;
-  display: flex;
-  flex-direction: row;
-  height: 46px;
-  /* Concentric with the card: outer radius minus its 4px inset. */
-  border-radius: max(0px, calc(var(--radius-md, 12px) - 4px));
-  overflow: hidden;
-}
-/* One half of the palette. Single-mode tabs render one half across the full
-   card; the follow-system tab paints the day half beside the night half, the
-   pair the family would swap between. */
-.settings-theme-half {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-.settings-theme-card:hover { background: var(--bg-hover); }
-.settings-theme-card.active { background: var(--bg-active); }
-.settings-theme-band-bg { flex: 1; }
-.settings-theme-band-accent { height: 14px; }
-.settings-theme-check {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  /* The app's one selected mark: a blue round check. */
-  background: var(--switch-on, #0a84ff);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.settings-theme-check svg { width: 9px; height: 9px; }
-.settings-theme-name {
-  font-size: var(--type-caption);
-  text-align: center;
-  color: var(--text-2, rgba(255, 255, 255, 0.7));
-  transition: color 0.14s ease;
-}
-.settings-theme-card.active .settings-theme-name { color: var(--text-1, #fff); }
+/* ── Appearance (方案 A): one quiet card per group ───────────────────────── */
+.settings-cards { display: flex; flex-direction: column; gap: 12px; }
+.settings-card { padding: 14px 16px 16px; border-radius: var(--radius-md, 12px); background: var(--bg-card); box-shadow: inset 0 0 0 1px var(--border); }
+.settings-card-head { display: flex; align-items: center; gap: 12px; min-height: 28px; margin-bottom: 12px; }
+.settings-card-head:last-child { margin-bottom: 0; }
+.settings-card-title { flex: 1; min-width: 0; color: var(--text-1); font-size: 14px; font-weight: 500; }
+.settings-card-head .settings-card-hint { flex: none; }
+.settings-card-hint { color: var(--text-3); font-size: var(--type-caption); }
+.settings-card-head + .settings-card-hint { margin-top: -4px; }
+.settings-card .settings-wallpaper-actions { margin: 0; }
+/* Palettes: a small picture of each one, drawn with its own variables; the chosen one sits on a deeper ground. */
+.settings-palettes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.settings-palette { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 6px 7px; border: 0; border-radius: max(0px, calc(var(--radius-md, 12px) - 4px)); background: transparent; cursor: pointer; transition: background-color .15s; }
+.settings-palette:hover { background: var(--bg-hover); }
+.settings-palette.active { background: var(--bg-active); }
+.settings-palette-art { position: relative; display: flex; height: 48px; border-radius: max(0px, calc(var(--radius-md, 12px) - 9px)); overflow: hidden; box-shadow: 0 0 0 1px var(--border); }
+.settings-palette-swatch { position: relative; flex: 1; min-width: 0; background: var(--bg-app); }
+.settings-palette-side { position: absolute; inset: 0 auto 0 0; width: 26%; background: var(--bg-panel); }
+.settings-palette-accent { position: absolute; left: 36%; top: 12px; width: 40%; height: 7px; border-radius: 4px; background: var(--accent); }
+.settings-palette-line { position: absolute; left: 36%; top: 26px; width: 50%; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--text-2) 50%, transparent); }
+/* Follow-system: the day half beside the night half, each a narrower picture. */
+.settings-palette-swatch + .settings-palette-swatch .settings-palette-side { width: 0; }
+.settings-palette-swatch:first-child:not(:last-child) .settings-palette-line { width: 40%; }
+.settings-palette-check { position: absolute; right: 5px; bottom: 5px; display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%; background: var(--switch-on, #0a84ff); color: #fff; }
+.settings-palette-check svg { width: 10px; height: 10px; }
+.settings-palette-name { color: var(--text-2); font-size: 12.5px; text-align: center; transition: color .15s; }
+.settings-palette.active .settings-palette-name { color: var(--text-1); }
 
 /* Selected and hovered controls drop the accent outline for a brighter fill:
    a 1px saturated ring on a rounded corner reads harsh at small sizes. */
