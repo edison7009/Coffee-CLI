@@ -768,8 +768,8 @@ export function Explorer() {
       <div className="explorer-tabs">
         {/* Code 方案 A: the sidebar's entries as one row of icons (names in the tips), the sessions right under. */}
         <button className="explorer-icon-button explorer-new-icon" aria-label={t('explorer.new_session')} {...tipFor(t('explorer.new_session'))} onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
-          {/* Lucide square-pen; license in /icons/LICENSE-lucide.txt. */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
+          {/* Lucide plus; license in /icons/LICENSE-lucide.txt. */}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           <span className="explorer-icon-label">{t('explorer.new_session')}</span>
         </button>
       <button type="button" className="explorer-icon-button" aria-pressed={!!state.toolSettingsOpen} {...tipFor(t('tools.title'))} onClick={() => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true })}>

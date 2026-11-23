@@ -16,7 +16,7 @@ import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
 const ICONS: Record<string, ReactNode> = {
-  new: <><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></>,
+  new: <><path d="M12 5v14M5 12h14" /></>,
   conversations: <><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   automations: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></>,
