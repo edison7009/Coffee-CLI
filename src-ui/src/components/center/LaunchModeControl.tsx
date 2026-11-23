@@ -10,6 +10,7 @@ export function LaunchModeControl({ value = 'terminal', disabled = false, onChan
   const t = useT();
   if (!onChange) return null;
   return <div className="launchpad-mode-tabs" role="group" aria-label={`${modeLabel ?? 'Claude'} launch mode`}>
-    {modes.map(mode => <button key={mode} type="button" className={value === mode ? 'is-selected' : ''} disabled={disabled} aria-pressed={value === mode} onClick={event => { event.stopPropagation(); onChange(mode); }}>{t(mode === 'terminal' ? 'tools.mode.terminal' : 'tools.mode.desktop')}</button>)}
+    {/* Short on the card (IDE / CLI) so a long folder beside it still fits; the full name is what it announces. */}
+    {modes.map(mode => <button key={mode} type="button" className={value === mode ? 'is-selected' : ''} disabled={disabled} aria-pressed={value === mode} aria-label={t(mode === 'terminal' ? 'tools.mode.terminal' : 'tools.mode.desktop')} onClick={event => { event.stopPropagation(); onChange(mode); }}>{mode === 'terminal' ? 'CLI' : 'IDE'}</button>)}
   </div>;
 }

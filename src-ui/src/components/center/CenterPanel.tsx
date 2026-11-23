@@ -638,8 +638,7 @@ export function CenterPanel() {
   };
   // Shared recent project folders, most recently used first.
   const recentFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFolders, getProjectFolders);
-  // `project`: the menu under Code's project path, which picks the folder every card starts in, launching nothing.
-  const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType; project?: boolean } | null>(null);
+  const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
   // Each tool's last project folder: clicking its card opens straight there.
   const [lastFolders, setLastFolders] = useState<Record<string, string>>(readLastFolders);
   // Chosen on the other side (the desktop, or a browser following it): read again, so the next save keeps it.
@@ -1101,14 +1100,6 @@ export function CenterPanel() {
     }).catch(() => {});
   };
 
-  // Code: the project every card starts in — the most recent folder, changed from the bar above the cards.
-  const projectFolder = recentFolders[0] ?? null;
-  const openProjectMenu = (anchor: HTMLElement) => {
-    if (recentFolders.length === 0) { void pickFolder().then(selected => { if (selected) addProjectFolder(selected); }); return; }
-    const rect = anchor.getBoundingClientRect();
-    setFolderMenu({ x: rect.left, y: rect.bottom + 4, tool: null, project: true });
-  };
-
   const handleRemoteConnect = async () => {
     if (!sshHost.trim()) return;
     if (remoteProtocol === 'ssh' && !sshUser.trim()) return;
@@ -1548,12 +1539,6 @@ export function CenterPanel() {
 
                       return (<>
                         {state.layoutMode === 'work' && <div className="launchpad-work-head"><h1>{t('launchpad.work_title')}</h1><p>{t('launchpad.work_hint')}</p></div>}
-                        {/* Code: pick the project once, above the cards; every card then starts there. */}
-                        {state.layoutMode !== 'work' && <button type="button" className="launchpad-project" aria-haspopup="menu" onClick={event => openProjectMenu(event.currentTarget)}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
-                          {projectFolder ? <bdi className="launchpad-project-path">{homeShortPath(projectFolder, homeDir)}</bdi> : <span className="launchpad-project-path is-empty">{t('launchpad.pick_project')}</span>}
-                          <svg className="launchpad-project-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-                        </button>}
                         <div className="launchpad-grid">
                           {pinnedAgents.map(tool => {
                             const isTerminal = tool.key === 'terminal';
@@ -1566,8 +1551,7 @@ export function CenterPanel() {
                                   onClick={(event) => {
                                     if (disabled) return;
                                     if (tool.requiresCwd) {
-                                      // Code starts in the project chosen above the cards; Clean in the tool's own last folder.
-                                      const last = (state.layoutMode !== 'work' ? projectFolder : null) ?? (tool.key ? lastFolders[tool.key] : undefined);
+                                      const last = tool.key ? lastFolders[tool.key] : undefined;
                                       if (last) launchFromCard(tool.key, last); else openToolFolderMenu(tool.key, event.currentTarget);
                                       return;
                                     }
@@ -1582,14 +1566,19 @@ export function CenterPanel() {
                                       {!isTerminal && tool.key && <CliUpdateButton tool={tool.key} active={!utilityPageOpen && !configModalTool} installed={installed} />}
                                       {isTerminal && <button type="button" className="launchpad-chip" onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}>{t('launchpad.remote')}</button>}
                                     </div>
-                                    {tool.requiresCwd && state.layoutMode === 'work' && (tool.key && lastFolders[tool.key]
+                                    {tool.requiresCwd && (tool.key && lastFolders[tool.key]
                                       ? <span className="launchpad-card-path is-path"><bdi>{homeShortPath(lastFolders[tool.key], homeDir)}</bdi></span>
                                       : <span className="launchpad-card-path">{t('launchpad.pick_folder')}</span>)}
                                   </div>
-                                  {tool.requiresCwd && <button type="button" className="launchpad-folder" aria-label={t('launchpad.open_folder')} disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
-                                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
-                                  </button>}
-                                  {tool.type === 'ai-cli' && state.layoutMode !== 'work' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
+                                  {/* Clean: the folder icon. Code: a right column level with the name and its path — "choose folder" (the recent-folders list) over how it opens. */}
+                                  {state.layoutMode === 'work' ? <>
+                                    {tool.requiresCwd && <button type="button" className="launchpad-folder" aria-label={t('launchpad.open_folder')} disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
+                                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
+                                    </button>}
+                                  </> : <div className="launchpad-card-side">
+                                    {tool.requiresCwd && <button type="button" className="launchpad-folder launchpad-folder--text" disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>{t('launchpad.choose_folder')}</button>}
+                                    {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
+                                  </div>}
                                 </div>
                               </div>
                             );
@@ -1814,14 +1803,9 @@ export function CenterPanel() {
           y={folderMenu.y}
           recent={recentFolders}
           openLabel={t('launchpad.open_folder') || 'Open folder…'}
-          onPick={(f) => { if (folderMenu.project) addProjectFolder(f); else selectTool(folderMenu.tool, undefined, f); setFolderMenu(null); }}
+          onPick={(f) => { selectTool(folderMenu.tool, undefined, f); setFolderMenu(null); }}
           onRemove={REMOTE ? undefined : (f) => removeRecentFolder(f)}
-          onOpenNew={() => {
-            const { tool: tk, project } = folderMenu;
-            setFolderMenu(null);
-            if (project) void pickFolder().then(selected => { if (selected) addProjectFolder(selected); });
-            else handlePickFolder(tk);
-          }}
+          onOpenNew={() => { const tk = folderMenu.tool; setFolderMenu(null); handlePickFolder(tk); }}
           onClose={() => setFolderMenu(null)}
         />
       )}

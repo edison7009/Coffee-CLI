@@ -958,5 +958,5 @@ export const vi = {
   "tools.mode.desktop": "IDE máy tính",
   "gambit.folder": "Thư mục",
   "theme.section.shape_hint": "Góc bo, bảng và họa tiết nền",
-  "launchpad.pick_project": "Chọn thư mục dự án",
+  "launchpad.choose_folder": "Chọn thư mục",
 } as const satisfies Record<I18nKey, string>;

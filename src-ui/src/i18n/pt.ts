@@ -954,5 +954,5 @@ export const pt = {
   "tools.mode.desktop": "Desktop IDE",
   "gambit.folder": "Pasta",
   "theme.section.shape_hint": "Cantos, painéis e textura do fundo",
-  "launchpad.pick_project": "Escolher a pasta do projeto",
+  "launchpad.choose_folder": "Escolher pasta",
 } as const satisfies Record<I18nKey, string>;

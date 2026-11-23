@@ -957,5 +957,5 @@ export const ja = {
   "tools.mode.desktop": "IDE デスクトップ",
   "gambit.folder": "フォルダ",
   "theme.section.shape_hint": "角丸、パネル、背景の質感",
-  "launchpad.pick_project": "プロジェクトのフォルダを選択",
+  "launchpad.choose_folder": "フォルダを選択",
 } as const satisfies Record<I18nKey, string>;

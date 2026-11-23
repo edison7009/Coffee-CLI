@@ -958,5 +958,5 @@ export const zhTW = {
   "tools.mode.desktop": "IDE 桌面",
   "gambit.folder": "資料夾",
   "theme.section.shape_hint": "影響圓角、面板和背景紋理",
-  "launchpad.pick_project": "選擇專案路徑",
+  "launchpad.choose_folder": "選擇目錄",
 } as const satisfies Record<I18nKey, string>;

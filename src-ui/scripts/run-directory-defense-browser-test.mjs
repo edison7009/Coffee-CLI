@@ -59,11 +59,12 @@ const app = (page, action) => page.evaluate(action => {
   if (action) context.dispatch(action);
   return context.state.terminals.find(t => t.id === context.state.activeTerminalId);
 }, action);
-const card = (page, tool) => page.getByRole('group', { name: `${tool} launch mode` }).locator('..');
+// The card around a tool's launch-mode control, however deep the control sits in it.
+const card = (page, tool) => page.getByRole('group', { name: `${tool} launch mode` }).locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " launchpad-card ")][1]');
 
 try {
   let { page, errors } = await prepare(['D:/Gone', 'D:/File', 'D:/Offline', 'D:/Valid'], { 'D:/Gone': 'missing', 'D:/File': 'not_directory', 'D:/Offline': 'unavailable' });
-  await card(page, 'Claude').locator('.launchpad-folder').click();
+  await card(page, 'Claude').locator('.launchpad-card-info').click();
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('coffee:recent-folders')).length === 2);
   assert.deepEqual(await names(page), ['Offline', 'Valid']); assert.deepEqual(await saved(page), ['D:/Offline', 'D:/Valid']);
   await page.getByText('Valid', { exact: true }).click();
@@ -72,14 +73,14 @@ try {
   assert.deepEqual(await saved(page), ['D:/Valid', 'D:/Offline']); assert.deepEqual(errors, []); await page.close();
 
   ({ page, errors } = await prepare(['D:/Race', 'D:/Valid']));
-  await card(page, 'Codex').locator('.launchpad-folder').click(); await page.locator('.folder-menu').waitFor();
+  await card(page, 'Codex').locator('.launchpad-card-info').click(); await page.locator('.folder-menu').waitFor();
   await page.evaluate(() => { window.directoryStatuses['D:/Race'] = 'missing'; });
   await page.getByText('Race', { exact: true }).click(); await page.waitForFunction(() => window.pickCount === 1);
   assert.equal((await app(page)).tool, null, 'deleted after opening the menu: do not launch');
   assert.deepEqual(await saved(page), ['D:/Valid']); assert.deepEqual(errors, []); await page.close();
 
   ({ page, errors } = await prepare(['D:/Valid']));
-  await card(page, 'Claude').locator('.launchpad-folder').click(); await page.locator('.folder-menu').waitFor();
+  await card(page, 'Claude').locator('.launchpad-card-info').click(); await page.locator('.folder-menu').waitFor();
   await page.evaluate(() => { window.holdChecks = true; });
   await page.getByText('Valid', { exact: true }).click(); await page.waitForFunction(() => !!window.finishCheck);
   await app(page, { type: 'ADD_TERMINAL', session: { id: 'new-tab', tool: null } });
@@ -92,18 +93,11 @@ try {
   for (const tool of ['Claude', 'Codex']) for (const status of ['missing', 'unavailable']) {
     ({ page, errors } = await prepare(['D:/Valid'], {}, true));
     await page.evaluate(status => { window.startupFailure = `COFFEE_DIRECTORY:${status}:D:/Valid`; }, status);
-    await card(page, tool).locator('.launchpad-folder').click(); await page.getByText('Valid', { exact: true }).click();
+    await card(page, tool).locator('.launchpad-card-info').click(); await page.getByText('Valid', { exact: true }).click();
     await page.getByRole('alert').filter({ hasText: status === 'missing' ? 'project directory no longer exists' : 'project directory is unavailable' }).waitFor();
     assert.equal(await page.locator('.claude-reconnect').count(), status === 'unavailable' ? 1 : 0); assert.equal(await page.locator('.claude-empty').count(), 0);
     assert.equal(await page.evaluate(() => window.startCount), 1); assert.equal((await app(page)).folderPath, 'D:/Valid');
     assert.deepEqual(errors, []); await page.close();
   }
-  // Code starts a card in the project above the cards (the most recent folder), without a menu.
-  ({ page, errors } = await prepare(['D:/Valid', 'D:/Other']));
-  assert.equal(await page.locator('.launchpad-project').innerText(), 'D:/Valid');
-  await card(page, 'Claude').locator('.launchpad-card-info').click();
-  await page.waitForFunction(() => !document.querySelector('.launchpad-mode-tabs'));
-  assert.equal(await page.locator('.folder-menu').count(), 0); assert.equal((await app(page)).folderPath, 'D:/Valid'); assert.equal((await app(page)).tool, 'claude');
-  assert.deepEqual(errors, []); await page.close();
-  console.log('OK a card starts in the chosen project; deleted recents pruned, unavailable recents retained, launch-time deletion and tab-switch races blocked; both desktop views explain directory errors and allow manual reconnect only for unavailable paths');
+  console.log('OK deleted recents pruned, unavailable recents retained, launch-time deletion and tab-switch races blocked; both desktop views explain directory errors and allow manual reconnect only for unavailable paths');
 } finally { await browser.close();await devServer.close(); }
