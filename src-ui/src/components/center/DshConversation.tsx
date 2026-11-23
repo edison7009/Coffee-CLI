@@ -19,7 +19,7 @@ import { DshWelcomeIcon } from './DshWelcomeIcon';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, Chevron } from './ConversationControls';
-import { ClaudeTool } from './ClaudeConversation';
+import { ClaudeTool, ToolGroup } from './ClaudeConversation';
 import DSH_RUNNING_WHALE from '../../icons-inline/dsh-running-whale.png';
 import './ConversationView.css';
 import './ClaudeConversation.css';
@@ -185,8 +185,10 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
       <div className={`claude-thread${!rows.length ? ' is-empty' : ''}`}>
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
         {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
-          <article className={`claude-row claude-row--${row.members ? (row.running ? 'running' : 'tool') : row.role} codex-row`} data-message-id={row.id}>
-            {row.members ? <>
+          <article className={`claude-row claude-row--${row.members ? (row.running ? 'running' : 'tool') : row.role}${row.members?.some(m => m.role === 'tool') ? ' claude-row--group' : ''} codex-row`} data-message-id={row.id}>
+            {row.members && row.members.some(m => m.role === 'tool') ? <ToolGroup messages={row.members.filter(m => m.role === 'tool').map(dshToolCard)}
+              extra={row.members.filter(m => m.role !== 'tool').map(m => <details key={m.id} className="claude-reasoning" open={!!expanded[m.id]} onToggle={event => { const open = event.currentTarget.open; setExpanded(old => ({ ...old, [m.id]: open })); }}><summary>{t('conversation.reasoning')}</summary><MarkdownContent content={m.content} /></details>)} />
+            : row.members ? <>
               <button type="button" className="codex-group-heading" aria-expanded={groupOpen(row.id)} onClick={() => setExpanded(old => ({ ...old, [row.id]: !groupOpen(row.id) }))}><span aria-hidden="true"><Chevron open={groupOpen(row.id)} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.running && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!, t)}</small></button>
               {groupOpen(row.id) && <div className="dsh-activity-steps">{row.members.map(m => m.role === 'tool'
                 ? <ClaudeTool key={m.id} message={dshToolCard(m)} />

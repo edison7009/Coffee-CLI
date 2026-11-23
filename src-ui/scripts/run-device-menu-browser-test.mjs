@@ -18,7 +18,7 @@ async function open({ connected, manifest = false }) {
   page.on('pageerror', e => errors.push(e.message));
   await page.route(/\/src\/components\/center\/(TierTerminal|ClaudeConversation|CodexConversation)\.tsx/, route => {
     const name = route.request().url().match(/\/([A-Za-z]+)\.tsx/)[1];
-    return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;` });
+    return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null, ToolGroup=()=>null;` });
   });
   // Release manifests answer with a newer version only when asked; otherwise no update shows.
   await page.route(/manifest\.json|version\.json/, route => manifest

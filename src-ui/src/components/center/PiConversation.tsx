@@ -17,7 +17,8 @@ import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './Welcome
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
-import { ClaudeThinking, ClaudeTool } from './ClaudeConversation';
+import { ClaudeThinking, ClaudeTool, ToolGroup } from './ClaudeConversation';
+import { toolRuns } from '../../lib/tool-runs';
 import { PiMark, PiWelcomeLogo } from './PiWelcomeLogo';
 import './ConversationView.css';
 import './Gambit.css';
@@ -92,6 +93,10 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
   const [thinkingExpansion, setThinkingExpansion] = useState<Record<string, boolean>>({});
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const virtual = useConversationVirtualizer(s.messages, scrollRef);
+  // Clear shows every call as a step card, even alone; Code folds runs of two or more and keeps a single
+  // call's full card (its diff or command output open).
+  const clear = useAppState().state?.layoutMode === 'work';
+  const runs = useMemo(() => toolRuns(s.messages, clear ? 1 : 2), [s.messages, clear]);
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainPiSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [sessionId, s.busy, s.requests.length, dispatch]);
@@ -168,11 +173,11 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
     <div className="claude-scroll" ref={scrollRef} onPointerDownCapture={event => { if (event.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
-        {s.messages.slice(virtual.start, virtual.end).map((m, i) => <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
+        {s.messages.slice(virtual.start, virtual.end).map((m, i) => runs.follower.has(virtual.start + i) ? <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>{null}</MeasuredRow> : <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           {new Date(m.timestamp).toDateString() !== new Date(s.messages[virtual.start + i - 1]?.timestamp ?? 0).toDateString() && <div className="claude-date">{new Date(m.timestamp).toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}</div>}
-          <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''}`}>
+          <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? 'claude-row--group' : ''} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''}`}>
             {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></>
-              : m.role === 'tool' ? <ClaudeTool message={m} />
+              : m.role === 'tool' ? (runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} /> : <ClaudeTool message={m} />)
               : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? false} onToggle={open => setThinkingExpansion(previous => ({ ...previous, [m.id]: open }))} />
               : m.role === 'notice' ? <div className={`claude-turn-summary${m.toolStatus === 'failed' ? ' is-error' : ''}`} role="status">{system(m)}</div>
               : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}

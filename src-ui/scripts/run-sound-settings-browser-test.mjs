@@ -24,12 +24,15 @@ await build({
   define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'native-boundary', setup(b) {
     b.onResolve({ filter: /^@tauri-apps\/plugin-dialog$/ }, () => ({ path: 'dialog', namespace: 'fixture' }));
+    // Settings now hosts the changelog entry, which reads the release notes as raw text (Vite's ?raw).
+    b.onResolve({ filter: /\.md\?raw$/ }, args => ({ path: join(args.resolveDir, args.path.replace(/\?raw$/, '')), namespace: 'raw' }));
+    b.onLoad({ filter: /.*/, namespace: 'raw' }, async args => ({ loader: 'text', contents: await readFile(args.path, 'utf8') }));
     b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ loader: 'js', contents: `export const open=async()=>window.chosenPath??null;` }));
   } }],
 });
 const page = `<!doctype html><html data-theme="lavender" data-mode="dark"><head><meta charset="utf-8"></head><body style="margin:0;background:var(--bg-app)"><div id="root"></div>
 <script>
-  localStorage.setItem('cc-lang','zh-CN');
+  localStorage.setItem('cc-lang','zh-CN');localStorage.setItem('cc-release-notes-seen','999.0.0');
   window.calls=[];window.files={done:null,wait:null};
   window.__TAURI_INTERNALS__={transformCallback:()=>0,metadata:{currentWindow:{label:'main'},currentWebview:{label:'main'}},async invoke(name,args){
     window.calls.push({name,...args});

@@ -24,7 +24,9 @@ try {
  const badge=page.locator('.gambit-capabilities[role="status"]'),draft=page.locator('textarea');await badge.waitFor();
  const position=()=>page.evaluate(()=>{
   const box=selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();return r?{left:r.left,right:r.right,top:r.top}:null};
-  return {workspace:box('.gambit-workspace'),permission:box('.claude-permission-control'),badge:box('.gambit-capabilities'),model:box('.claude-model-controls'),send:box('.gambit-send')};
+  // Desktop tabs use the card composer: the chips flow in its control row and the folder is on the place tab.
+  const card=!!document.querySelector('.gambit--card');
+  return {workspace:box(card?'.gambit-place':'.gambit-workspace'),permission:box('.claude-permission-control'),badge:box(card?'.gambit-capabilities > :first-child':'.gambit-capabilities'),model:box('.claude-model-controls'),send:box('.gambit-send')};
  });
  for(const kind of ['claude','codex','terminal']) {
   await page.evaluate(kind=>window.setKind(kind),kind);await badge.waitFor();
@@ -41,7 +43,8 @@ try {
  await page.evaluate(()=>window.setKind('claude'));
  await page.screenshot({path:join(directory,'orchestration-dark.png')});
  const colors=()=>page.locator('.gambit-capability').evaluateAll(els=>els.map(el=>getComputedStyle(el).color));
- const enabledColors=await colors();assert.equal(new Set(enabledColors).size,3,'capabilities have three distinct semantic colors');
+ // In the card composer every control is quiet text until hovered (方案 A), so the chips share one colour.
+ const enabledColors=await colors();assert.ok(enabledColors.length===3,'all three capabilities are shown');
  await page.evaluate(()=>window.setStatus(false));await badge.waitFor({state:'detached'});assert.equal(await page.getByText('新会话生效',{exact:true}).count(),0);
  await page.evaluate(()=>window.setStatus(true));await draft.fill('让 Claude 自己决定如何协作');await draft.press('Enter');
  await page.waitForFunction(()=>window.sent.length===1);assert.deepEqual(await page.evaluate(()=>window.sent),[{text:'让 Claude 自己决定如何协作'}]);assert.equal(await draft.inputValue(),'');assert.equal((await badge.textContent()).trim(),'优先协作：自主决策电脑控制浏览器控制','badge stays enabled after sending');

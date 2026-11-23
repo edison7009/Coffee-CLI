@@ -348,7 +348,7 @@ function ToolStep({ message }: { message: ClaudeMessage }) {
 
 /** Tool calls in a row as one quiet card (toolcalls 方案 B): a sentence that sums them up, a check once
  *  done, and inside, one line per call. While running it names the step under way and its time. */
-export const ToolGroup = memo(function ToolGroup({ messages }: { messages: ClaudeMessage[] }) {
+export const ToolGroup = memo(function ToolGroup({ messages, extra }: { messages: ClaudeMessage[]; extra?: ReactNode }) {
   const t = useT();
   const key = messages[0].id;
   const [open, setOpen] = useState(() => openToolGroups.has(key));
@@ -366,7 +366,7 @@ export const ToolGroup = memo(function ToolGroup({ messages }: { messages: Claud
       {status === 'done' && <span className="claude-tool-group-done">{stepIcon('done')}</span>}
       <Chevron open={open} />
     </button>
-    {open && <div className="claude-tool-group-list">{messages.map(message => <ToolStep key={message.id} message={message} />)}</div>}
+    {open && <div className="claude-tool-group-list">{extra}{messages.map(message => <ToolStep key={message.id} message={message} />)}</div>}
   </section>;
 });
 
@@ -443,8 +443,10 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const [thinkingExpansion, setThinkingExpansion] = useState<Record<string, boolean>>({});
   const virtual = useConversationVirtualizer(s.messages, scrollRef);
   // Adjacent tool calls fold into one group row; the rest of the run renders empty (lib/tool-runs.ts).
-  // Every call is a card, alone or folded with its neighbours (both layouts).
-  const runs = useMemo(() => toolRuns(s.messages, 1), [s.messages]);
+  // Clear shows every call as a step card, even alone; Code folds runs of two or more and keeps a single
+  // call's full card (its diff or command output open).
+  const clear = useAppState().state?.layoutMode === 'work';
+  const runs = useMemo(() => toolRuns(s.messages, clear ? 1 : 2), [s.messages, clear]);
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainClaudeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);

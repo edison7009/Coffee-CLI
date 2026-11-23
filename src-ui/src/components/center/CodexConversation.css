@@ -150,3 +150,11 @@
   89.6785% { transform:translate(-44.4444%); }
   93.7312% { transform:translate(-45.5556%); }
 }
+
+/* Activity groups (Codex, OpenCode, a DeepSeek Harness group of reasoning only) read like Claude's tool cards:
+   one quiet card with the summary, opening into the steps. */
+.codex-row .codex-group-heading { min-height:38px; padding:6px 12px; border-radius:var(--shape-radius-panel,8px); background:color-mix(in srgb,var(--text-1) 5%,transparent) !important; font-size:14px; cursor:pointer; transition:background-color .15s,color .15s; }
+.codex-row .codex-group-heading:hover { background:var(--bg-hover) !important; color:var(--text-1); }
+.codex-row .codex-group-heading[aria-expanded="true"] { border-radius:var(--shape-radius-panel,8px) var(--shape-radius-panel,8px) 0 0; }
+.codex-row .codex-group-heading small { margin-left:auto; }
+.codex-row .codex-activity-list, .codex-row .dsh-activity-steps { margin:0; padding:10px 12px 12px; border-left:0; border-radius:0 0 var(--shape-radius-panel,8px) var(--shape-radius-panel,8px); background:color-mix(in srgb,var(--text-1) 3%,transparent); }

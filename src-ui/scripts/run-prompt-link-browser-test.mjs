@@ -22,7 +22,7 @@ async function open(pending) {
   // Terminal and conversation views need native sessions; the composer and launchpad are real.
   await page.route(/\/src\/components\/center\/(TierTerminal|ClaudeConversation|CodexConversation)\.tsx/, route => {
     const name = route.request().url().match(/\/([A-Za-z]+)\.tsx/)[1];
-    return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null;` });
+    return route.fulfill({ contentType: 'text/javascript', body: `export function ${name}(){return null} export const TERM_COLOR_SCHEMES=[]; export const ClaudeTool=()=>null, ClaudeThinking=()=>null, ToolGroup=()=>null;` });
   });
   await page.addInitScript(pending => {
     for (const [k, v] of Object.entries({ 'cc-pre-input-button': '1', 'cc-lang': 'zh-CN', 'cc-theme': 'sakura', 'cc-mode': 'dark', 'cc-shape': 'soft', 'cc-tasks-seeded': '1', 'cc-gambit-open': '0', 'coffee:codex-launch-mode': 'terminal' })) localStorage.setItem(k, v);

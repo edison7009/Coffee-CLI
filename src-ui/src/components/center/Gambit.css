@@ -606,7 +606,7 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit-footer--card :is(.gambit-meta > :not(.claude-composer-controls), .claude-composer-controls > :not(.claude-model-controls, .gambit-capabilities), .gambit-capabilities > *, .claude-model-controls > *) {
     box-sizing: border-box; height: 22px; min-height: 22px; margin: 0; display: inline-flex; align-items: center; gap: 4px; flex: none;
     padding: 0 5px; border: 0; border-radius: 5px; background: transparent !important; color: var(--text-3);
-    font: 11.5px/1 var(--font); white-space: nowrap; transition: background-color .15s, color .15s;
+    font: 11.5px/1 var(--font); white-space: nowrap; transition: background-color .15s;
 }
 .gambit-footer--card :is(button, .gambit-capability.is-picker):hover { background: var(--bg-hover) !important; color: var(--text-1); }
 .gambit-footer--card .gambit-capability.is-remote.is-tied { color: var(--text-1); }
@@ -651,3 +651,5 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit-footer--card .claude-permission-control { --chip-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3C/svg%3E"); display: inline-flex; align-items: center; gap: 5px; }
 .gambit-footer--card .gambit-capability.is-orchestration { --chip-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E"); display: inline-flex; align-items: center; gap: 5px; }
 .gambit-footer--card :is(.gambit-capability, .claude-model-control) { overflow: visible !important; }
+/* The top effort level keeps its accent: it marks a costly setting, not decoration. */
+.gambit-footer .claude-effort-trigger.is-ultracode { color: var(--accent) !important; }

@@ -456,7 +456,8 @@ try {
   assert.equal(await returnLatest.evaluate(el=>el.classList.contains('gambit-send')),false,'return button is a dark chip, not the filled send button');
   assert.equal(await returnLatest.locator('svg path').count(),1,'return button uses the shared SVG arrow');
   const radius=locator=>locator.evaluate(el=>getComputedStyle(el).borderRadius);
-  assert.equal(await radius(returnLatest),await radius(page.locator('.gambit-footer > .gambit-send')),'return button takes the theme shape of the send button');
+  // The card composer's send is a small 6px key now; the return button keeps the theme's pill shape.
+  assert.equal(await radius(returnLatest),(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--shape-radius-pill').trim()))||'9999px','return button keeps the theme pill shape');
   const returnSize=await returnLatest.boundingBox(),hostSize=await page.locator('.host:visible .claude-conversation').boundingBox();assert.equal(returnSize.width,32);assert.equal(returnSize.height,32);
   assert.ok(Math.abs(returnSize.x+returnSize.width/2-(hostSize.x+hostSize.width/2))<2,'return button is centered in the conversation');
   await page.evaluate(()=>{window.emit('b','turn/started',{turn:{id:'live'}});window.emit('b','item/agentMessage/delta',{turnId:'live',itemId:'answer',delta:'New answer. '.repeat(90)})});
