@@ -112,8 +112,8 @@ try {
   const summary = page.locator('.claude-turn-summary'); await summary.waitFor();
   assert.equal(await summary.locator('..').getAttribute('data-message-id'), 'live', 'usage belongs inside the final timeline message');
   const summaryBox = await summary.boundingBox(), copyBox = await summary.locator('..').locator('.conversation-copy').boundingBox();
-  // Usage and the copy action share one line under the reply: totals first, the copy icon right after.
-  assert.ok(Math.abs((summaryBox.y + summaryBox.height / 2) - (copyBox.y + copyBox.height / 2)) <= 3 && copyBox.x >= summaryBox.x + summaryBox.width && copyBox.x - summaryBox.x - summaryBox.width <= 12, 'usage and copy sit on one line');
+  // Usage and the copy action share one line under the reply: the copy icon first (it copies the reply), the totals right after.
+  assert.ok(Math.abs((summaryBox.y + summaryBox.height / 2) - (copyBox.y + copyBox.height / 2)) <= 3 && summaryBox.x >= copyBox.x + copyBox.width && summaryBox.x - copyBox.x - copyBox.width <= 12, 'usage and copy sit on one line');
   assert.ok((await summary.textContent()).includes('71.1k') && (await summary.textContent()).includes('1.48'), 'usage values remain intact');
   console.log('ok usage is inside the timeline, close to copy, with original values');
   await page.setViewportSize({ width: 1100, height: 600 }); await page.waitForTimeout(150); await atBottom();
