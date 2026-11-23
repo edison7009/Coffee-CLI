@@ -336,6 +336,12 @@
     background: var(--bg-panel);
     color: var(--text-1);
 }
+/* An image is a square of the picture; its remove button sits on the corner. */
+.gambit-attachment.is-image { position: relative; width: 52px; height: 52px; padding: 0; overflow: hidden; border-radius: 10px; background: var(--bg-hover); }
+.gambit-attachment.is-image .gambit-attachment-content { width: 100%; height: 100%; cursor: zoom-in; }
+.gambit-attachment.is-image .gambit-attachment-content img { width: 100%; height: 100%; border-radius: 0; }
+.gambit-attachment.is-image .gambit-attachment-remove { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 50%; background: rgb(0 0 0 / .55); color: #fff; }
+.gambit-attachment.is-image .gambit-attachment-remove:hover, .gambit-attachment.is-image .gambit-attachment-remove:focus-visible { background: rgb(0 0 0 / .75); color: #fff; }
 
 /* ─── Preview overlay (fullscreen zoom-in) ───────────────────── */
 /* Click anywhere in the dimmed background closes; clicking the
@@ -674,7 +680,7 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
     border-radius: 18px; background: var(--bg-input);
     box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgb(0 0 0 / .12);
 }
-.gambit--card.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; }
+.gambit--card.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; padding-inline: 4px; border-bottom: 0; }
 .gambit--card.gambit--minimal > .gambit-input { grid-area: input; align-self: center; max-height: 100%; }
 .gambit.gambit--docked.gambit--card.gambit--minimal .gambit-textarea { padding: 8px 6px 6px; font-size: 13.5px; }
 .gambit--card.gambit--minimal > .gambit-footer { display: contents; }

@@ -409,6 +409,7 @@ function GambitImpl({
   const setShown = useCallback((text: string) => onDraftChange(joinDraft(text, splitDraft(latestDraftRef.current).tokens)), [onDraftChange]);
   const pastedImagePaths = useMemo(() => attachments.filter(item => item.image).map(item => item.path), [attachments]);
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
+  const [brokenThumbs, setBrokenThumbs] = useState<ReadonlySet<string>>(() => new Set());
   // Use a stable key so the effect only re-fires when the set of paths
   // actually changes, not on every keystroke that leaves paths intact.
   const pastedImagePathsKey = pastedImagePaths.join('\n');
@@ -548,7 +549,8 @@ function GambitImpl({
   useEffect(() => {
     const row = attachmentsRef.current;
     if (!row || typeof ResizeObserver === 'undefined') return;
-    let last = row.offsetHeight;
+    // The first report comes as the row appears: measure then too, the row having pushed the input out of the box.
+    let last = -1;
     const observer = new ResizeObserver(() => { if (row.offsetHeight !== last) { last = row.offsetHeight; setRemeasure(n => n + 1); } });
     observer.observe(row);
     return () => observer.disconnect();
@@ -926,13 +928,17 @@ function GambitImpl({
         onClear={() => onDraftChange('')} />}
 
       {attachments.length > 0 && <div className="gambit-attachments" ref={attachmentsRef}>
-        {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>
+        {attachments.map(({ path, image }) => {
+          // An image shows as the picture itself, like other chat apps; a file (or an image that won't load) keeps its name.
+          const preview = image && !brokenThumbs.has(path) ? pastedPreviews.get(path) ?? thumbUrls[path] : undefined;
+          return <div className={`gambit-attachment${preview ? ' is-image' : ''}`} key={path}>
           <button className="gambit-attachment-content" aria-label={t(image ? 'gambit.preview_attachment' : 'gambit.attachment', { path })} onClick={() => { if (image) openThumbPreview(path); }}>
-            {image && (pastedPreviews.get(path) ?? thumbUrls[path]) ? <img src={pastedPreviews.get(path) ?? thumbUrls[path]} alt="" draggable={false} onError={e => { e.currentTarget.style.display = 'none'; }} /> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h5M8 12h8M8 16h8" /></svg>}
-            <span>{path.split(/[\\/]/).pop()}</span>
+            {preview ? <img src={preview} alt="" draggable={false} onError={() => setBrokenThumbs(prev => new Set(prev).add(path))} /> : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h5M8 12h8M8 16h8" /></svg>
+            <span>{path.split(/[\\/]/).pop()}</span></>}
           </button>
           <button className="gambit-attachment-remove close-button" aria-label={t('gambit.remove_attachment', { path })} onClick={() => removeAttachment(path)}><svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg></button>
-        </div>)}
+        </div>;
+        })}
       </div>}
 
       {card && !minimal && <PlaceTab device={placeDevice ?? null} folder={workspaceName} toolIcon={toolIcon} switchable={!!remoteControl} onPick={() => rootRef.current?.querySelector<HTMLButtonElement>('.gambit-capability.is-remote')?.click()} />}
