@@ -143,5 +143,6 @@
 }
 
 /* Changes beside the rail: the right panel's own content (pre-input, changes, diff), a little wider. */
-.icon-rail-list.icon-rail-changes { width: min(420px, calc(100vw - 80px)); padding: 0; }
+/* As wide as the conversation list beside it: the two flyouts open from the same rail. */
+.icon-rail-list.icon-rail-changes { padding: 0; }
 .icon-rail-changes > * { flex: 1; min-height: 0; }
