@@ -849,10 +849,12 @@ function GambitImpl({
     if (e.key === 'Enter' && (e.nativeEvent.keyCode === 229 || performance.now() - compositionEndRef.current < 50)) return;
     if (desktop && claudeKeyHandler.current?.(e)) return;
     // ⌘S / Ctrl+S: keep this draft for later in the pre-input list (the same as the save button on the box's edge).
-    if ((isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+    // The physical S key too, so it works on non-Latin layouts (ЙЦУКЕН gives 'ы').
+    if ((isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey && (e.key.toLowerCase() === 's' || e.code === 'KeyS')) {
       e.preventDefault();
       const text = draftForSend(draft).trim();
-      if (text) { appDispatch({ type: 'SAVE_PRE_INPUT', text }); onDraftChange(''); }
+      // Saved like a send: history recall starts again from the newest entry.
+      if (text) { appDispatch({ type: 'SAVE_PRE_INPUT', text }); onDraftChange(''); historyCursorRef.current = null; }
       return;
     }
     if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && suggestion) {

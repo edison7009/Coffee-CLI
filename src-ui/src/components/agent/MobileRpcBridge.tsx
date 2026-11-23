@@ -8,7 +8,7 @@ import { mirrorSnapshot, mirrorSource, runMirrorAction, setMirrorActive, type Mi
 import type { MobileRpcStatus } from '../../tauri';
 
 /** Tab changes a browser may ask for; everything else it does stays in the browser. */
-const BROWSER_ACTIONS = new Set<Action['type']>(['SET_GAMBIT_DRAFT', 'ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_TERMINAL_TOOL', 'REMOVE_TERMINAL', 'CLOSE_TERMINAL_GROUP', 'RESTART_TERMINAL', 'SET_TERMINAL_HIDDEN', 'SET_TERMINAL_WORKTREE', 'SET_TAB_TITLE']);
+const BROWSER_ACTIONS = new Set<Action['type']>(['SET_GAMBIT_DRAFT', 'ADD_TERMINAL', 'LAUNCH_TERMINAL_TOOL', 'SET_TERMINAL_TOOL', 'REMOVE_TERMINAL', 'CLOSE_TERMINAL_GROUP', 'RESTART_TERMINAL', 'SET_TERMINAL_HIDDEN', 'SET_TERMINAL_WORKTREE', 'SET_TAB_TITLE', 'SET_PINNED_TITLE']);
 const MIRROR_KINDS = new Set<MirrorKind>(['claude', 'codex', 'opencode', 'pi', 'dsh', 'app']);
 
 interface MobileRequest { requestId: string; method: string; params: { id?: string; text?: string; name?: string; cmd?: string; args?: Record<string, unknown> | unknown[]; kind?: string; action?: Action & { cwd?: string } } }

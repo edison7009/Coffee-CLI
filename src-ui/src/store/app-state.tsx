@@ -374,6 +374,8 @@ export type Action =
   | { type: 'TAKE_PRE_INPUT'; count: number }
   | { type: 'SET_PRE_INPUT_BUTTON'; value: boolean }
   | { type: 'SET_TAB_TITLE'; id: string; title: string }
+  /** The user's own name for an open conversation (renamed from the title bar); none clears it. */
+  | { type: 'SET_PINNED_TITLE'; id: string; title?: string }
   | { type: 'SET_DIFF_SELECTION'; selection: DiffSelection }
   | { type: 'CLEAR_DIFF' }
   | { type: 'SET_DIFF_MODE'; mode: 'overlay' | 'tab' }
@@ -450,6 +452,8 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         terminals: state.terminals.map(t => t.id === state.activeTerminalId ? { ...t, folderPath: null } : t)
       };
+    case 'SET_PINNED_TITLE':
+      return { ...state, terminals: state.terminals.map(t => t.id === action.id ? { ...t, pinnedTitle: action.title || undefined } : t) };
     case 'SET_TAB_TITLE':
       // OSC 0/2 title from the tool (xterm onTitleChange). Skip if the session
       // is gone (late dispatch after dispose) or unchanged (onTitleChange can
@@ -1061,7 +1065,7 @@ function browserDispatch(local: React.Dispatch<Action>): React.Dispatch<Action> 
         break;
       case 'RESTART_TERMINAL': if (desk(action.id)) { openedFromBrowser.add(action.newId); send(action); return; } break;
       case 'REMOVE_TERMINAL': if (desk(action.id)) { send(action); local(action); return; } break;
-      case 'CLOSE_TERMINAL_GROUP': case 'SET_TERMINAL_HIDDEN': case 'SET_TERMINAL_WORKTREE': case 'SET_TAB_TITLE':
+      case 'CLOSE_TERMINAL_GROUP': case 'SET_TERMINAL_HIDDEN': case 'SET_TERMINAL_WORKTREE': case 'SET_TAB_TITLE': case 'SET_PINNED_TITLE':
         if (desk(action.id)) { send(action); return; }
         break;
     }

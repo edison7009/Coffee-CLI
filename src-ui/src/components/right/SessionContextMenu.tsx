@@ -36,7 +36,7 @@ const ICON_PROPS = {
   strokeLinejoin: 'round' as const,
 };
 
-export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSplit, splitFull, onOpenWorker, onDetachWorker, onCloseConversation }: { menu: SessionCtxMenuState; onClose: () => void; /** For the open conversation (the title bar's menu): close it instead of deleting it. */ onCloseConversation?: () => void; onRename: (session: SavedSession) => void; onDelete: (session: SavedSession) => void; onOpenSplit?: (session: SavedSession) => void; splitFull?: boolean; onOpenWorker?: () => void; onDetachWorker?: () => void }) {
+export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSplit, splitFull, onOpenWorker, onDetachWorker, onCloseConversation, unsaved = false }: { menu: SessionCtxMenuState; onClose: () => void; /** For the open conversation (the title bar's menu): close it instead of deleting it. */ onCloseConversation?: () => void; /** Not in the history yet: no pin or rename, which would attach to an id the record won't have. */ unsaved?: boolean; onRename: (session: SavedSession) => void; onDelete: (session: SavedSession) => void; onOpenSplit?: (session: SavedSession) => void; splitFull?: boolean; onOpenWorker?: () => void; onDetachWorker?: () => void }) {
   const t = useT();
   const menuRef = useRef<HTMLDivElement>(null);
   const { session } = menu;
@@ -95,7 +95,7 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
       {onOpenSplit && <button className="ctx-menu-item" disabled={splitFull} title={splitFull ? t('split.full') : undefined} onClick={() => { onClose(); onOpenSplit(session); }}>
         <svg {...ICON_PROPS}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></svg>{t('split.open')}
       </button>}
-      <button className="ctx-menu-item" onClick={handlePin}>
+      {!unsaved && <><button className="ctx-menu-item" onClick={handlePin}>
         <svg {...ICON_PROPS}>
           <path d="M12 17v5"/>
           <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
@@ -108,7 +108,7 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
         </svg>
         {t('menu.rename')}
-      </button>
+      </button></>}
 
       {hasGroup2 && <div className="ctx-menu-divider" />}
 

@@ -91,7 +91,7 @@ function useRailTip() {
 function SessionButton({ session, active, unread, onPick, tipFor, kids, onPickKid }: { session: TerminalSession; active: boolean; unread: boolean; onPick: () => void; tipFor: ReturnType<typeof useRailTip>['tipFor']; kids?: TabChild[]; onPickKid: (id: string) => void }) {
   const t = useT();
   const folder = session.folderPath?.split(/[\\/]/).filter(Boolean).pop() ?? '';
-  const title = session.toolTitle || (session.tool ? getToolDisplayName(session.tool) : t('explorer.new_session'));
+  const title = session.pinnedTitle || session.toolTitle || (session.tool ? getToolDisplayName(session.tool) : t('explorer.new_session'));
   const letter = Array.from(title.trim())[0]?.toUpperCase() ?? '·';
   const state = session.agentStatus === 'working' ? 'working' : session.agentStatus === 'wait_input' ? 'waiting' : unread && !active ? 'unread' : '';
   return <button type="button" className="icon-rail-button icon-rail-session" aria-label={folder ? `${title} · ${folder}` : title} aria-current={active || undefined} onClick={onPick}
