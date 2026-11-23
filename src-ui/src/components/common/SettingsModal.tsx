@@ -317,7 +317,8 @@ export function SettingsModal() {
               {s.label}
             </button>
           ))}
-          {/* A free star on GitHub (as EchoBird asks for one): above the version, at the foot of the rail. */}
+          {/* The changelog, then a free star on GitHub, at the foot of the rail above the version (as EchoBird's). */}
+          <Changelog className="settings-rail-item settings-changelog" />
           <button type="button" className="settings-star" onClick={() => commands.openUrl('https://github.com/edison7009/Coffee-CLI').catch(() => {})}>
             <b>
               {t('settings.star')}
@@ -328,8 +329,6 @@ export function SettingsModal() {
           </button>
           {version && (
             <div className="settings-rail-version">
-              {/* The changelog lives here, above the version it describes (no longer in the title bar). */}
-              <Changelog className="settings-rail-version-link" />
               <span className="settings-rail-version-num">v{version}</span>
               <button
                 type="button"
