@@ -173,12 +173,13 @@ function ToolCopy({ content, expanded = false, onToggle }: { content: string; ex
   </div>;
 }
 
-/** The expand / collapse tab hanging from a block's lower right edge, so collapsing never needs a scroll back up. */
+/** Expand / collapse along the block's own bottom edge, inside its frame: collapsed, the last lines fade into the
+ *  block's fill under "展开 ⌄"; open, a "收起 ⌃" strip there, so collapsing never needs a scroll back up. */
 function ExpandTab({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
   const t = useT();
   return <button type="button" className="claude-expand-tab" aria-expanded={expanded} onClick={onToggle}>
     <span>{t(expanded ? 'claude.collapse' : 'claude.expand_tab')}</span>
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={RESIZE_ICON(expanded)} /></svg>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={expanded ? 'm18 15-6-6-6 6' : 'm6 9 6 6 6-6'} /></svg>
   </button>;
 }
 
@@ -220,7 +221,7 @@ function useToolExpanded(): [boolean, () => void] {
 function ToolContent({ content, path, plain = false, previewHeight = 95 }: { content: string; path: string; plain?: boolean; previewHeight?: number }) {
   const [expanded, toggle] = useToolExpanded();
   const [ref, overflow] = useOverflow(previewHeight, [content]);
-  return <div className={`claude-expandable${overflow ? ' has-tab' : ''}`}>
+  return <div className={`claude-expandable${overflow ? ' has-tab' : ''}${overflow && expanded ? ' is-open' : ''}`}>
     <ToolBody content={content} path={path} plain={plain} previewHeight={previewHeight} expanded={expanded} bodyRef={ref} onToggle={overflow ? toggle : undefined} />
     {overflow && <ExpandTab expanded={expanded} onToggle={toggle} />}
   </div>;
@@ -233,7 +234,7 @@ function BashIO({ command, output, failed }: { command: string; output?: string;
   const [inRef, inOverflow] = useOverflow(180, [command]);
   const [outRef, outOverflow] = useOverflow(180, [output]);
   const overflow = inOverflow || (output !== undefined && outOverflow);
-  return <div className={`claude-expandable${overflow ? ' has-tab' : ''}`}>
+  return <div className={`claude-expandable${overflow ? ' has-tab' : ''}${overflow && expanded ? ' is-open' : ''}`}>
     <div className="claude-io">
       <div className="claude-io-row"><span>{t('claude.input')}</span><ToolBody content={command} path="command.sh" plain={false} previewHeight={180} expanded={expanded} bodyRef={inRef} onToggle={inOverflow ? toggle : undefined} /></div>
       {output !== undefined && <div className={`claude-io-row ${failed}`}><span>{t('claude.output')}</span><ToolBody content={output} path="output.txt" plain previewHeight={180} expanded={expanded} bodyRef={outRef} onToggle={outOverflow ? toggle : undefined} /></div>}
@@ -268,7 +269,7 @@ function EditDiff({ before, after, path }: { before: string; after: string; path
   }, [before, after, path, mode]);
   const render = (value: string | undefined, index: number | undefined, side: 0 | 1) => index && tokens[side]?.[index - 1] ? tokens[side]![index - 1].map((t, i) => <span key={i} style={{ color: t.color }}>{t.content}</span>) : value;
   const long = rows.length > 6 || before.length + after.length > 800;
-  return <div className={`claude-expandable${long ? ' has-tab' : ''}`}><div className={`claude-diff ${expanded ? 'is-expanded' : ''}`}>
+  return <div className={`claude-expandable${long ? ' has-tab' : ''}${long && expanded ? ' is-open' : ''}`}><div className={`claude-diff ${expanded ? 'is-expanded' : ''}`}>
     <ToolCopy content={after} expanded={expanded} onToggle={long ? toggle : undefined} />
     <div className="claude-diff-scroll">{rows.length ? rows.map((r, i) => <div className="claude-diff-row" key={i}>
       <div className={`${r.changed ? r.old !== undefined ? 'is-removed' : 'is-gap' : ''}`}><span className="claude-line-number">{r.oldLine}</span><code>{render(r.old, r.oldLine, 0)}</code></div>

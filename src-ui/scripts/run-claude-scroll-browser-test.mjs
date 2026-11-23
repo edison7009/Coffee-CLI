@@ -297,7 +297,7 @@ try {
   await page.locator('.claude-expand-tab').click();
   assert.equal(await page.locator('.claude-diff.is-expanded').count(), 1);
   const diffTab = await page.locator('.claude-expand-tab').boundingBox(), diffBox = await page.locator('.claude-diff').boundingBox();
-  assert.ok(diffTab.y >= diffBox.y + diffBox.height - 2 && diffTab.x + diffTab.width <= diffBox.x + diffBox.width, 'the tab hangs from the lower right edge');
+  assert.ok(diffTab.y + diffTab.height <= diffBox.y + diffBox.height + 1 && diffTab.y >= diffBox.y + diffBox.height - 40 && diffTab.x >= diffBox.x && diffTab.x + diffTab.width <= diffBox.x + diffBox.width + 1, 'the strip sits inside the frame along its bottom edge');
   assert.equal(await page.locator('.claude-expand-tab').textContent(), 'Collapse', 'an open block offers Collapse right at its bottom');
   assert.equal(await page.locator('.claude-diff-scroll').evaluate(el => el.scrollHeight <= el.clientHeight + 1), true, 'an open block shows everything without an inner scroll');
   await page.locator('.claude-diff .claude-tool-resize').click();

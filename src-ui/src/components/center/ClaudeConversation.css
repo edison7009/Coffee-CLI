@@ -95,12 +95,33 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-tool-resize:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .claude-tool-resize:hover,.claude-row .claude-tool-actions .conversation-copy:hover { color:var(--text-1); background:var(--bg-hover); opacity:1; }
 .claude-expandable { position:relative; min-width:0; }
-.claude-expandable.has-tab { margin-bottom:19px; }
+
 .claude-expandable > .claude-tool-content { flex:1; }
-/* Hangs from the block's lower right edge in the block's own fill, joined without a seam. */
-.claude-expand-tab { position:absolute; top:calc(100% - 1px); right:12px; display:inline-flex; align-items:center; gap:4px; height:19px; padding:0 8px; border:1px solid var(--border); border-top:0; border-radius:0 0 var(--shape-radius-btn,6px) var(--shape-radius-btn,6px); font:11px/1 var(--font-ui, inherit); color:var(--text-2); background:color-mix(in srgb,var(--bg-terminal) 92%,#000 8%); cursor:pointer; }
+/* Expand / collapse sits inside the block's frame along its bottom edge. Collapsed, the last lines fade into the
+   block's own fill under the label; open, the same strip stays solid and the content keeps room under it. */
+.claude-expandable { --frame-fill:color-mix(in srgb,var(--bg-terminal) 92%,#000 8%); }
+.claude-expandable:has(> .claude-diff) { --frame-fill:var(--bg-terminal); }
+.claude-expand-tab {
+  position:absolute; left:1px; right:1px; bottom:1px; z-index:1; display:flex; align-items:flex-end; justify-content:center; gap:4px;
+  height:44px; padding:0 0 7px; border:0; border-radius:0 0 max(0px, calc(var(--shape-radius-btn,6px) - 1px)) max(0px, calc(var(--shape-radius-btn,6px) - 1px));
+  background:linear-gradient(to bottom, color-mix(in srgb,var(--frame-fill) 0%,transparent), var(--frame-fill) 62%);
+  color:var(--text-2); font:12px/1 var(--font-ui, var(--font)); cursor:pointer;
+}
+/* Bash's output row lays a hover tint over the fill: the fade carries the same tint so it meets the text seamlessly. */
+.claude-expandable:has(.claude-io-row + .claude-io-row) .claude-expand-tab {
+  background:linear-gradient(to bottom, transparent, var(--bg-hover) 62%), linear-gradient(to bottom, color-mix(in srgb,var(--frame-fill) 0%,transparent), var(--frame-fill) 62%);
+}
+.claude-expand-tab[aria-expanded="true"] { height:28px; align-items:center; padding:0; background:var(--frame-fill); border-top:1px solid color-mix(in srgb,var(--text-1) 6%,transparent); }
+.claude-expandable:has(.claude-io-row + .claude-io-row) .claude-expand-tab[aria-expanded="true"] { background:linear-gradient(var(--bg-hover), var(--bg-hover)), var(--frame-fill); }
 .claude-expand-tab:hover { color:var(--text-1); }
-.claude-expand-tab:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
+.claude-expand-tab:focus-visible { outline:1px solid var(--accent); outline-offset:-2px; }
+/* A plain code block keeps its border on the code itself, clipped by the preview: the strip closes the frame. */
+.claude-expandable > .claude-tool-content ~ .claude-expand-tab { left:0; right:0; bottom:0; border:1px solid var(--border); border-top:0; }
+.claude-expandable > .claude-tool-content ~ .claude-expand-tab[aria-expanded="true"] { border-top:1px solid color-mix(in srgb,var(--text-1) 6%,transparent); }
+/* Open: room under the last line for the strip. */
+.claude-expandable.is-open > .claude-tool-content .claude-code,
+.claude-expandable.is-open .claude-io-row:last-child :is(.claude-code, pre),
+.claude-expandable.is-open .claude-diff-scroll { padding-bottom:34px; }
 .claude-tool-pending { color:var(--text-3); font-size:13px; }
 .claude-diff { position:relative; overflow:hidden; border:1px solid var(--border); border-radius:var(--shape-radius-btn,6px); background:var(--bg-terminal); }
 .claude-diff:has(> .claude-tool-actions) { padding-top:30px; }
