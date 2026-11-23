@@ -966,4 +966,5 @@ export const zhTW = {
   "tab.sub_windows": "{count} 個子視窗",
   "titlebar.conversation_menu": "對話選單",
   "menu.close_conversation": "關閉對話",
+  "gambit.placeholder_save": "輸入訊息…  {save} 存入預輸入",
 } as const satisfies Record<I18nKey, string>;

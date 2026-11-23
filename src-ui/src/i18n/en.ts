@@ -968,6 +968,7 @@ export const en = {
   "tab.sub_windows": "{count} sub-windows",
   "titlebar.conversation_menu": "Conversation menu",
   "menu.close_conversation": "Close conversation",
+  "gambit.placeholder_save": "Message…  {save} to save for later",
 } as const;
 
 export type I18nKey = keyof typeof en;

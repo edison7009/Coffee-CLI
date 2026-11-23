@@ -962,4 +962,5 @@ export const ru = {
   "tab.sub_windows": "Подокон: {count}",
   "titlebar.conversation_menu": "Меню разговора",
   "menu.close_conversation": "Закрыть разговор",
+  "gambit.placeholder_save": "Сообщение…  {save} — сохранить на потом",
 } as const satisfies Record<I18nKey, string>;

@@ -848,6 +848,13 @@ function GambitImpl({
     // That keydown still carries keyCode 229, and it lands right after compositionend.
     if (e.key === 'Enter' && (e.nativeEvent.keyCode === 229 || performance.now() - compositionEndRef.current < 50)) return;
     if (desktop && claudeKeyHandler.current?.(e)) return;
+    // ⌘S / Ctrl+S: keep this draft for later in the pre-input list (the same as the save button on the box's edge).
+    if ((isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      const text = draftForSend(draft).trim();
+      if (text) { appDispatch({ type: 'SAVE_PRE_INPUT', text }); onDraftChange(''); }
+      return;
+    }
     if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && suggestion) {
       e.preventDefault();
       onDraftChange(suggestion);
@@ -1015,7 +1022,7 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={shown}
-          placeholder={suggestion ? undefined : phone || card ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ? undefined : phone ? t('gambit.placeholder_short') : card ? t('gambit.placeholder_save', { save: `${ctxMod}${isMac ? '' : '+'}S` }) : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => setShown(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}

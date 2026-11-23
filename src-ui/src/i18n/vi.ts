@@ -966,4 +966,5 @@ export const vi = {
   "tab.sub_windows": "{count} cửa sổ con",
   "titlebar.conversation_menu": "Menu cuộc trò chuyện",
   "menu.close_conversation": "Đóng cuộc trò chuyện",
+  "gambit.placeholder_save": "Tin nhắn…  {save} để lưu dùng sau",
 } as const satisfies Record<I18nKey, string>;

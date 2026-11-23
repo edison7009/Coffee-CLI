@@ -965,4 +965,5 @@ export const ko = {
   "tab.sub_windows": "하위 창 {count}개",
   "titlebar.conversation_menu": "대화 메뉴",
   "menu.close_conversation": "대화 닫기",
+  "gambit.placeholder_save": "메시지…  {save} 사전 입력에 저장",
 } as const satisfies Record<I18nKey, string>;

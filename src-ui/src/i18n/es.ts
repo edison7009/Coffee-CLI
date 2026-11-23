@@ -962,4 +962,5 @@ export const es = {
   "tab.sub_windows": "{count} subventanas",
   "titlebar.conversation_menu": "Menú de la conversación",
   "menu.close_conversation": "Cerrar conversación",
+  "gambit.placeholder_save": "Mensaje…  {save} para guardar para luego",
 } as const satisfies Record<I18nKey, string>;

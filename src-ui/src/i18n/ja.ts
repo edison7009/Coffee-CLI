@@ -965,4 +965,5 @@ export const ja = {
   "tab.sub_windows": "サブウィンドウ {count} 個",
   "titlebar.conversation_menu": "会話メニュー",
   "menu.close_conversation": "会話を閉じる",
+  "gambit.placeholder_save": "メッセージ…  {save} で事前入力に保存",
 } as const satisfies Record<I18nKey, string>;
