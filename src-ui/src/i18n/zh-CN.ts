@@ -972,7 +972,7 @@ export const zhCN = {
   "changelog.feedback": "问题反馈",
   "changelog.close": "关闭",
   "launchpad.install": "安装",
-  "launchpad.install_tip": "还没安装 {tool}。安装 Agent 工具不建议直接用命令：环境、路径等配置难度较大。推荐使用 EchoBird，它的 AI 助手会检查电脑环境，一键安装并配置好账号和模型。点击「安装」打开 EchoBird.ai 下载即可。",
+  "launchpad.install_tip": "还没安装 {tool}，但不建议你直接安装：运行环境、配置路径和模型切换等难度太大，还消耗时间。推荐使用 EchoBird 的 AI 助手一键安装，30 秒搞定。直接点击「安装」进入 EchoBird 官网。",
   "settings.star": "帮我们点个免费的星",
   "settings.star_hint": "在 GitHub 支持我们",
 } as const satisfies Record<I18nKey, string>;

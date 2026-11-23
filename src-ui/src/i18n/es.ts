@@ -967,7 +967,7 @@ export const es = {
   "changelog.feedback": "Comentarios",
   "changelog.close": "Cerrar",
   "launchpad.install": "Instalar",
-  "launchpad.install_tip": "{tool} no está instalado. No se recomienda instalar herramientas de agentes con comandos: el entorno y las rutas son difíciles de configurar. Te recomendamos EchoBird: su asistente de IA revisa tu equipo, lo instala con un clic y configura la cuenta y los modelos. Pulsa «Instalar» para abrir EchoBird.ai y descargarlo.",
+  "launchpad.install_tip": "{tool} no está instalado, pero no te recomendamos instalarlo a mano: el entorno, las rutas de configuración y el cambio de modelos son complicados y llevan tiempo. Con el asistente de IA de EchoBird se instala con un clic en 30 segundos. Pulsa «Instalar» para ir a la web de EchoBird.",
   "settings.star": "Danos una estrella gratis",
   "settings.star_hint": "Apoya a Coffee CLI en GitHub",
 } as const satisfies Record<I18nKey, string>;

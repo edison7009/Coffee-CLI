@@ -971,7 +971,7 @@ export const vi = {
   "changelog.feedback": "Góp ý",
   "changelog.close": "Đóng",
   "launchpad.install": "Cài đặt",
-  "launchpad.install_tip": "{tool} chưa được cài. Không nên cài công cụ Agent bằng lệnh trực tiếp: môi trường và đường dẫn khó cấu hình. Hãy dùng EchoBird: trợ lý AI sẽ kiểm tra môi trường, cài đặt bằng một cú nhấp và thiết lập tài khoản, mô hình. Nhấn “Cài đặt” để mở EchoBird.ai và tải về.",
+  "launchpad.install_tip": "{tool} chưa được cài, nhưng không nên tự cài: môi trường chạy, đường dẫn cấu hình và chuyển mô hình đều khó và tốn thời gian. Dùng trợ lý AI của EchoBird để cài bằng một cú nhấp, xong trong 30 giây. Nhấn “Cài đặt” để mở trang EchoBird.",
   "settings.star": "Tặng chúng tôi một ngôi sao",
   "settings.star_hint": "Ủng hộ Coffee CLI trên GitHub",
 } as const satisfies Record<I18nKey, string>;
