@@ -169,3 +169,9 @@
 .rail-new-sep { height: 1px; margin: 3px 6px; background: var(--border); }
 /* Showing a file's diff, the changes flyout widens so code lines are not wrapped at every turn. */
 .icon-rail-list.icon-rail-changes:has([role="tab"][id$="-detail-tab"][aria-selected="true"]) { width: min(560px, calc(100vw - 80px)); }
+/* The app update on the rail: centred like every rail icon (the sidebar's update style made it an inline-flex
+   that sat on the left), and the ready "安装" label fits the tile. */
+.icon-rail-button.icon-rail-update.update-available { display: grid; place-items: center; }
+.icon-rail-button.icon-rail-update.is-ready { width: 34px; padding: 0; }
+.icon-rail-button.icon-rail-update .update-install-label { font-size: 10.5px; }
+.icon-rail-button.icon-rail-update[data-tip]:hover::after, .icon-rail-button.icon-rail-update[data-tip]:focus-visible::after { display: none; }
