@@ -156,7 +156,9 @@ const normCwd = (cwd: string) => {
   return /^[a-z]:\\/i.test(normalized) ? normalized.toLowerCase() : normalized;
 };
 
-export function HistoryBoard() {
+/** `searchRequested`: a host with its own search button (代码式's icon row) asks for the search dialog, and hears
+ *  back through `onSearchOpened`; such a host also hides the board's own search row. */
+export function HistoryBoard({ searchRequested = false, onSearchOpened }: { searchRequested?: boolean; onSearchOpened?: () => void } = {}) {
   const t = useT();
   const { state, dispatch } = useAppState();
   const stateRef = useAppStateRef();
@@ -461,6 +463,11 @@ export function HistoryBoard() {
   const openSearch = () => {
     setPreview(null); setSessionSearchQuery(''); setDebouncedQuery(''); setSearchSelection(0); setSearchCount(PAGE); setSearchOpen(true);
   };
+  useEffect(() => {
+    if (!searchRequested) return;
+    openSearch(); onSearchOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- openSearch only resets local state
+  }, [searchRequested]);
   const openSearchResult = (session: SavedSession) => { searchDialogRef.current?.close(); handleViewHistory(session); };
 
   // Enter inline-rename mode on a card (invoked from the context menu).
@@ -735,11 +742,11 @@ export function HistoryBoard() {
 
   return (
     <>
-      <button type="button" className="history-search-trigger" onClick={openSearch}>
+      {!onSearchOpened && <button type="button" className="history-search-trigger" onClick={openSearch}>
         {/* Lucide search; license in /icons/LICENSE-lucide.txt. */}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg>
         <span>{t('history.search')}</span>
-      </button>
+      </button>}
       <div className="history-layout-toggle">
         <span>{layout === 'tool' ? getToolName(toolFilter) : t(layout === 'list' ? 'history.list' : 'history.projects')}</span>
         <button type="button" ref={layoutBtnRef} className={`history-layout-menu-btn${layoutMenu ? ' open' : ''}`} aria-label={t('history.layout')} aria-haspopup="menu" aria-expanded={!!layoutMenu} onClick={() => {

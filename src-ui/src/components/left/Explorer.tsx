@@ -620,6 +620,7 @@ export function Explorer() {
   const installing = installPhase !== null;
 
   // Keep the last-selected view across panel collapse and application restarts.
+  const [searchRequested, setSearchRequested] = useState(false);
   const [activeTab, setActiveTab] = useState<'history' | 'workspace'>(() => {
     try {
       const saved = localStorage.getItem('cc-left-tab');
@@ -780,6 +781,11 @@ export function Explorer() {
         <button type="button" className="explorer-icon-button" aria-pressed={!!state.automationsOpen} {...tipFor(t('automation.title'))} onClick={() => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: true })}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></svg><span className="explorer-icon-label">{t('automation.title')}</span>
         </button>
+        {/* Search the conversations: a button in the row instead of a full-width field above the list. */}
+        <button type="button" className="explorer-icon-button" aria-haspopup="dialog" {...tipFor(t('history.search'))} onClick={() => { setActiveTab('history'); setSearchRequested(true); }}>
+        {/* Lucide search; license in /icons/LICENSE-lucide.txt. */}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34" /><circle cx="11" cy="11" r="8" /></svg><span className="explorer-icon-label">{t('history.search')}</span>
+        </button>
         <span className="explorer-icon-fill" />
         <span className="explorer-view-switch" data-active={activeTab} role="group" aria-label={`${t('explorer.tab.history')} / ${t('explorer.tab.workspace')}`}>
         <span className="explorer-view-thumb" aria-hidden="true" />
@@ -825,7 +831,7 @@ export function Explorer() {
           // HistoryBoard returns a fragment and was originally hosted inside
           // .task-board which provided the 16px gutter. In Explorer's flex
           // shell that padding doesn't exist, so we wrap to restore it.
-          <div className="explorer-history-host"><HistoryBoard /></div>
+          <div className="explorer-history-host"><HistoryBoard searchRequested={searchRequested} onSearchOpened={() => setSearchRequested(false)} /></div>
         ) : (!activeSession?.tool || CWD_AGNOSTIC_TOOLS.has(activeSession.tool)) ? (
           // Launchpad (no tool picked yet) or a CWD-agnostic tool
           // (OpenClaw / Hermes Agent) — both render the same blank
