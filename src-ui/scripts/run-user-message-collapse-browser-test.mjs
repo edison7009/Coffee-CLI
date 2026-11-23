@@ -17,7 +17,7 @@ createRoot(document.getElementById('root')).render(<App/>);
   loader: { '.woff2': 'dataurl', '.svg': 'dataurl', '.png': 'dataurl' }, external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   plugins: [{ name: 'language', setup(b) {
     b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'language', namespace: 'fixture' }));
-    b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ loader: 'js', contents: `export function useAppLanguage(){return 'zh-CN'}` }));
+    b.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ loader: 'js', contents: `export function useAppLanguage(){return 'zh-CN'}\nexport function useAppState(){return {state:{terminals:[]},dispatch(){}}}` }));
   } }] });
 const server = http.createServer(async (req, res) => {
   const name = req.url.slice(1);

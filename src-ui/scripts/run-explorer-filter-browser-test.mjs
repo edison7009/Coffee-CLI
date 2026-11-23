@@ -31,6 +31,8 @@ const mock = `
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `import React from 'react';import{createRoot}from'react-dom/client';import{Explorer}from'./src/components/left/Explorer';import'./src/styles/global.css';localStorage.setItem('cc-left-tab','workspace');createRoot(document.getElementById('root')).render(<Explorer/>);` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
+  // The update notes (release-notes.ts) import the bundled template as text, as Vite's ?raw does.
+  loader: { '.md': 'text' },
   nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'],
   define: { 'process.env.NODE_ENV': '"development"', __IS_LINUX__: 'false' },
   plugins: [{ name: 'explorer-boundaries', setup(builder) {
