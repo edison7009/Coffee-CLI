@@ -16,21 +16,17 @@ try{
  const {page,errors}=await prepare(['D:/Recent','D:/Older']);
  assert.equal(await page.locator('.launchpad-config').count(),0,'tool settings live in App configuration, not on the launch cards');
  for(let attempt=0;attempt<5;attempt++){
-   await page.locator('.launchpad-icon').first().click();
+   await page.locator('.launchpad-folder').first().click();
    await page.keyboard.press('Escape');
    await page.locator('.folder-menu').waitFor({state:'hidden'});
  }
  for(const card of await page.locator('.launchpad-card').all()){
    const folder=card.locator('.launchpad-folder');
    assert.equal(await folder.count(),1,'every directory-based card has a folder button');
-   await folder.hover();
-   assert.equal(await folder.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)','the folder is a plain enlarged icon, with no button background even on hover');
-   assert.ok((await folder.locator('svg').boundingBox()).width>=24,'the folder icon is enlarged');
+   assert.ok((await folder.innerText()).trim().length>0,'Code names the folder button in words (choose folder), above how the tool opens');
    assert.equal((await card.locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder','a tool never opened shows the folder hint on its second line');
    assert.equal(await card.locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'ltr','the hint elides at its end; only paths keep their end');
-   const [icon,info,path]=await Promise.all([card.locator('.launchpad-icon').boundingBox(),card.locator('.launchpad-card-info').boundingBox(),card.locator('.launchpad-card-path').boundingBox()]);
-   assert.ok(Math.abs(info.y+info.height/2-(icon.y+icon.height/2))<2&&path.y+path.height<=icon.y+icon.height+2,'name and path stand beside the icon, within its height');
-   for(const opener of [card.locator('.launchpad-icon'),folder]){
+   for(const opener of [card.locator('.launchpad-card-info'),folder]){
      await opener.click();await page.locator('.folder-menu').waitFor();
      assert.equal((await state(page)).tool,null,'opening the list never launches');
      const [menu,cardBounds,button]=await Promise.all([page.locator('.folder-menu').boundingBox(),card.boundingBox(),folder.boundingBox()]);
@@ -47,25 +43,23 @@ try{
  await remote.click();await page.locator('.remote-form-overlay').waitFor();
  assert.equal((await state(page)).tool,null,'Remote opens the connection form instead of a local terminal');
  assert.equal(await page.locator('.folder-menu').count(),0);
- const [terminalIcon,claudeIcon]=await Promise.all([terminal.locator('.launchpad-icon').boundingBox(),page.locator('.launchpad-icon').first().boundingBox()]);
- assert.equal(terminalIcon.width,claudeIcon.width,'the terminal icon fills the same box as the other tools');
  await page.reload();await page.locator('.launchpad-mode-tabs').first().waitFor();
  console.log('OK cards have no settings gear; the folder button and a never-opened card open the list, aligned under the button, without launching; Remote is a name-line chip');
  const claude=page.getByRole('group',{name:'Claude launch mode'});
  await claude.getByRole('button',{name:'CLI · Native terminal',exact:true}).click();assert.equal(await page.locator('.folder-menu').count(),0);assert.equal((await state(page)).tool,null);
- await claude.locator('..').locator('.launchpad-card-info').click();await page.locator('.folder-menu-item:not(.folder-menu-open)').nth(1).click();
+ await claude.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-info').click();await page.locator('.folder-menu-item:not(.folder-menu-open)').nth(1).click();
  let launched=await state(page);assert.equal(launched.tool,'claude');assert.equal(launched.folderPath,'D:/Older');assert.equal(launched.claudeMode,'terminal');
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older','D:/Recent']);
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:last-folder-by-tool'))),{claude:'D:/Older'},'each tool remembers its own last folder');
  await fresh(page);
- assert.equal((await claude.locator('..').locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the card shows its last folder');
- assert.equal(await claude.locator('..').locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'rtl','a long path elides its start and keeps the folder name');await page.locator('.launchpad-mode-tabs').first().waitFor();
- const codex=page.getByRole('group',{name:'Codex launch mode'});await codex.getByRole('button',{name:'IDE desktop',exact:true}).click();await codex.locator('..').locator('.launchpad-card-info').click();
+ assert.equal((await claude.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the card shows its last folder');
+ assert.equal(await claude.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'rtl','a long path elides its start and keeps the folder name');await page.locator('.launchpad-mode-tabs').first().waitFor();
+ const codex=page.getByRole('group',{name:'Codex launch mode'});await codex.getByRole('button',{name:'IDE desktop',exact:true}).click();await codex.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-info').click();
  assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
  await page.locator('.folder-menu-item:not(.folder-menu-open)').first().click();launched=await state(page);assert.equal(launched.tool,'codex');assert.equal(launched.folderPath,'D:/Older');assert.equal(launched.codexMode,'conversation');
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older','D:/Recent'],'reusing a recent path does not duplicate it');
  await page.reload();await page.locator('.launchpad-mode-tabs').first().waitFor();
- const claudeCard=page.getByRole('group',{name:'Claude launch mode'}).locator('..');
+ const claudeCard=page.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]');
  assert.equal((await claudeCard.locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the last folder survives a reload');
  await claudeCard.locator('.launchpad-folder').click();assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
  await page.keyboard.press('Escape');await page.locator('.folder-menu').waitFor({state:'hidden'});assert.equal((await state(page)).tool,null);
@@ -80,7 +74,7 @@ try{
   await dbl.reload();await dbl.locator('.launchpad-mode-tabs').first().waitFor();
   const launches=[];await dbl.exposeFunction('countLaunch',tool=>launches.push(tool));
   await dbl.evaluate(()=>{const root=document.getElementById('root'),fiber=root[Object.keys(root).find(k=>k.startsWith('__reactContainer$'))];let ctx;(function walk(f){if(!f||ctx)return;const v=f.memoizedProps?.value;if(v?.state?.terminals&&typeof v.dispatch==='function'){ctx=v;return}walk(f.child);walk(f.sibling)})(fiber);const dispatch=ctx.dispatch;ctx.dispatch=a=>{if(a.type==='LAUNCH_TERMINAL_TOOL')window.countLaunch(a.tool);return dispatch(a)};});
-  const card=dbl.getByRole('group',{name:'Claude launch mode'}).locator('..').locator('.launchpad-card-info');
+  const card=dbl.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-info');
   await card.dblclick();await dbl.waitForTimeout(400);
   assert.ok(launches.length<=1,`a double click launches at most once: ${launches.join(',')}`);
   assert.deepEqual(dblErrors,[]);await dbl.close();
@@ -89,7 +83,7 @@ try{
   const {page:tidy}=await prepare(['D:/Recent','D:/Older']);
   await tidy.evaluate(()=>{localStorage.setItem('coffee:last-folder-by-tool',JSON.stringify({claude:'D:/Recent'}));});
   await tidy.reload();await tidy.locator('.launchpad-mode-tabs').first().waitFor();
-  const claudeCard=tidy.getByRole('group',{name:'Claude launch mode'}).locator('..');
+  const claudeCard=tidy.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]');
   await claudeCard.locator('.launchpad-folder').click();await tidy.locator('.folder-menu').waitFor();
   await tidy.locator('.folder-menu-item',{hasText:'Recent'}).first().locator('.folder-menu-del').dispatchEvent('mousedown');
   await tidy.keyboard.press('Escape');
@@ -102,13 +96,13 @@ try{
   const {page:bad,errors:badErrors}=await prepare([]);
   await bad.evaluate(()=>{localStorage.setItem('coffee:last-folder-by-tool',JSON.stringify({claude:123,codex:{},opencode:'D:/Ok'}));});
   await bad.reload();await bad.locator('.launchpad-mode-tabs').first().waitFor();
-  assert.equal((await bad.getByRole('group',{name:'Claude launch mode'}).locator('..').locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder');
+  assert.equal((await bad.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder');
   assert.deepEqual(badErrors,[]);await bad.close();
   console.log('OK a double click launches once, tidying recents keeps last folders, damaged entries fall back to the hint');
  }
  const empty=await prepare([]),p=empty.page;
- await p.getByRole('group',{name:'Claude launch mode'}).locator('..').locator('.launchpad-card-info').click();await p.waitForFunction(()=>window.pickCount===1);assert.equal((await state(p)).tool,null,'cancelling the folder chooser does not launch');
- await p.evaluate(()=>window.pickedFolder='D:/NewProject');await p.getByRole('group',{name:'Codex launch mode'}).locator('..').locator('.launchpad-card-info').click();await p.waitForFunction(()=>window.pickCount===2);
+ await p.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-info').click();await p.waitForFunction(()=>window.pickCount===1);assert.equal((await state(p)).tool,null,'cancelling the folder chooser does not launch');
+ await p.evaluate(()=>window.pickedFolder='D:/NewProject');await p.getByRole('group',{name:'Codex launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-info').click();await p.waitForFunction(()=>window.pickCount===2);
  launched=await state(p);assert.equal(launched.tool,'codex');assert.equal(launched.folderPath,'D:/NewProject');assert.deepEqual(await p.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/NewProject']);assert.deepEqual(empty.errors,[]);
  console.log('OK empty history uses the folder chooser; cancel is safe; a new selection becomes the first recent directory');await p.close();
 }finally{await browser.close();await devServer.close()}

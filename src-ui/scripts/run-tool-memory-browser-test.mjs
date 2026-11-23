@@ -12,6 +12,7 @@ const directory = await mkdtemp(join(tmpdir(), 'coffee-tool-memory-'));
 const native = `
 window.calls=[];window.docs={claude:{path:'C:/fixture/.claude/CLAUDE.md',content:'Claude 原文\\n第二行'},codex:{path:'C:/fixture/.codex/AGENTS.md',content:'Codex original'},pi:{path:'C:/fixture/.pi/agent/AGENTS.md',content:null},cursor:{path:null,content:null},copilot:{path:'C:/fixture/.copilot/copilot-instructions.md',content:'Copilot original'}};
 export const commands={
+ async windowControlTools(){return []},async windowControlSetTool(){return []},async remoteWindowList(){return []},async remoteWindowFocus(){},async remoteWindowClose(){},
  async getToolControl(){return {supported:true,installed:false,ready:false,browser:null,agents:[]}},
  async getToolSkills(){return {supported:false,skills:[]}},
  async searchToolSkills(){return []},
@@ -53,7 +54,7 @@ try{
     const marker=document.querySelector('.tool-settings-indicator')?.getBoundingClientRect(),selected=document.querySelector('[role="tab"][aria-selected="true"]')?.getBoundingClientRect();
     return marker&&selected&&Math.abs(marker.x-selected.x)<1&&Math.abs(marker.width-selected.width)<1;
   });
-  assert.equal(await page.getByRole('tab').count(),6);
+  assert.equal(await page.getByRole('tab').count(),7);
   await page.locator('.tool-settings-indicator[data-ready]').waitFor({state:'attached'});await aligned();
   assert.equal(await page.getByRole('tab',{selected:true}).evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
   await tab('技能').click();
@@ -137,7 +138,7 @@ try{
   await page.evaluate(()=>window.setEnabled(['claude','codex','pi','cursor','copilot','opencode']));await page.waitForTimeout(350);
   assert.equal(await tools.getByRole('button').count(),6);assert.equal(await page.locator('.tool-settings-page').evaluate(el=>el.scrollWidth>el.clientWidth),false,'six icons fit without widening narrow windows');
   await page.screenshot({path:join(directory,'memory-six-tools-narrow.png')});
-  await tab('浏览器控制').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
+  await tab('远程操控').click();await page.keyboard.press('ArrowRight');assert.match(await page.getByRole('tab',{selected:true}).innerText(),/^常用 /);
   await aligned();
   await page.evaluate(()=>document.querySelectorAll('[role="tab"]').forEach(tab=>{tab.style.fontSize='15px'}));await aligned();
   await tab('主记忆').click();await value('Claude 草稿\n未保存');
@@ -153,6 +154,6 @@ try{
     assert.equal(await page.locator('.tool-settings-panel:not([hidden]) .tool-control-summary strong').innerText(),'Computer Use','the page title retains the English technical term');
   }
   assert.deepEqual(errors,[]);
-  console.log('OK: six themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
+  console.log('OK: seven themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

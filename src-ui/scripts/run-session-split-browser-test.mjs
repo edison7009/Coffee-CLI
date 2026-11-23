@@ -157,96 +157,44 @@ try {
   await pane('b-restarted').waitFor(); assert.equal(await pane('b').count(), 0);
   await page.evaluate(async () => {
     const { receiveOrchestration } = await import('/src/lib/orchestration.ts');
-    window.pauseTabEntry = event => {
-      if (event.animationName === 'orchestration-tab-enter') for (const animation of event.target.getAnimations()) {
-        if (animation.animationName === event.animationName) { animation.pause(); animation.currentTime = 100; }
-      }
-    };
-    document.addEventListener('animationstart', window.pauseTabEntry);
     const tasks = ['codex', 'opencode'].map((tool, index) => ({ id: 'task-' + index, parentId: 'a', parentNativeId: 'thread-a', parentTool: 'claude', sessionId: 'worker-' + index, nativeId: 'worker-native-' + index, tool, title: index ? '检查交互' : '实现页面', cwd: 'D:/a', phase: 'starting', question: null, activity: 'working' }));
     for (const task of tasks) window.testDispatch({ type: 'ADD_TERMINAL', session: { id: task.sessionId, parentId: 'a', tool: task.tool, resumeToken: task.nativeId, folderPath: task.cwd, toolTitle: 'You are a worker assigned to a task', agentStatus: 'working' } });
-    window.testDispatch({ type: 'REORDER_TAB', tabId: 'worker-0', beforeId: 'b-restarted' });
-    window.testDispatch({ type: 'REORDER_TAB', tabId: 'worker-1', beforeId: 'b-restarted' });
     receiveOrchestration({ enabled: true, tasks, revision: 10 });
     window.testDispatch({ type: 'SET_ACTIVE_TERMINAL', id: 'worker-0' });
   });
+  // Sub-windows live under their parent's count, not in the strip; the count opens a menu of them.
   const parentTab = page.locator('.chrome-tab[data-tab-id="a"]'), childTab = page.locator('.chrome-tab[data-tab-id="worker-0"]'), siblingTab = page.locator('.chrome-tab[data-tab-id="worker-1"]');
-  await childTab.waitFor();
-  const tabReveal = await childTab.evaluate(el => {
-    const animation = el.getAnimations().find(animation => animation.animationName === 'orchestration-tab-enter');
-    const sample = time => { animation.currentTime = time; return { width: el.getBoundingClientRect().width, opacity: Number(getComputedStyle(el).opacity) }; };
-    const start = sample(0), middle = sample(100), end = sample(200);
-    document.querySelectorAll('.orchestration-child').forEach(tab => tab.getAnimations().filter(animation=>animation.animationName==='orchestration-tab-enter').forEach(animation=>animation.finish()));
-    document.removeEventListener('animationstart', window.pauseTabEntry);
-    return { start, middle, end };
-  });
-  assert.ok(tabReveal.start.width < tabReveal.middle.width && tabReveal.middle.width <= tabReveal.end.width,'child tabs reveal horizontally');
-  assert.ok(tabReveal.start.opacity < tabReveal.middle.opacity && tabReveal.middle.opacity < tabReveal.end.opacity,'child titles fade in with their tab');
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  assert.equal(await childTab.evaluate(el=>getComputedStyle(el).animationName),'none','reduced motion disables child tab entry');
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>['orchestration-tab-enter','orchestration-worker-enter'].includes(animation.animationName)).map(animation=>animation.finished)));
-  await page.evaluate(async()=>{const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>({...task,phase:'running'}))})});
+  const kids = parentTab.locator('.tab-children'), kidsMenu = page.getByRole('menu', { name: '2 sub-windows', exact: true });
+  await kids.waitFor();
+  assert.equal(await kids.innerText(), '2', 'the parent tab counts its sub-windows');
+  assert.equal(await childTab.count() + await siblingTab.count(), 0, 'sub-windows never take a place in the strip');
+  assert.equal(await parentTab.evaluate(el => el.classList.contains('orchestration-family-active')), true, 'a selected sub-window keeps its parent highlighted');
+  assert.equal(await page.locator('.chrome-tab.active').count(), 0, 'the parent is highlighted, not selected, while a sub-window is open');
+  await kids.hover(); await kidsMenu.waitFor();
+  assert.deepEqual(await kidsMenu.locator('.tab-children-title').allInnerTexts(), ['实现页面', '检查交互'], 'the menu lists each sub-window by its task title');
+  assert.equal(await kidsMenu.locator('.tab-children-item.is-active .tab-children-title').innerText(), '实现页面', 'the open sub-window is marked in the menu');
+  await kidsMenu.getByRole('menuitem', { name: /检查交互/ }).click();
+  assert.equal(await page.evaluate(() => window.testState().activeTerminalId), 'worker-1', 'picking a sub-window switches to it');
   await page.evaluate(async()=>{
     const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');
     const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>task.id==='task-0'?{...task,title:'Updated child title'}:task)});
   });
-  await page.waitForFunction(()=>document.querySelector('.chrome-tab[data-tab-id="worker-0"] .tab-title')?.textContent==='Updated child title');
-  assert.equal(await childTab.evaluate(el=>el.getAnimations().filter(animation=>animation.animationName==='orchestration-tab-enter').length),0,'updating a title does not replay tab entry');
+  await kids.hover(); await kidsMenu.waitFor();
+  await page.waitForFunction(()=>[...document.querySelectorAll('.tab-children-menu .tab-children-title')].some(el=>el.textContent==='Updated child title'));
   await page.evaluate(async()=>{
     const {receiveOrchestration,getOrchestrationSnapshot}=await import('/src/lib/orchestration.ts');
     const current=getOrchestrationSnapshot();receiveOrchestration({...current,revision:current.revision+1,tasks:current.tasks.map(task=>task.id==='task-0'?{...task,title:'实现页面'}:task)});
   });
+  await page.mouse.move(1500, 950);
   const nested = page.locator('.history-worker').filter({ hasText: '实现页面' });
-  assert.equal(await nested.locator('.history-worker-title').innerText(), await childTab.locator('.tab-title').innerText(), 'sidebar and top tab share the task title');
+  assert.equal(await nested.locator('.history-worker-title').innerText(), '实现页面', 'sidebar and the sub-window menu share the task title');
   assert.equal(await page.locator('.history-card-title').filter({ hasText: 'You are a worker' }).count(), 0, 'live workers never appear as peer history rows');
   await nested.click();
   assert.equal(await page.evaluate(() => window.testState().activeTerminalId), 'worker-0');
-  await page.mouse.move(1500, 950);
-  for (const shape of ['soft', 'panel', 'sharp', 'glass', 'monogram']) {
-    await page.evaluate(shape => window.testDispatch({ type: 'SET_SHAPE', shape }), shape);
-    await page.waitForFunction(shape => document.documentElement.dataset.shape === shape, shape);
-    assert.equal(await parentTab.evaluate(el => el.classList.contains('orchestration-family-active')), true, shape + ': child selection retains the parent highlight');
-    assert.equal(await page.locator('.chrome-tab.active').count(), 1, 'family styling preserves a single actual focused tab');
-    const parentSurface = await parentTab.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.color, s.boxShadow]; });
-    await parentTab.click();
-    assert.deepEqual(await parentTab.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.color, s.boxShadow]; }), parentSurface, shape + ': family highlight matches the normal parent selection');
-    await childTab.click();
-    await page.mouse.move(1500, 950);
-    const p = await parentTab.boundingBox(), c = await childTab.boundingBox(), s = await siblingTab.boundingBox();
-    assert.ok(c.height < p.height, shape + ': child tab is shorter than its parent');
-    if (shape === 'panel') {
-      const content = await page.locator('.main-content').boundingBox();
-      for (const tab of [c, s]) assert.ok(tab.y + tab.height < content.y, 'panel child tabs stay separate from the content frame');
-      await page.screenshot({ path: join(directory, 'orchestration-tab-family-panel.png') });
-    }
-    assert.ok(c.x - p.x - p.width >= 3.5 && s.x - c.x - c.width >= 3.5, shape + ': child tabs keep their own gap and corners');
-    assert.equal(await childTab.evaluate(el=>{const probe=document.createElement('span');probe.style.background='color-mix(in srgb,var(--text-1) 20%,var(--bg-app))';probe.style.color='var(--text-1)';document.body.append(probe);const s=getComputedStyle(el),p=getComputedStyle(probe),matches=s.backgroundColor===p.backgroundColor&&s.color===p.color;probe.remove();return matches}),true,shape+': child surface and text follow the theme');
-    assert.equal(await childTab.evaluate(el => { const ctx = document.createElement('canvas').getContext('2d'); ctx.fillStyle = getComputedStyle(el).backgroundColor; ctx.fillRect(0, 0, 1, 1); return ctx.getImageData(0, 0, 1, 1).data[3]; }), 255, shape + ': child has a solid theme surface');
-    assert.deepEqual(await childTab.locator('.orchestration-status').evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.boxShadow, s.outlineWidth, s.borderWidth]; }), ['rgb(217, 119, 87)', 'none', '0px', '0px'], shape + ': working child status matches the ordinary tab orange with no ring');
-  }
-  for(const [status,expected,color] of [['idle','idle','rgb(52, 211, 153)'],['working','working','rgb(217, 119, 87)'],['wait_input','waiting','rgb(96, 165, 250)']]) {
-    await page.evaluate(status=>{for(const id of ['a','worker-0'])window.testDispatch({type:'SET_AGENT_STATUS',id,status})},status);
-    await page.waitForFunction(expected=>document.querySelector('.chrome-tab[data-tab-id="worker-0"] .orchestration-status')?.dataset.state===expected,expected);
-    assert.equal(await childTab.locator('.orchestration-status').evaluate(el=>getComputedStyle(el).backgroundColor),color,'child tab uses the standard '+expected+' color');
-    assert.equal(await parentTab.locator('.tab-status-dot').first().evaluate(el=>getComputedStyle(el).backgroundColor),color,'ordinary and child tabs share '+expected+' colors');
-  }
-  await page.evaluate(()=>{for(const id of ['a','worker-0'])window.testDispatch({type:'SET_AGENT_STATUS',id,status:'working'})});
-  for(const mode of ['light','dark']) {
-    await page.evaluate(mode=>window.testDispatch({type:'SET_THEME_MODE',mode}),mode);
-    await page.waitForFunction(mode=>document.documentElement.dataset.mode===mode,mode);
-    await page.evaluate(()=>Promise.allSettled(document.getAnimations().filter(animation=>animation instanceof CSSTransition).map(animation=>animation.finished)));
-    const tone=await siblingTab.evaluate(el=>{const context=document.createElement('canvas').getContext('2d');const sample=value=>{context.clearRect(0,0,1,1);context.fillStyle=value;context.fillRect(0,0,1,1);const p=context.getImageData(0,0,1,1).data;return p[0]*.2126+p[1]*.7152+p[2]*.0722};return {child:sample(getComputedStyle(el).backgroundColor),base:sample(getComputedStyle(document.documentElement).getPropertyValue('--bg-app'))}});
-    assert.ok(mode==='dark'?tone.child>tone.base:tone.child<tone.base,mode+': child surface lifts at night and deepens in daylight');
-    await page.screenshot({path:join(directory,'separate-blue-child-tabs-'+mode+'.png')});
-  }
   await page.screenshot({ path: join(directory, 'orchestration-tab-family.png') });
   await page.locator('.chrome-tab[data-tab-id="b-restarted"]').click();
   assert.equal(await parentTab.evaluate(el => el.classList.contains('orchestration-family-active')), false, 'selecting an unrelated session clears the family highlight');
   assert.equal(await page.locator('.history-card-active .history-card-title').filter({ hasText: 'Claude desktop task' }).count(), 0, 'unrelated selection also clears sidebar family highlighting');
-  await page.evaluate(() => window.testDispatch({ type: 'REORDER_TAB', tabId: 'worker-0', beforeId: null }));
-  assert.equal(await childTab.evaluate(el => el.classList.contains('orchestration-attached')), false, 'moving a child away never joins it visually to an unrelated tab');
-  assert.equal(await parentTab.evaluate(el => el.classList.contains('orchestration-has-child')), false, 'parent corners remain independent of child tabs');
   await page.evaluate(async () => {
     const { commands } = await import('/src/tauri.ts');
     const { getOrchestrationSnapshot } = await import('/src/lib/orchestration.ts');
@@ -278,11 +226,12 @@ try {
   },phase);await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.animationName==='orchestration-tab-enter').map(animation=>animation.finished)));};
   const groupParent=page.locator('.chrome-tab[data-tab-id="group-parent"]');
   await addGroup('completed');
-  assert.equal(await page.locator('.chrome-tab[data-tab-id="group-child"]').count(),1,'completed tasks remain available until their parent is explicitly closed');
+  assert.equal(await page.evaluate(()=>window.testState().terminals.some(tab=>tab.id==='group-child')),true,'completed tasks remain available until their parent is explicitly closed');
+  assert.equal(await groupParent.locator('.tab-children').innerText(),'1','under their parent\'s count');
   await groupParent.hover();await groupParent.locator('.tab-close-btn').click();
   await groupParent.waitFor({state:'detached'});
   assert.equal(await closeDialog.count(),0,'settled groups close without a prompt');
-  assert.equal(await page.locator('.chrome-tab[data-tab-id="group-child"]').count(),0);
+  assert.equal(await page.evaluate(()=>window.testState().terminals.some(tab=>tab.id==='group-child')),false);
   assert.equal(await childTab.count(),1,'closing another group leaves previously detached sessions alone');
   await addGroup('running');
   await groupParent.hover();await groupParent.locator('.tab-close-btn').click();
@@ -292,7 +241,7 @@ try {
   await page.evaluate(()=>window.failGroupClose=false);
   await closeDialog.getByRole('button',{name:'End group',exact:true}).click();
   await groupParent.waitFor({state:'detached'});
-  assert.equal(await page.locator('.chrome-tab[data-tab-id="group-child"]').count(),0,'end group closes the running child together with its parent');
+  assert.equal(await page.evaluate(()=>window.testState().terminals.some(tab=>tab.id==='group-child')),false,'end group closes the running child together with its parent');
   assert.equal(await childTab.count(),1,'unrelated sessions survive end group');
   console.log('OK: completed groups, running-task choice, Escape, detach without restart, independent history, native failure/retry and scoped group shutdown');
   await page.evaluate(async()=>{
@@ -306,22 +255,22 @@ try {
   const historyChild=page.locator('.history-worker').filter({hasText:'Original child history'}),restoredTab=page.locator('.chrome-tab[data-tab-id="saved-history-child"]');
   await historyChild.hover();
   assert.equal(await page.getByRole('tooltip').locator('.history-card-preview-title').innerText(),'Original child history');assert.equal(await page.getByRole('tooltip').locator('.history-card-meta').count(),1);
-  await historyChild.locator('.history-worker-open').click();await restoredTab.waitFor();
-  assert.equal(await restoredTab.evaluate(el=>getComputedStyle(el).animationName),'none','restoring child history opens its tab without a new-task entrance animation');
+  const restored=()=>page.waitForFunction(()=>window.testState().terminals.some(tab=>tab.id==='saved-history-child'));
+  await historyChild.locator('.history-worker-open').click();await restored();
+  assert.equal(await restoredTab.count(),0,'a restored child opens under its parent, not as a tab of its own');
   assert.equal(await page.evaluate(()=>window.testState().terminals.find(tab=>tab.id==='saved-history-child').resumeToken),'original-native-thread','history restore passes the original native conversation ID');
   assert.equal(await page.evaluate(()=>window.testState().terminals.find(tab=>tab.id==='saved-history-child').parentId),'history-parent');
   const relatedOrder=await page.evaluate(()=>window.testState().tabOrder);
   assert.equal(relatedOrder.indexOf('saved-history-child'),relatedOrder.indexOf('history-parent')+1,'restored child joins its existing parent in the tab strip');
-  await restoredTab.hover();await restoredTab.locator('.tab-close-btn').click();await restoredTab.waitFor({state:'detached'});
-  await historyChild.locator('.history-worker-open').dblclick();await restoredTab.waitFor();
-  assert.equal(await restoredTab.evaluate(el=>getComputedStyle(el).animationName),'none','reopening an existing child cannot replay the creation animation');
+  await page.evaluate(()=>window.testDispatch({type:'REMOVE_TERMINAL',id:'saved-history-child'}));await page.waitForFunction(()=>!window.testState().terminals.some(tab=>tab.id==='saved-history-child'));
+  await historyChild.locator('.history-worker-open').dblclick();await restored();
   assert.equal(await page.evaluate(()=>window.testState().terminals.filter(tab=>tab.resumeToken==='original-native-thread').length),1,'repeated clicks keep exactly one writer for the original history');
   assert.equal(await page.evaluate(()=>window.restoredHistory.length),2,'active child clicks select the tab without another restore request');
   const savedDraft=page.getByRole('textbox',{name:'draft saved-history-child',exact:true});await savedDraft.fill('Draft survives becoming independent');
   const lifetimeBeforeDetach=await page.evaluate(()=>window.lifetimes.filter(([,id])=>id==='saved-history-child'));
   await historyChild.click({button:'right'});await page.getByRole('button',{name:'Make independent',exact:true}).click();
   await historyChild.waitFor({state:'detached'});
-  assert.equal(await restoredTab.evaluate(el=>el.classList.contains('orchestration-child')),false,'independent sessions leave the family styling');
+  await restoredTab.waitFor();assert.equal(await restoredTab.evaluate(el=>el.classList.contains('orchestration-child')),false,'an independent session becomes a tab of its own, without the family styling');
   assert.equal(await savedDraft.inputValue(),'Draft survives becoming independent');
   assert.deepEqual(await page.evaluate(()=>window.lifetimes.filter(([,id])=>id==='saved-history-child')),lifetimeBeforeDetach,'detaching never remounts or restarts the child transport');
   assert.equal(await page.locator('.history-card-title').filter({hasText:/^Original child history$/}).count(),1,'detached session keeps a normal history entry');

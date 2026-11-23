@@ -13,7 +13,8 @@ export function useRemoteControlState(sessionId: string, active: boolean): [Wind
     refresh();
     // A window opening or closing changes the choices, and a closed window's pick is dropped; the
     // setting or this tab's window changing (src/window_control.rs) changes what the chip shows.
-    const stops = ['remote-windows-changed', 'window-control-changed'].map(event => listen(event, refresh));
+    const stops = ['remote-windows-changed', 'window-control-changed'].map(event => listen(event, refresh).catch(() => () => {}));
+    // Outside the desktop (a test page, a browser without the bridge) there is nothing to listen to.
     return () => { current = false; for (const stop of stops) void stop.then(unlisten => unlisten()); };
   }, [sessionId, active]);
   const set = useCallback((value: WindowControlState) => setStored({ session: sessionId, value }), [sessionId]);
