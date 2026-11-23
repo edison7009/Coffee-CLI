@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 const result = await build({ entryPoints: ['src/lib/gambit-attachments.ts'], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} };
 runInNewContext(result.outputFiles[0].text, { module, exports: module.exports });
-const { gambitAttachments, removeGambitAttachment, ATTACH_MARK, splitDraft, joinDraft, attachToDraft, detachFromDraft, draftForSend } = module.exports;
+const { gambitAttachments, removeGambitAttachment, ATTACH_MARK, splitDraft, joinDraft, attachToDraft, detachFromDraft, draftForSend, draftAttachments } = module.exports;
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log(`ok ${name}`); }
 
@@ -62,5 +62,18 @@ test('text appended after the attachments joins the words', () => {
   assert.equal(draftForSend(attachToDraft('', ['/tmp/a.png'])), '/tmp/a.png', 'only files: just the paths');
   assert.equal(splitDraft('typed /tmp/a.png stays typed').text, 'typed /tmp/a.png stays typed');
   assert.ok(!draftForSend(draft).includes(ATTACH_MARK));
+});
+test('folders and files without an extension attach too; a slash command does not', () => {
+  let draft = attachToDraft('看这个目录', ['/Users/me/Desktop/Deskflow-Ctrl2Cmd/', '/Users/me/My Project/', '/Users/me/repo/LICENSE']);
+  same(draftAttachments(draft), [
+    { path: '/Users/me/Desktop/Deskflow-Ctrl2Cmd/', image: false, folder: true },
+    { path: '/Users/me/My Project/', image: false, folder: true },
+    { path: '/Users/me/repo/LICENSE', image: false, folder: false },
+  ]);
+  assert.equal(splitDraft(draft).text, '看这个目录');
+  assert.equal(draftForSend(draft), '看这个目录\n/Users/me/Desktop/Deskflow-Ctrl2Cmd/ "/Users/me/My Project/" /Users/me/repo/LICENSE');
+  draft = detachFromDraft(draft, '/Users/me/My Project/');
+  same(splitDraft(draft).tokens, ['/Users/me/Desktop/Deskflow-Ctrl2Cmd/', '/Users/me/repo/LICENSE']);
+  assert.equal(splitDraft(draft + '\n/model').text, '看这个目录\n/model', 'a one-level slash command stays words');
 });
 console.log(`${passed} attachment checks passed`);

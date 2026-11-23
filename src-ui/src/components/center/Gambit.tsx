@@ -34,7 +34,7 @@ import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { VoiceInputButton, VoiceUsageSlot } from './VoiceInputButton';
 import { useUsageQuota } from '../../lib/usage-quota';
-import { attachToDraft, detachFromDraft, draftForSend, gambitAttachments, joinDraft, splitDraft } from '../../lib/gambit-attachments';
+import { attachToDraft, detachFromDraft, draftAttachments, draftForSend, joinDraft, splitDraft } from '../../lib/gambit-attachments';
 import './Gambit.css';
 import { OrchestrationPicker } from './OrchestrationPicker';
 import { fileToBase64 } from '../../lib/answer-image-paste';
@@ -400,7 +400,7 @@ function GambitImpl({
   // attachment state. User edits/deletes the path string → thumbnails
   // update automatically. Paths remain the only source of truth; they
   // travel with the text through copy/paste/send.
-  const attachments = useMemo(() => Array.from(new Map(gambitAttachments(draft).map(item => [item.path, item])).values()), [draft]);
+  const attachments = useMemo(() => draftAttachments(draft), [draft]);
   // The box shows only the words: attached files sit after an invisible mark at the end of the draft and show as
   // the thumbnails above (lib/gambit-attachments.ts). Edits in the box keep them; sending puts them back as text.
   const { text: shown } = useMemo(() => splitDraft(draft), [draft]);
@@ -439,10 +439,13 @@ function GambitImpl({
   const onDraftChangeRef = useRef(onDraftChange);
   useEffect(() => { draftRef.current = draft; }, [draft]);
   useEffect(() => { onDraftChangeRef.current = onDraftChange; }, [onDraftChange]);
-  const insertPaths = useCallback((paths: string[]) => {
+  const insertPaths = useCallback(async (paths: string[]) => {
     const textarea = textareaRef.current;
     const start = textarea?.selectionStart, end = textarea?.selectionEnd;
-    onDraftChangeRef.current(attachToDraft(draftRef.current, paths));
+    // A folder becomes a folder card: one that lists is a folder, kept with a trailing separator.
+    const marked = await Promise.all(paths.map(path => /[\\/]$/.test(path) ? path
+      : commands.listDirectory(path).then(() => path + (path.includes('\\') && !path.includes('/') ? '\\' : '/'), () => path)));
+    onDraftChangeRef.current(attachToDraft(draftRef.current, marked));
     requestAnimationFrame(() => {
       if (!textarea) return;
       textarea.focus();
@@ -928,16 +931,16 @@ function GambitImpl({
         onClear={() => onDraftChange('')} />}
 
       {attachments.length > 0 && <div className="gambit-attachments" ref={attachmentsRef}>
-        {attachments.map(({ path, image }) => {
+        {attachments.map(({ path, image, folder }) => {
           // An image shows as the picture itself, like other chat apps; a file (or an image that won't load) keeps its name.
           const preview = image && !brokenThumbs.has(path) ? pastedPreviews.get(path) ?? thumbUrls[path] : undefined;
           // A file is a card of the same height: its name over two lines at most, its type underneath.
-          const name = path.split(/[\\/]/).pop() ?? path, dot = name.lastIndexOf('.');
-          const ext = dot > 0 ? name.slice(dot + 1).toUpperCase() : '';
+          const name = path.split(/[\\/]/).filter(Boolean).pop() ?? path, dot = folder ? -1 : name.lastIndexOf('.');
+          const ext = folder ? t('gambit.folder') : dot > 0 ? name.slice(dot + 1).toUpperCase() : '';
           return <div className={`gambit-attachment${preview ? ' is-image' : ' is-file'}`} key={path}>
           <button className="gambit-attachment-content" aria-label={t(image ? 'gambit.preview_attachment' : 'gambit.attachment', { path })} onClick={() => { if (image) openThumbPreview(path); }}>
             {preview ? <img src={preview} alt="" draggable={false} onError={() => setBrokenThumbs(prev => new Set(prev).add(path))} /> : <>
-            <span className="gambit-file-name">{ext ? name.slice(0, dot) : name}</span>
+            <span className="gambit-file-name">{dot > 0 ? name.slice(0, dot) : name}</span>
             {ext && <span className="gambit-file-ext">{ext}</span>}</>}
           </button>
           <button className="gambit-attachment-remove close-button" aria-label={t('gambit.remove_attachment', { path })} onClick={() => removeAttachment(path)}><svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg></button>

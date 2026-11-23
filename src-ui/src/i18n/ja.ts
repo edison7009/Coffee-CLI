@@ -955,4 +955,5 @@ export const ja = {
   "tools.mode.terminal": "ネイティブ端末",
   "tools.modes": "利用可能：{modes}",
   "tools.mode.desktop": "IDE デスクトップ",
+  "gambit.folder": "フォルダ",
 } as const satisfies Record<I18nKey, string>;

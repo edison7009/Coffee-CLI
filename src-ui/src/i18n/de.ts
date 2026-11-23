@@ -952,4 +952,5 @@ export const de = {
   "tools.mode.terminal": "Natives Terminal",
   "tools.modes": "Läuft in: {modes}",
   "tools.mode.desktop": "IDE-Desktop",
+  "gambit.folder": "Ordner",
 } as const satisfies Record<I18nKey, string>;

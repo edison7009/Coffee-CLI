@@ -956,4 +956,5 @@ export const vi = {
   "tools.mode.terminal": "Terminal gốc",
   "tools.modes": "Dùng được trong: {modes}",
   "tools.mode.desktop": "IDE máy tính",
+  "gambit.folder": "Thư mục",
 } as const satisfies Record<I18nKey, string>;

@@ -958,6 +958,7 @@ export const en = {
   "tools.mode.terminal": "Native terminal",
   "tools.modes": "Runs in: {modes}",
   "tools.mode.desktop": "IDE desktop",
+  "gambit.folder": "Folder",
 } as const;
 
 export type I18nKey = keyof typeof en;

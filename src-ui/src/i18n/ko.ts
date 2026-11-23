@@ -955,4 +955,5 @@ export const ko = {
   "tools.mode.terminal": "네이티브 터미널",
   "tools.modes": "사용 가능: {modes}",
   "tools.mode.desktop": "IDE 데스크톱",
+  "gambit.folder": "폴더",
 } as const satisfies Record<I18nKey, string>;

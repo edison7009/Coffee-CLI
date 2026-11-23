@@ -957,4 +957,5 @@ export const zhCN = {
   "tools.mode.terminal": "原生终端",
   "tools.modes": "可用：{modes}",
   "tools.mode.desktop": "IDE 桌面",
+  "gambit.folder": "文件夹",
 } as const satisfies Record<I18nKey, string>;

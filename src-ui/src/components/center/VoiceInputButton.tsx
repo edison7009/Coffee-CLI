@@ -1,6 +1,7 @@
 // Voice input for any composer: the selected local account (or the current tool's account) streams the microphone
 // to their own speech-to-text service (src/voice_input.rs); the words appear in the draft as they are
 // heard, and the service's final text replaces them when the recording ends.
+import { joinDraft as joinAttached, splitDraft } from '../../lib/gambit-attachments';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { commands, isTauri, type VoiceInputEvent } from '../../tauri';
 import { useT } from '../../i18n/useT';
@@ -14,10 +15,12 @@ type Phase = 'idle' | 'connecting' | 'recording' | 'finishing';
 
 
 /** Text spoken after existing Latin text needs a space; CJK text does not. */
-function joinDraft(before: string, spoken: string): string {
-  if (!before || !spoken || /\s$/.test(before)) return before + spoken;
+function joinDraft(draft: string, spoken: string): string {
+  // The words go after the typed words, not after the attachments riding at the end of the draft.
+  const { text: before, tokens } = splitDraft(draft);
+  if (!before || !spoken || /\s$/.test(before)) return joinAttached(before + spoken, tokens);
   const wide = (c: string) => c.codePointAt(0)! >= 0x2e80;
-  return before + (wide(before.slice(-1)) || wide(spoken[0]) ? '' : ' ') + spoken;
+  return joinAttached(before + (wide(before.slice(-1)) || wide(spoken[0]) ? '' : ' ') + spoken, tokens);
 }
 
 export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: { tool: string; cwd?: string; waveKey: string; draft: string; onDraftChange: (text: string) => void }) {

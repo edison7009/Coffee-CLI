@@ -956,4 +956,5 @@ export const zhTW = {
   "tools.mode.terminal": "原生終端",
   "tools.modes": "可用：{modes}",
   "tools.mode.desktop": "IDE 桌面",
+  "gambit.folder": "資料夾",
 } as const satisfies Record<I18nKey, string>;

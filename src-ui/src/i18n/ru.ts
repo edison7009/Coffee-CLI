@@ -952,4 +952,5 @@ export const ru = {
   "tools.mode.terminal": "Нативный терминал",
   "tools.modes": "Работает в: {modes}",
   "tools.mode.desktop": "IDE-десктоп",
+  "gambit.folder": "Папка",
 } as const satisfies Record<I18nKey, string>;
