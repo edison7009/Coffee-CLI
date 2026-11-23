@@ -8,6 +8,7 @@ import { getToolIcon } from '../center/CenterPanel';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { getTabOrder, type TerminalSession } from '../../store/app-state';
 import { HistoryBoard } from '../right/HistoryBoard';
+import { RightPanel } from '../right/Compiler';
 import { refreshHistory } from '../../lib/history-cache';
 import { WebAccessStatus } from './WebAccessStatus';
 import { getUnreadSessionReplies, sessionReplyKey, subscribeSessionReplies } from '../../lib/session-replies';
@@ -83,24 +84,26 @@ export function IconRail() {
   const { state, dispatch } = useAppState();
   const t = useT();
   const { tipFor, tip, hide } = useRailTip();
-  const [listOpen, setListOpen] = useState(false);
-  const list = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null);
+  // One side list at a time, opened by hovering its icon: the conversations, or the changes (修改记录).
+  const [flyout, setFlyout] = useState<'conversations' | 'changes' | null>(null);
+  const listOpen = flyout !== null;
+  const list = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), changesToggle = useRef<HTMLButtonElement>(null);
   // The list opens on hover and stays while the pointer is on the button or the list; leaving both closes it.
   const closeTimer = useRef<number | undefined>(undefined);
-  const holdList = () => { window.clearTimeout(closeTimer.current); setListOpen(true); };
-  const releaseList = () => { window.clearTimeout(closeTimer.current); closeTimer.current = window.setTimeout(() => setListOpen(false), 220); };
+  const holdList = (which?: 'conversations' | 'changes') => { window.clearTimeout(closeTimer.current); if (which) setFlyout(which); };
+  const releaseList = () => { window.clearTimeout(closeTimer.current); closeTimer.current = window.setTimeout(() => setFlyout(null), 220); };
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   // Picking a conversation (or anything that changes the page) puts the list away.
-  useEffect(() => { setListOpen(false); }, [state.activeTerminalId, state.settingsOpen, state.usageOpen, state.automationsOpen, state.toolSettingsOpen]);
+  useEffect(() => { setFlyout(null); }, [state.activeTerminalId, state.settingsOpen, state.usageOpen, state.automationsOpen, state.toolSettingsOpen]);
   useEffect(() => {
     if (!listOpen) return;
-    refreshHistory();
-    const outside = (e: PointerEvent) => { const target = e.target as Node; if (!list.current?.contains(target) && !toggle.current?.contains(target) && !(target as Element).closest?.('.ctx-menu')) setListOpen(false); };
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { setListOpen(false); toggle.current?.focus(); } };
+    if (flyout === 'conversations') refreshHistory();
+    const outside = (e: PointerEvent) => { const target = e.target as Node; if (!list.current?.contains(target) && !toggle.current?.contains(target) && !changesToggle.current?.contains(target) && !(target as Element).closest?.('.ctx-menu, .settings-overlay, .folder-menu')) setFlyout(null); };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { (flyout === 'changes' ? changesToggle : toggle).current?.focus(); setFlyout(null); } };
     document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', escape); };
-  }, [listOpen]);
+  }, [listOpen, flyout]);
 
   // A finished reply nobody has read yet (the same record the conversation list marks).
   const unread = useSyncExternalStore(subscribeSessionReplies, getUnreadSessionReplies, getUnreadSessionReplies);
@@ -112,9 +115,14 @@ export function IconRail() {
   return <nav className="icon-rail" aria-label={t('rail.label')}>
     {/* Start something, or find something. */}
     {button('new', t('explorer.new_session'), () => window.dispatchEvent(new Event('coffee-new-session')), false)}
-    <button ref={toggle} type="button" className="icon-rail-button" aria-label={t('rail.conversations')} aria-expanded={listOpen} aria-haspopup="dialog"
-      onClick={() => setListOpen(open => !open)} onMouseEnter={() => { hide(); holdList(); }} onMouseLeave={releaseList}>
+    <button ref={toggle} type="button" className="icon-rail-button" aria-label={t('rail.conversations')} aria-expanded={flyout === 'conversations'} aria-haspopup="dialog"
+      onClick={() => setFlyout(open => open === 'conversations' ? null : 'conversations')} onMouseEnter={() => { hide(); holdList('conversations'); }} onMouseLeave={releaseList}>
       {glyph('search')}
+    </button>
+    {/* Changes open the same way, beside the rail: in Clear they belong with the conversation, not a right column. */}
+    <button ref={changesToggle} type="button" className="icon-rail-button" aria-label={t('rail.changes')} aria-expanded={flyout === 'changes'} aria-haspopup="dialog"
+      onClick={() => setFlyout(open => open === 'changes' ? null : 'changes')} onMouseEnter={() => { hide(); holdList('changes'); }} onMouseLeave={releaseList}>
+      {glyph('changes')}
     </button>
     {/* What is open. */}
     {sessions.length > 0 && <span className="icon-rail-separator" aria-hidden="true" />}
@@ -127,13 +135,15 @@ export function IconRail() {
     {/* Everything else. */}
     {button('automations', t('automation.title'), () => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: !state.automationsOpen }), !!state.automationsOpen)}
     {button('usage', t('usage.title'), () => dispatch({ type: 'SET_USAGE_OPEN', open: !state.usageOpen }), !!state.usageOpen)}
-    {button('changes', t('rail.changes'), () => dispatch({ type: 'TOGGLE_RIGHT_PANEL' }), !state.rightPanelHidden)}
     {button('tools', t('tools.title'), () => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: !state.toolSettingsOpen }), !!state.toolSettingsOpen)}
     {/* The sidebar's device menu, worn as an icon: its label stays for screen readers. */}
     <span className="icon-rail-button icon-rail-devices" {...tipFor(t('rail.devices'))}>{glyph('devices')}<WebAccessStatus /></span>
     {button('settings', t('settings.title'), () => dispatch({ type: 'TOGGLE_SETTINGS' }), !!state.settingsOpen)}
-    {listOpen && <div ref={list} className="icon-rail-list" role="dialog" aria-label={t('rail.conversations')} onMouseEnter={holdList} onMouseLeave={releaseList}>
+    {flyout === 'conversations' && <div ref={list} className="icon-rail-list" role="dialog" aria-label={t('rail.conversations')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
       <div className="explorer-history-host"><HistoryBoard /></div>
+    </div>}
+    {flyout === 'changes' && <div ref={list} className="icon-rail-list icon-rail-changes" role="dialog" aria-label={t('rail.changes')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
+      <RightPanel />
     </div>}
     {tip}
   </nav>;

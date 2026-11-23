@@ -223,7 +223,8 @@ export function App() {
   // 工作式: the icon rail stands in for the left sidebar; the right panel opens over the conversation.
   const work = state.layoutMode === 'work';
   const leftPanel = useSlidingPanel(work || (compact ? state.drawer !== 'left' : state.leftPanelHidden));
-  const rightPanel = useSlidingPanel(compact ? state.drawer !== 'right' : state.rightPanelHidden);
+  // Clear: changes open from the rail, beside it, never as a right column or sheet.
+  const rightPanel = useSlidingPanel(compact ? state.drawer !== 'right' : work || state.rightPanelHidden);
   // A drawer closes on Escape, when the window grows wide enough to dock, and once a tab is picked.
   useEffect(() => {
     if (!compact || !state.drawer) return;

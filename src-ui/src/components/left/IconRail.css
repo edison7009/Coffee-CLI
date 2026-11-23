@@ -131,3 +131,7 @@
   margin: 0 6px 6px 0; border-radius: 8px; overflow: hidden;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent), 0 0 0 100vmax var(--clear-ground);
 }
+
+/* Changes beside the rail: the right panel's own content (pre-input, changes, diff), a little wider. */
+.icon-rail-list.icon-rail-changes { width: min(420px, calc(100vw - 80px)); padding: 0; }
+.icon-rail-changes > * { flex: 1; min-height: 0; }
