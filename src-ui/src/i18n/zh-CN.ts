@@ -50,7 +50,6 @@ export const zhCN = {
   "tools.tab.computer": "电脑控制",
   "tools.tab.browser": "浏览器控制",
   "tools.tab.remote": "远程操控",
-  "ai_remote.description": "为下方的助手打开后，它新开的会话可以查看和操作已打开的远程电脑窗口：读取画面、输入、按键、新开标签。在输入框上方的「远程操控」里，可以让一个会话只在某个窗口里工作。这等于把那台电脑交给 AI，请只在信任时开启。",
   "ai_remote.pick.prefix": "远程操控：{name}",
   "ai_remote.pick.auto": "自动",
   "ai_remote.pick.none": "还没有打开远程电脑窗口",

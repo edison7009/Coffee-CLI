@@ -50,7 +50,6 @@ export const ja = {
   "tools.tab.computer": "コンピューター操作",
   "tools.tab.browser": "ブラウザー操作",
   "tools.tab.remote": "リモート操作",
-  "ai_remote.description": "下のアシスタントでオンにすると、その新しいセッションが、開いているリモートPCのウィンドウを表示・操作できます（画面の読み取り、入力、キー操作、タブを開く）。入力欄の上の「リモート操作」で、セッションを特定のウィンドウだけで作業させられます。そのPCを AI に任せることになるため、信頼できる場合のみオンにしてください。",
   "ai_remote.pick.prefix": "リモート操作：{name}",
   "ai_remote.pick.auto": "自動",
   "ai_remote.pick.none": "開いているリモートPCのウィンドウはありません",

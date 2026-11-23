@@ -50,7 +50,6 @@ export const de = {
   "tools.tab.computer": "Computersteuerung",
   "tools.tab.browser": "Browsersteuerung",
   "tools.tab.remote": "Fernsteuerung",
-  "ai_remote.description": "Für einen Assistenten unten aktiviert, können seine neuen Sitzungen die geöffneten Fenster entfernter Computer sehen und bedienen: Bildschirm lesen, tippen, Tasten drücken und Tabs öffnen. Über „Fernsteuerung“ über dem Eingabefeld lässt sich eine Sitzung auf ein Fenster festlegen. Damit überlässt du jenen Computer der KI – nur aktivieren, wenn du ihr vertraust.",
   "ai_remote.pick.prefix": "Fernsteuerung: {name}",
   "ai_remote.pick.auto": "Automatisch",
   "ai_remote.pick.none": "Keine Fenster entfernter Computer geöffnet",
