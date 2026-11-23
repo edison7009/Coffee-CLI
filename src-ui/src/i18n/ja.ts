@@ -969,4 +969,6 @@ export const ja = {
   "changelog.got_it": "了解",
   "changelog.feedback": "フィードバック",
   "changelog.close": "閉じる",
+  "launchpad.install": "インストール",
+  "launchpad.install_tip": "{tool} はまだインストールされていません。Agent ツールをコマンドで直接インストールするのはおすすめしません。環境やパスの設定が難しいためです。EchoBird がおすすめです。AI アシスタントが環境を確認し、ワンクリックでインストールしてアカウントとモデルまで設定します。「インストール」で EchoBird.ai を開いてダウンロードしてください。",
 } as const satisfies Record<I18nKey, string>;

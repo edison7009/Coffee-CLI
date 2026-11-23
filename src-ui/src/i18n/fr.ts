@@ -966,4 +966,6 @@ export const fr = {
   "changelog.got_it": "Compris",
   "changelog.feedback": "Retours",
   "changelog.close": "Fermer",
+  "launchpad.install": "Installer",
+  "launchpad.install_tip": "{tool} n’est pas installé. Installer des outils d’agent en ligne de commande est déconseillé : l’environnement et les chemins sont difficiles à configurer. Nous recommandons EchoBird : son assistant IA vérifie votre environnement, l’installe en un clic et configure compte et modèles. Cliquez sur « Installer » pour ouvrir EchoBird.ai et le télécharger.",
 } as const satisfies Record<I18nKey, string>;

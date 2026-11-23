@@ -972,6 +972,8 @@ export const en = {
   "changelog.got_it": "Got it",
   "changelog.feedback": "Feedback",
   "changelog.close": "Close",
+  "launchpad.install": "Install",
+  "launchpad.install_tip": "{tool} isn’t installed. Installing agent tools from the command line isn’t recommended: environments and paths are hard to get right. We recommend EchoBird: its AI assistant checks your setup, installs it in one click and sets up sign-in and models. Click “Install” to open EchoBird.ai and download it.",
 } as const;
 
 export type I18nKey = keyof typeof en;

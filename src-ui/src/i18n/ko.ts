@@ -969,4 +969,6 @@ export const ko = {
   "changelog.got_it": "확인",
   "changelog.feedback": "피드백",
   "changelog.close": "닫기",
+  "launchpad.install": "설치",
+  "launchpad.install_tip": "{tool}이(가) 설치되어 있지 않습니다. Agent 도구를 명령어로 직접 설치하는 것은 권장하지 않습니다. 환경과 경로 설정이 까다롭기 때문입니다. EchoBird를 추천합니다. AI 도우미가 환경을 확인하고 한 번에 설치한 뒤 계정과 모델까지 설정합니다. “설치”를 눌러 EchoBird.ai에서 다운로드하세요.",
 } as const satisfies Record<I18nKey, string>;

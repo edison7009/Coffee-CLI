@@ -1503,3 +1503,21 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
    own layer and renders like all other text. Leaving, the layer is kept until the logo has turned back (.45s). */
 [data-layout="code"] .launchpad-card > :not(.launchpad-card-mark) { transition: transform 0s .45s; }
 [data-layout="code"] .launchpad-card-group:hover .launchpad-card > :not(.launchpad-card-mark) { transform: translateZ(0); backface-visibility: hidden; transition: none; }
+
+/* 安装 on a tool that isn't installed: the update chip's shape. The card stays dimmed around it, but the chip
+   itself is the one thing to press, so it keeps full strength (the dimming moves from the card to its parts). */
+.launchpad-card .launchpad-install {
+  flex-shrink: 0; height: 18px; padding: 0 9px; border: 0; border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text-1);
+  font: 500 var(--type-caption)/1 var(--font-nav, var(--font)); white-space: nowrap; cursor: pointer;
+  transform: translateY(1px); transition: background .15s;
+}
+.launchpad-card .launchpad-install:hover { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+.launchpad-card .launchpad-install:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.launchpad-card-group.launchpad-card-disabled { opacity: 1; }
+.launchpad-card-disabled .launchpad-card > :not(.launchpad-card-info, .launchpad-card-mark),
+.launchpad-card-disabled .launchpad-card-info > :not(.launchpad-card-title),
+.launchpad-card-disabled .launchpad-card-title > :not(.launchpad-install) { opacity: .35; }
+[data-layout="code"] .launchpad-card-group.launchpad-card-disabled { --brand-tint: 6%; }
+/* The faded logo keeps its own faintness, halved. */
+[data-layout="code"] .launchpad-card-disabled .launchpad-card-mark { opacity: calc(var(--brand-mark) * .5); }

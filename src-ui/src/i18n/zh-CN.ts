@@ -971,4 +971,6 @@ export const zhCN = {
   "changelog.got_it": "我知道了",
   "changelog.feedback": "问题反馈",
   "changelog.close": "关闭",
+  "launchpad.install": "安装",
+  "launchpad.install_tip": "还没安装 {tool}。安装 Agent 工具不建议直接用命令：环境、路径等配置难度较大。推荐使用 EchoBird，它的 AI 助手会检查电脑环境，一键安装并配置好账号和模型。点击「安装」打开 EchoBird.ai 下载即可。",
 } as const satisfies Record<I18nKey, string>;

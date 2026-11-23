@@ -966,4 +966,6 @@ export const de = {
   "changelog.got_it": "Verstanden",
   "changelog.feedback": "Feedback",
   "changelog.close": "Schließen",
+  "launchpad.install": "Installieren",
+  "launchpad.install_tip": "{tool} ist nicht installiert. Agent-Tools per Befehl zu installieren ist nicht empfehlenswert: Umgebung und Pfade richtig einzurichten ist schwierig. Wir empfehlen EchoBird: Sein KI-Assistent prüft deine Umgebung, installiert mit einem Klick und richtet Anmeldung und Modelle ein. „Installieren“ öffnet EchoBird.ai zum Download.",
 } as const satisfies Record<I18nKey, string>;

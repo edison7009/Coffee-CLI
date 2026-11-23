@@ -966,4 +966,6 @@ export const ru = {
   "changelog.got_it": "Понятно",
   "changelog.feedback": "Обратная связь",
   "changelog.close": "Закрыть",
+  "launchpad.install": "Установить",
+  "launchpad.install_tip": "{tool} не установлен. Устанавливать агентские инструменты командой не рекомендуется: окружение и пути сложно настроить. Рекомендуем EchoBird: его ИИ-помощник проверит окружение, установит в один клик и настроит аккаунт и модели. Нажмите «Установить», чтобы открыть EchoBird.ai и скачать его.",
 } as const satisfies Record<I18nKey, string>;
