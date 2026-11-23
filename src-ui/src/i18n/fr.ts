@@ -959,4 +959,5 @@ export const fr = {
   "worker.instructions": "Voir les instructions complètes pour l’IA",
   "worker.instructions_hide": "Masquer les instructions",
   "worker.label": "Sous-tâche",
+  "tab.sub_windows": "{count} sous-fenêtres",
 } as const satisfies Record<I18nKey, string>;

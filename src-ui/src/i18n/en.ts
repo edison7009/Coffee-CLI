@@ -965,6 +965,7 @@ export const en = {
   "worker.instructions": "Show the full instructions for the AI",
   "worker.instructions_hide": "Hide instructions",
   "worker.label": "Sub-task",
+  "tab.sub_windows": "{count} sub-windows",
 } as const;
 
 export type I18nKey = keyof typeof en;

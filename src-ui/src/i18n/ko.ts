@@ -962,4 +962,5 @@ export const ko = {
   "worker.instructions": "AI에게 보낸 전체 지시 보기",
   "worker.instructions_hide": "지시 접기",
   "worker.label": "하위 작업",
+  "tab.sub_windows": "하위 창 {count}개",
 } as const satisfies Record<I18nKey, string>;

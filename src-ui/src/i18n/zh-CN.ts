@@ -964,4 +964,5 @@ export const zhCN = {
   "worker.instructions": "查看给 AI 的完整指令",
   "worker.instructions_hide": "收起指令",
   "worker.label": "子任务",
+  "tab.sub_windows": "{count} 个子窗口",
 } as const satisfies Record<I18nKey, string>;

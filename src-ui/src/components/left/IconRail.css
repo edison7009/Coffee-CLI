@@ -92,6 +92,16 @@
 /* Tips open to the right of the rail, level with the icon they name (the app's tip card look). */
 .icon-rail-tip { position: fixed; z-index: 10000; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; max-width: 280px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); line-height: 1.35; pointer-events: none; box-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 6px 20px rgba(0, 0, 0, .22); }
 .icon-rail-tip-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+/* The tip's title line, then (for a parent) its sub-windows: each a row with its state, clickable. */
+.icon-rail-tip { flex-direction: column; align-items: stretch; gap: 4px; }
+.icon-rail-tip-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.icon-rail-tip.has-kids { min-width: 220px; padding-bottom: 4px; }
+.icon-rail-tip-kids { display: flex; flex-direction: column; gap: 1px; margin: 2px -6px 0 -6px; padding-top: 4px; border-top: 1px solid var(--border); }
+.icon-rail-tip-kid { display: flex; align-items: center; gap: 8px; min-width: 0; height: 28px; padding: 0 6px; border: 0; border-radius: 5px; background: transparent; color: var(--text-2); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s, color .15s; }
+.icon-rail-tip-kid:hover, .icon-rail-tip-kid:focus-visible { background: var(--bg-hover); color: var(--text-1); outline: 0; }
+.icon-rail-tip-kid-icon { display: inline-flex; flex: none; width: 13px; height: 13px; }
+.icon-rail-tip-kid-icon > *, .icon-rail-tip-kid-icon svg, .icon-rail-tip-kid-icon img { width: 100% !important; height: 100% !important; }
+.icon-rail-tip-kid-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon-rail-tip.has-action { pointer-events: auto; padding-right: 4px; }
 .icon-rail-tip-close { display: grid; place-items: center; width: 24px; height: 24px; flex: none; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; transition: background-color .15s, color .15s; }
 .icon-rail-tip-close:hover { background: var(--bg-hover); color: var(--text-1); }

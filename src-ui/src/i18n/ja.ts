@@ -962,4 +962,5 @@ export const ja = {
   "worker.instructions": "AI への指示をすべて表示",
   "worker.instructions_hide": "指示を閉じる",
   "worker.label": "サブタスク",
+  "tab.sub_windows": "サブウィンドウ {count} 個",
 } as const satisfies Record<I18nKey, string>;

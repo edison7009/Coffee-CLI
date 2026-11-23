@@ -959,4 +959,5 @@ export const pt = {
   "worker.instructions": "Ver as instruções completas para a IA",
   "worker.instructions_hide": "Ocultar instruções",
   "worker.label": "Subtarefa",
+  "tab.sub_windows": "{count} subjanelas",
 } as const satisfies Record<I18nKey, string>;

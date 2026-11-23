@@ -34,3 +34,17 @@
 .orchestration-close-dialog::backdrop { background:#0008; backdrop-filter:blur(4px); }
 .orchestration-close-dialog p { margin:0; line-height:1.7; color:var(--text-2); }
 .orchestration-close-dialog [role="alert"] { color:var(--red); margin-top:12px; }
+
+/* A parent tab's sub-windows (方案 B, revised): a small count on the tab instead of tabs of their own; hovering it
+   lists them. The count carries their state: blue when one waits on you, the working colour while one works. */
+.tab-children { display:inline-flex; align-items:center; justify-content:center; flex:none; min-width:18px; height:18px; margin-left:6px; padding:0 5px; border:0; border-radius:9px; background:color-mix(in srgb,var(--text-1) 9%,transparent); color:var(--text-2); font:600 11px/1 var(--font); font-variant-numeric:tabular-nums; cursor:pointer; transition:background-color .15s,color .15s; }
+.tab-children:hover, .tab-children[aria-expanded="true"] { background:color-mix(in srgb,var(--text-1) 16%,transparent); color:var(--text-1); }
+.tab-children[data-state="working"] { color:#D97757; background:color-mix(in srgb,#D97757 16%,transparent); }
+.tab-children[data-state="waiting"] { color:#fff; background:var(--blue); }
+.tab-children:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
+.tab-children-menu { min-width:220px; max-width:280px; padding:4px; }
+.tab-children-item { display:flex; align-items:center; gap:8px; width:100%; }
+.tab-children-item.is-active { background:var(--bg-active); color:var(--text-1); }
+.tab-children-icon { display:inline-flex; flex:none; width:14px; height:14px; }
+.tab-children-icon > *, .tab-children-icon svg, .tab-children-icon img { width:100% !important; height:100% !important; }
+.tab-children-title { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; }

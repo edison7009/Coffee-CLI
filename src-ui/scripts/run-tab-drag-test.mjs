@@ -68,6 +68,8 @@ function fixture(order = ['one', 'two', 'three'], titlebarScale = 1) {
     getTabOrder: stateApi.getTabOrder, state,
     sessions: new Map(state.terminals.map(session => [session.id, session])),
     activeTerminalId: state.activeTerminalId,
+    // Sub-windows live under their parent's number (lib/tab-family.ts); these fixtures have none.
+    compact: false, families: { childIds: new Set() },
   }));
   const context = {
     dispatch, tabDrag: null, tabDragSuppressClickRef: { current: false },

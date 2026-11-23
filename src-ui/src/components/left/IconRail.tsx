@@ -12,6 +12,8 @@ import { RightPanel } from '../right/Compiler';
 import { refreshHistory } from '../../lib/history-cache';
 import { WebAccessStatus } from './WebAccessStatus';
 import { getUnreadSessionReplies, sessionReplyKey, subscribeSessionReplies } from '../../lib/session-replies';
+import { useOrchestration } from '../../lib/orchestration';
+import { tabFamilies, type TabChild } from '../../lib/tab-family';
 import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
@@ -30,7 +32,8 @@ const glyph = (name: string) => <svg viewBox="0 0 24 24" fill="none" stroke="cur
 
 /** A tip that opens to the right of the rail, level with what it names (not under the pointer). A tip
  *  with an action (close a conversation) stays while the pointer crosses over to it. */
-type RailTip = { label: string; detail?: string; top: number; left: number; onClose?: () => void; closeLabel?: string };
+type RailTip = { label: string; detail?: string; top: number; left: number; onClose?: () => void; closeLabel?: string; kids?: TabChild[]; onPickKid?: (id: string) => void };
+type TipExtras = { onClose: () => void; label: string; kids?: TabChild[]; onPickKid?: (id: string) => void };
 function useRailTip() {
   const [tip, setTip] = useState<RailTip | null>(null);
   const hideTimer = useRef<number | undefined>(undefined);
@@ -43,22 +46,31 @@ function useRailTip() {
     window.addEventListener('scroll', hide, true); window.addEventListener('resize', hide); window.addEventListener('blur', hide);
     return () => { window.removeEventListener('scroll', hide, true); window.removeEventListener('resize', hide); window.removeEventListener('blur', hide); };
   }, [tip]);
-  const show = (element: HTMLElement, label: string, detail?: string, close?: { onClose: () => void; label: string }) => {
+  const show = (element: HTMLElement, label: string, detail?: string, close?: TipExtras) => {
     cancelHide();
     const rect = element.getBoundingClientRect();
-    setTip({ label, detail, top: rect.top + rect.height / 2, left: rect.right + 8, onClose: close?.onClose, closeLabel: close?.label });
+    setTip({ label, detail, top: rect.top + rect.height / 2, left: rect.right + 8, onClose: close?.onClose, closeLabel: close?.label, kids: close?.kids, onPickKid: close?.onPickKid });
   };
-  const tipFor = (label: string, detail?: string, close?: { onClose: () => void; label: string }) => ({
+  const tipFor = (label: string, detail?: string, close?: TipExtras) => ({
     onMouseEnter: (e: React.MouseEvent<HTMLElement>) => show(e.currentTarget, label, detail, close),
     onFocus: (e: React.FocusEvent<HTMLElement>) => show(e.currentTarget, label, detail, close),
     onMouseLeave: () => close ? hideSoon() : setTip(null), onBlur: () => close ? hideSoon() : setTip(null),
   });
-  const node = tip && createPortal(<span className={`icon-rail-tip${tip.onClose ? ' has-action' : ''}`} role="tooltip" style={{ top: tip.top, left: tip.left }}
+  const node = tip && createPortal(<span className={`icon-rail-tip${tip.onClose ? ' has-action' : ''}${tip.kids?.length ? ' has-kids' : ''}`} role="tooltip" style={{ top: tip.top, left: tip.left }}
     onMouseEnter={tip.onClose ? cancelHide : undefined} onMouseLeave={tip.onClose ? hideSoon : undefined}>
-    <span className="icon-rail-tip-text"><strong>{tip.label}</strong>{tip.detail && <small>{tip.detail}</small>}</span>
-    {tip.onClose && <button type="button" className="icon-rail-tip-close" aria-label={tip.closeLabel} onClick={() => { const close = tip.onClose; setTip(null); close?.(); }}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-    </button>}
+    <span className="icon-rail-tip-head">
+      <span className="icon-rail-tip-text"><strong>{tip.label}</strong>{tip.detail && <small>{tip.detail}</small>}</span>
+      {tip.onClose && <button type="button" className="icon-rail-tip-close" aria-label={tip.closeLabel} onClick={() => { const close = tip.onClose; setTip(null); close?.(); }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      </button>}
+    </span>
+    {/* Its sub-windows, under the title: each with its state, a click switches to it. */}
+    {!!tip.kids?.length && <span className="icon-rail-tip-kids">{tip.kids.map(kid => <button key={kid.id} type="button" className="icon-rail-tip-kid"
+      onClick={() => { const pick = tip.onPickKid; setTip(null); pick?.(kid.id); }}>
+      <span className="orchestration-status" data-state={kid.state} aria-hidden="true" />
+      <span className="icon-rail-tip-kid-icon" aria-hidden="true">{getToolIcon(kid.tool)}</span>
+      <span className="icon-rail-tip-kid-title">{kid.title || getToolDisplayName(kid.tool ?? '')}</span>
+    </button>)}</span>}
   </span>, document.body);
   return { tipFor, tip: node, hide: () => setTip(null) };
 }
@@ -66,14 +78,14 @@ function useRailTip() {
 /** One open conversation (Clear 方案 A): the first character of its title on a quiet tile, the tool's mark
  *  in the lower corner and its state in the upper one — a spinner while it works, a hollow blue ring when it
  *  waits for you, a blue dot for a reply you have not read. The full title (and close) is in the tip. */
-function SessionButton({ session, active, unread, onPick, tipFor }: { session: TerminalSession; active: boolean; unread: boolean; onPick: () => void; tipFor: ReturnType<typeof useRailTip>['tipFor'] }) {
+function SessionButton({ session, active, unread, onPick, tipFor, kids, onPickKid }: { session: TerminalSession; active: boolean; unread: boolean; onPick: () => void; tipFor: ReturnType<typeof useRailTip>['tipFor']; kids?: TabChild[]; onPickKid: (id: string) => void }) {
   const t = useT();
   const folder = session.folderPath?.split(/[\\/]/).filter(Boolean).pop() ?? '';
   const title = session.toolTitle || (session.tool ? getToolDisplayName(session.tool) : t('explorer.new_session'));
   const letter = Array.from(title.trim())[0]?.toUpperCase() ?? '·';
   const state = session.agentStatus === 'working' ? 'working' : session.agentStatus === 'wait_input' ? 'waiting' : unread && !active ? 'unread' : '';
   return <button type="button" className="icon-rail-button icon-rail-session" aria-label={folder ? `${title} · ${folder}` : title} aria-current={active || undefined} onClick={onPick}
-    {...tipFor(title, folder || undefined, { label: t('rail.close_tab'), onClose: () => window.dispatchEvent(new CustomEvent('coffee-close-tab', { detail: session.id })) })}>
+    {...tipFor(title, folder || undefined, { label: t('rail.close_tab'), onClose: () => window.dispatchEvent(new CustomEvent('coffee-close-tab', { detail: session.id })), kids, onPickKid })}>
     <span className="icon-rail-letter" aria-hidden="true">{letter}</span>
     <span className="icon-rail-tool-badge" aria-hidden="true">{getToolIcon(session.tool)}</span>
     {state && <span className={`icon-rail-state is-${state}`} aria-hidden="true"><i /></span>}
@@ -110,7 +122,10 @@ export function IconRail() {
   const button = (key: string, label: string, onClick: () => void, pressed: boolean, extra?: ReactNode) =>
     <button type="button" className="icon-rail-button" aria-label={label} aria-pressed={pressed} onClick={onClick} {...tipFor(label)}>{glyph(key)}{extra}</button>;
   // The open tabs, in tab order: 代码式's tab strip, as icons.
-  const sessions = getTabOrder(state).map(id => state.terminals.find(session => session.id === id)).filter((session): session is TerminalSession => !!session?.tool);
+  // Sub-windows are not tiles of their own: their parent's tip lists them.
+  const orchestration = useOrchestration();
+  const families = tabFamilies(state.terminals, orchestration.tasks);
+  const sessions = getTabOrder(state).map(id => state.terminals.find(session => session.id === id)).filter((session): session is TerminalSession => !!session?.tool && !families.childIds.has(session.id));
 
   return <nav className="icon-rail" aria-label={t('rail.label')}>
     {/* Start something, or find something. */}
@@ -127,7 +142,9 @@ export function IconRail() {
     {/* What is open. */}
     {sessions.length > 0 && <span className="icon-rail-separator" aria-hidden="true" />}
     <div className="icon-rail-sessions" role="list" aria-label={t('rail.open_tabs')}>
-      {sessions.map(session => <div role="listitem" key={session.id}><SessionButton session={session} active={session.id === state.activeTerminalId && !state.diffTabActive} tipFor={tipFor}
+      {sessions.map(session => <div role="listitem" key={session.id}><SessionButton session={session} tipFor={tipFor}
+        active={(session.id === state.activeTerminalId || !!families.children.get(session.id)?.some(kid => kid.id === state.activeTerminalId)) && !state.diffTabActive}
+        kids={families.children.get(session.id)} onPickKid={id => dispatch({ type: 'SET_ACTIVE_TERMINAL', id })}
         unread={!!session.resumeToken && !!session.tool && unread.has(sessionReplyKey(session.tool, session.resumeToken))}
         onPick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })} /></div>)}
     </div>

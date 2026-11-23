@@ -19,6 +19,7 @@ import { DshConversation } from './DshConversation';
 import { UsageDashboard } from './UsageDashboard';
 import { ToolSettingsPage } from './ToolSettingsPage';
 import { receiveOrchestration, useOrchestration, workerState } from '../../lib/orchestration';
+import { familyState, tabFamilies } from '../../lib/tab-family';
 import { CloseSessionGroupDialog } from './CloseSessionGroupDialog';
 import '../../styles/orchestration.css';
 import { LaunchModeControl } from './LaunchModeControl';
@@ -381,6 +382,19 @@ const CONFIGURABLE_AGENT_TOOLS = new Set<ToolType>([
 export function CenterPanel() {
   const { state, dispatch } = useAppState();
   const orchestration = useOrchestration();
+  // A tab's sub-windows (方案 B, revised): not tabs of their own; the parent shows how many, and hovering the number
+  // lists them. The menu stays while the pointer is on the number or on the menu.
+  const families = useMemo(() => tabFamilies(state.terminals, orchestration.tasks), [state.terminals, orchestration.tasks]);
+  const [childMenu, setChildMenu] = useState<{ parentId: string; left: number; top: number } | null>(null);
+  const childMenuTimer = useRef<number | undefined>(undefined);
+  const openChildMenu = (parentId: string, anchor: HTMLElement) => {
+    window.clearTimeout(childMenuTimer.current);
+    const rect = anchor.getBoundingClientRect();
+    setChildMenu({ parentId, left: Math.max(8, Math.min(rect.left - 8, window.innerWidth - 288)), top: rect.bottom + 6 });
+  };
+  const holdChildMenu = () => window.clearTimeout(childMenuTimer.current);
+  const closeChildMenuSoon = () => { window.clearTimeout(childMenuTimer.current); childMenuTimer.current = window.setTimeout(() => setChildMenu(null), 200); };
+  useEffect(() => () => window.clearTimeout(childMenuTimer.current), []);
   const t = useT();
   const terminals = state.terminals;
   const activeTerminalId = state.activeTerminalId;
@@ -1266,7 +1280,8 @@ export function CenterPanel() {
           const sessions = new Map(terminals.map(session => [session.id, session]));
           const visibleTabs = getTabOrder(state).filter(id => {
             const session = sessions.get(id);
-            return !!session && session.tool !== null && (!session.isHidden || id === activeTerminalId);
+            // A sub-window lives under its parent's number, not in the strip (narrow windows list every tab anyway).
+            return !!session && session.tool !== null && (!session.isHidden || id === activeTerminalId) && (compact || !families.childIds.has(id));
           });
           // Narrow: only the current tab stays in the strip; the menu beside it lists them all.
           const compactTabs: CompactTab[] = [];
@@ -1303,6 +1318,13 @@ export function CenterPanel() {
             >
               {icon}
               <span className="tab-title" style={{ flex: '0 1 auto', minWidth: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{title}</span>
+              {(() => {
+                const kids = compact ? undefined : families.children.get(session.id);
+                return kids && <button type="button" className="tab-children" data-state={familyState(kids)} aria-haspopup="menu" aria-expanded={childMenu?.parentId === session.id}
+                  aria-label={t('tab.sub_windows', { count: kids.length })} onPointerDown={event => event.stopPropagation()}
+                  onClick={event => { event.stopPropagation(); openChildMenu(session.id, event.currentTarget); }}
+                  onMouseEnter={event => openChildMenu(session.id, event.currentTarget)} onMouseLeave={closeChildMenuSoon}>{kids.length}</button>;
+              })()}
               <div className={`tab-actions${showAgentStatus || worker ? '' : ' tab-actions--close-only'}`}>
                 {worker && <span className="orchestration-status" data-state={workerState(worker, session)} role="img" aria-label={t(`orchestration.${workerState(worker, session)}`)} />}
                 {!worker && showAgentStatus && (
@@ -1346,6 +1368,19 @@ export function CenterPanel() {
             PTY. Visible only in tab mode with a selection. Clicking it
             focuses the diff surface (SET_DIFF_TAB_ACTIVE); its X clears the
             diff entirely. No status-grid (diff has no agent state). */}
+        {/* The parent's sub-windows, from its number: each with its state, a click switches to it. */}
+        {childMenu && families.children.get(childMenu.parentId) && createPortal(
+          <div className="ctx-menu tab-children-menu" role="menu" aria-label={t('tab.sub_windows', { count: families.children.get(childMenu.parentId)!.length })}
+            style={{ position: 'fixed', left: childMenu.left, top: childMenu.top }} onMouseEnter={holdChildMenu} onMouseLeave={closeChildMenuSoon}>
+            {families.children.get(childMenu.parentId)!.map(child => <button key={child.id} type="button" role="menuitem"
+              className={`ctx-menu-item tab-children-item${child.id === activeTerminalId && contentActive ? ' is-active' : ''}`}
+              onClick={() => { setChildMenu(null); onTabClickGuarded(child.id); }}>
+              <span className="orchestration-status" data-state={child.state} role="img" aria-label={t(`orchestration.${child.state}`)} />
+              <span className="tab-children-icon" aria-hidden="true">{getToolIcon(child.tool)}</span>
+              <span className="tab-children-title">{child.title || getToolDisplayName(child.tool ?? '')}</span>
+            </button>)}
+          </div>, document.body)}
+
         {diffTabVisible && (
           <div
             className={`chrome-tab ${diffTabActive && !utilityPageOpen ? 'active' : ''}`}

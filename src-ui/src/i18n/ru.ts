@@ -959,4 +959,5 @@ export const ru = {
   "worker.instructions": "Показать полные инструкции для ИИ",
   "worker.instructions_hide": "Скрыть инструкции",
   "worker.label": "Подзадача",
+  "tab.sub_windows": "Подокон: {count}",
 } as const satisfies Record<I18nKey, string>;

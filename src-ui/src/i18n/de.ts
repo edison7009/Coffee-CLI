@@ -959,4 +959,5 @@ export const de = {
   "worker.instructions": "Vollständige Anweisungen an die KI anzeigen",
   "worker.instructions_hide": "Anweisungen ausblenden",
   "worker.label": "Teilaufgabe",
+  "tab.sub_windows": "{count} Unterfenster",
 } as const satisfies Record<I18nKey, string>;
