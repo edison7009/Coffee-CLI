@@ -157,6 +157,10 @@ function DraftActions({ enabled, canShare, label, shareLabel, clearLabel, tips, 
 const CARD_MIN_HEIGHT = 76; // 方案 A: the card — one line to type, one line of controls
 const CLEAR_MIN_HEIGHT = 64; // Clear: the one-line box (36px) and the row of settings under it
 const PLACE_TAB_HEIGHT = 26; // the place tab standing on the card's top edge
+// Pasted images, shown from the pasted bytes while the draft holds their saved path: the preview is there at
+// once and doesn't depend on reading the file back. Kept for the app's lifetime (a few screenshots at most).
+const pastedPreviews = new Map<string, string>();
+
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
 /** The strip a phone keeps clear at the bottom (the iPhone home indicator); 0 where there is none. The
@@ -852,7 +856,9 @@ function GambitImpl({
     for (const { file, ext } of imageFiles) {
       try {
         const base64 = await fileToBase64(file);
-        paths.push(await commands.saveClipboardImage(base64, ext));
+        const path = await commands.saveClipboardImage(base64, ext);
+        if (!pastedPreviews.has(path)) pastedPreviews.set(path, URL.createObjectURL(file));
+        paths.push(path);
       } catch (err) {
         console.error('[Gambit] save image failed', err);
       }
@@ -922,7 +928,7 @@ function GambitImpl({
       {attachments.length > 0 && <div className="gambit-attachments" ref={attachmentsRef}>
         {attachments.map(({ path, image }) => <div className="gambit-attachment" key={path}>
           <button className="gambit-attachment-content" aria-label={t(image ? 'gambit.preview_attachment' : 'gambit.attachment', { path })} onClick={() => { if (image) openThumbPreview(path); }}>
-            {image && thumbUrls[path] ? <img src={thumbUrls[path]} alt="" draggable={false} onError={e => { e.currentTarget.style.display = 'none'; }} /> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h5M8 12h8M8 16h8" /></svg>}
+            {image && (pastedPreviews.get(path) ?? thumbUrls[path]) ? <img src={pastedPreviews.get(path) ?? thumbUrls[path]} alt="" draggable={false} onError={e => { e.currentTarget.style.display = 'none'; }} /> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M14 2H6v20h12V6zM14 2v5h5M8 12h8M8 16h8" /></svg>}
             <span>{path.split(/[\\/]/).pop()}</span>
           </button>
           <button className="gambit-attachment-remove close-button" aria-label={t('gambit.remove_attachment', { path })} onClick={() => removeAttachment(path)}><svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="m3 3 6 6m0-6-6 6" /></svg></button>
@@ -1034,14 +1040,14 @@ function GambitImpl({
       {/* Full-size preview overlay. Renders into document.body to escape
           .gambit's transform containing block (otherwise position:fixed
           anchors to the transformed ancestor and clips to overflow:hidden). */}
-      {previewPath && thumbUrls[previewPath] && createPortal(
+      {previewPath && (pastedPreviews.get(previewPath) ?? thumbUrls[previewPath]) && createPortal(
         <div
           className="gambit-preview-overlay"
           onClick={() => setPreviewPath(null)}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <img
-            src={thumbUrls[previewPath]}
+            src={pastedPreviews.get(previewPath) ?? thumbUrls[previewPath]}
             alt=""
             draggable={false}
             onClick={(e) => e.stopPropagation() /* clicking the image itself should NOT close — only blank space does */}
