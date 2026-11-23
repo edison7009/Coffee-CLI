@@ -390,7 +390,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
               ? <TurnSummary stats={row.turnStats} sessionKey={s.nativeId} messageId={row.id} prefix={t(row.item.status === 'interrupted' ? 'claude.interrupted' : row.item.status === 'failed' ? 'codex.failed' : 'codex.completed')} />
               : <div className="claude-turn-summary" role="status">{t(row.item.status === 'interrupted' ? 'claude.interrupted' : row.item.status === 'failed' ? 'codex.failed' : 'codex.completed')}{num(row.item.durationMs) > 0 && ` · ${Math.round(num(row.item.durationMs) / 1000)}s`}</div>) : <>
               {row.role === 'user'
-                ? <CollapsibleUserMessage sentAt={row.timestamp} expanded={!!expanded[row.id]} onToggle={() => setExpanded(old => ({ ...old, [row.id]: !old[row.id] }))}><MarkdownContent content={row.content} /></CollapsibleUserMessage>
+                ? <CollapsibleUserMessage sentAt={row.timestamp} text={row.content} expanded={!!expanded[row.id]} onToggle={() => setExpanded(old => ({ ...old, [row.id]: !old[row.id] }))}><MarkdownContent content={row.content} /></CollapsibleUserMessage>
                 : <div><MarkdownContent content={row.content} /></div>}
               <MessageCopyButton copied={copied === row.id} onCopy={() => copy(row.id, row.content)} />
             </>}

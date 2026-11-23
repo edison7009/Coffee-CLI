@@ -955,4 +955,8 @@ export const ru = {
   "gambit.folder": "Папка",
   "theme.section.shape_hint": "Углы, панели и фактура фона",
   "launchpad.choose_folder": "Выбрать папку",
+  "worker.from": "Подзадача · от {parent}",
+  "worker.instructions": "Показать полные инструкции для ИИ",
+  "worker.instructions_hide": "Скрыть инструкции",
+  "worker.label": "Подзадача",
 } as const satisfies Record<I18nKey, string>;

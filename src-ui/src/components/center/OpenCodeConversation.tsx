@@ -247,7 +247,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
               {expanded[row.id] && <div className="codex-activity-list">{row.members.map(tool)}</div>}
             </> : row.kind ? turnStatus(row) : <>
               {row.role === 'user'
-                ? <CollapsibleUserMessage sentAt={row.timestamp} expanded={!!expanded[row.id]} onToggle={() => toggle(row.id)}><MarkdownContent content={row.content} />{!!row.files?.length && <div className="opencode-files">{row.files.map(file => <span key={file}>{file.split(/[\\/]/).pop()}</span>)}</div>}</CollapsibleUserMessage>
+                ? <CollapsibleUserMessage sentAt={row.timestamp} text={row.content} expanded={!!expanded[row.id]} onToggle={() => toggle(row.id)}><MarkdownContent content={row.content} />{!!row.files?.length && <div className="opencode-files">{row.files.map(file => <span key={file}>{file.split(/[\\/]/).pop()}</span>)}</div>}</CollapsibleUserMessage>
                 : <div><MarkdownContent content={row.content} /></div>}
               <MessageCopyButton copied={copied === row.id} onCopy={() => copy(row.id, row.content)} />
             </>}

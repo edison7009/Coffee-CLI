@@ -1,4 +1,6 @@
-import { memo, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { parseWorkerPrompt } from '../../lib/worker-prompt';
+import { WorkerTaskCard } from './WorkerTaskCard';
 import { useT } from '../../i18n/useT';
 
 export interface ConversationNavigationItem {
@@ -17,7 +19,13 @@ const ENTERING_WITHIN = 3000;
 const ENTRANCE_MS = 450;
 
 /** The user's bubble. The expansion lives with the conversation, as virtual rows unmount off screen. */
-export function CollapsibleUserMessage({ sentAt, expanded, onToggle, children }: { sentAt: number; expanded: boolean; onToggle: () => void; children: ReactNode }) {
+export function CollapsibleUserMessage({ sentAt, expanded, onToggle, text, children }: { sentAt: number; expanded: boolean; onToggle: () => void; text?: string; children: ReactNode }) {
+  // A sub-task's opening instruction is not the user's message: it shows as the task card.
+  const worker = useMemo(() => text ? parseWorkerPrompt(text) : null, [text]);
+  return worker ? <WorkerTaskCard prompt={worker} /> : <UserBubble sentAt={sentAt} expanded={expanded} onToggle={onToggle}>{children}</UserBubble>;
+}
+
+function UserBubble({ sentAt, expanded, onToggle, children }: { sentAt: number; expanded: boolean; onToggle: () => void; children: ReactNode }) {
   const t = useT(), id = useId();
   const [entering, setEntering] = useState(() => Date.now() - sentAt < ENTERING_WITHIN);
   // Hidden tabs use display:none, which would replay the animation on return.

@@ -958,4 +958,8 @@ export const ja = {
   "gambit.folder": "フォルダ",
   "theme.section.shape_hint": "角丸、パネル、背景の質感",
   "launchpad.choose_folder": "フォルダを選択",
+  "worker.from": "サブタスク · {parent} から割り当て",
+  "worker.instructions": "AI への指示をすべて表示",
+  "worker.instructions_hide": "指示を閉じる",
+  "worker.label": "サブタスク",
 } as const satisfies Record<I18nKey, string>;

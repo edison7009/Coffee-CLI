@@ -959,4 +959,8 @@ export const vi = {
   "gambit.folder": "Thư mục",
   "theme.section.shape_hint": "Góc bo, bảng và họa tiết nền",
   "launchpad.choose_folder": "Chọn thư mục",
+  "worker.from": "Tác vụ con · giao từ {parent}",
+  "worker.instructions": "Xem toàn bộ chỉ dẫn gửi AI",
+  "worker.instructions_hide": "Ẩn chỉ dẫn",
+  "worker.label": "Tác vụ con",
 } as const satisfies Record<I18nKey, string>;

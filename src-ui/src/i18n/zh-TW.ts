@@ -959,4 +959,8 @@ export const zhTW = {
   "gambit.folder": "資料夾",
   "theme.section.shape_hint": "影響圓角、面板和背景紋理",
   "launchpad.choose_folder": "選擇目錄",
+  "worker.from": "子任務 · 由 {parent} 分派",
+  "worker.instructions": "查看給 AI 的完整指令",
+  "worker.instructions_hide": "收起指令",
+  "worker.label": "子任務",
 } as const satisfies Record<I18nKey, string>;

@@ -955,4 +955,8 @@ export const pt = {
   "gambit.folder": "Pasta",
   "theme.section.shape_hint": "Cantos, painéis e textura do fundo",
   "launchpad.choose_folder": "Escolher pasta",
+  "worker.from": "Subtarefa · atribuída por {parent}",
+  "worker.instructions": "Ver as instruções completas para a IA",
+  "worker.instructions_hide": "Ocultar instruções",
+  "worker.label": "Subtarefa",
 } as const satisfies Record<I18nKey, string>;

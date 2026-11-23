@@ -961,6 +961,10 @@ export const en = {
   "gambit.folder": "Folder",
   "theme.section.shape_hint": "Corners, panels and background texture",
   "launchpad.choose_folder": "Choose folder",
+  "worker.from": "Sub-task · assigned by {parent}",
+  "worker.instructions": "Show the full instructions for the AI",
+  "worker.instructions_hide": "Hide instructions",
+  "worker.label": "Sub-task",
 } as const;
 
 export type I18nKey = keyof typeof en;

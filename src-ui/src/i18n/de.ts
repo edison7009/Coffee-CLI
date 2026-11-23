@@ -955,4 +955,8 @@ export const de = {
   "gambit.folder": "Ordner",
   "theme.section.shape_hint": "Ecken, Flächen und Hintergrundstruktur",
   "launchpad.choose_folder": "Ordner wählen",
+  "worker.from": "Teilaufgabe · zugewiesen von {parent}",
+  "worker.instructions": "Vollständige Anweisungen an die KI anzeigen",
+  "worker.instructions_hide": "Anweisungen ausblenden",
+  "worker.label": "Teilaufgabe",
 } as const satisfies Record<I18nKey, string>;

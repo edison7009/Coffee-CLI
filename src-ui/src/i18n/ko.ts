@@ -958,4 +958,8 @@ export const ko = {
   "gambit.folder": "폴더",
   "theme.section.shape_hint": "모서리, 패널, 배경 질감",
   "launchpad.choose_folder": "폴더 선택",
+  "worker.from": "하위 작업 · {parent}에서 배정",
+  "worker.instructions": "AI에게 보낸 전체 지시 보기",
+  "worker.instructions_hide": "지시 접기",
+  "worker.label": "하위 작업",
 } as const satisfies Record<I18nKey, string>;

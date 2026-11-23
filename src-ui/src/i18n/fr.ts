@@ -955,4 +955,8 @@ export const fr = {
   "gambit.folder": "Dossier",
   "theme.section.shape_hint": "Coins, panneaux et texture du fond",
   "launchpad.choose_folder": "Choisir un dossier",
+  "worker.from": "Sous-tâche · confiée par {parent}",
+  "worker.instructions": "Voir les instructions complètes pour l’IA",
+  "worker.instructions_hide": "Masquer les instructions",
+  "worker.label": "Sous-tâche",
 } as const satisfies Record<I18nKey, string>;

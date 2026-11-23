@@ -955,4 +955,8 @@ export const es = {
   "gambit.folder": "Carpeta",
   "theme.section.shape_hint": "Esquinas, paneles y textura de fondo",
   "launchpad.choose_folder": "Elegir carpeta",
+  "worker.from": "Subtarea · asignada por {parent}",
+  "worker.instructions": "Ver las instrucciones completas para la IA",
+  "worker.instructions_hide": "Ocultar instrucciones",
+  "worker.label": "Subtarea",
 } as const satisfies Record<I18nKey, string>;
