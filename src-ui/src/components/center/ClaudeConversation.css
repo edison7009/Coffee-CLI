@@ -260,3 +260,5 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 /* The copy action is always there (not only on hover), in line under its message. */
 .claude-thread .claude-row > .conversation-copy { position:static; display:inline-flex; margin:2px 0 0 -6px; opacity:1; }
 .claude-thread .claude-row--user > .conversation-copy { align-self:flex-end; margin:2px -6px 0 0; }
+/* A path that opens is a blue link, not a code chip: no tile behind it, in every layout. */
+.md-body .md-inline-code:has(> a) { padding:0; border:0; background:transparent !important; box-shadow:none; }
