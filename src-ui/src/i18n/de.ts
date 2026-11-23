@@ -968,4 +968,6 @@ export const de = {
   "changelog.close": "Schließen",
   "launchpad.install": "Installieren",
   "launchpad.install_tip": "{tool} ist nicht installiert. Agent-Tools per Befehl zu installieren ist nicht empfehlenswert: Umgebung und Pfade richtig einzurichten ist schwierig. Wir empfehlen EchoBird: Sein KI-Assistent prüft deine Umgebung, installiert mit einem Klick und richtet Anmeldung und Modelle ein. „Installieren“ öffnet EchoBird.ai zum Download.",
+  "settings.star": "Gib uns einen kostenlosen Stern",
+  "settings.star_hint": "Unterstütze Coffee CLI auf GitHub",
 } as const satisfies Record<I18nKey, string>;

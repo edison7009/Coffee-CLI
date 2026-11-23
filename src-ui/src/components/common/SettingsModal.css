@@ -629,10 +629,21 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 10%, transparent), 0 24px 60px -12px rgb(0 0 0 / .5) !important;
 }
 [data-mode="light"] .settings-page--dialog > .settings-modal { background: color-mix(in srgb, var(--bg-app) 95%, #000) !important; }
-.settings-page--dialog .settings-rail { flex: 0 0 150px; width: 150px; padding: 8px 6px; background: transparent !important; border: 0 !important; }
+.settings-page--dialog .settings-rail { flex: 0 0 164px; width: 164px; padding: 8px 6px; background: transparent !important; border: 0 !important; }
 .settings-page--dialog .settings-rail-back { font-size: 12.5px; color: var(--text-2); }
 .settings-page--dialog .settings-rail-back svg { width: 14px; height: 14px; }
 .settings-page--dialog .settings-rail-item { height: 28px; min-height: 28px; padding: 0 8px; border-radius: 6px; font-size: 13px; }
 .settings-page--dialog .settings-rail-item.active { background: var(--bg-active) !important; color: var(--text-1); font-weight: 500; }
 .settings-page--dialog .settings-rail-version, .settings-page--dialog .settings-rail-version-link { font-size: 11px; color: var(--text-3); }
 .settings-page--dialog .settings-content { border-radius: 8px; background: var(--bg-app) !important; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent); overflow: hidden; }
+
+/* The star card at the foot of the rail (as EchoBird's): a quiet tile, the line with a gold star, a hint under it.
+   It takes the rail's foot (margin-top: auto), the version sits right under it. */
+.settings-star { display: grid; gap: 2px; width: 100%; margin-top: auto; padding: 9px 8px 9px 10px; border: 0; border-radius: 10px; background: color-mix(in srgb, var(--text-1) 5%, transparent); color: var(--text-1); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s; }
+.settings-star:hover { background: color-mix(in srgb, var(--text-1) 9%, transparent); }
+.settings-star:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.settings-star b { display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 12.5px; white-space: nowrap; font-weight: 500; line-height: 1.35; }
+.settings-star b svg { flex: none; color: #e8b04a; }
+.settings-star small { color: var(--text-3); font-size: 11.5px; line-height: 1.35; }
+.settings-star + .settings-rail-version { margin-top: 10px; }
+:root[data-width="xs"] .settings-star { display: none; }

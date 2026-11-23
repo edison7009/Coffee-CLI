@@ -971,4 +971,6 @@ export const ja = {
   "changelog.close": "閉じる",
   "launchpad.install": "インストール",
   "launchpad.install_tip": "{tool} はまだインストールされていません。Agent ツールをコマンドで直接インストールするのはおすすめしません。環境やパスの設定が難しいためです。EchoBird がおすすめです。AI アシスタントが環境を確認し、ワンクリックでインストールしてアカウントとモデルまで設定します。「インストール」で EchoBird.ai を開いてダウンロードしてください。",
+  "settings.star": "無料のスターで応援",
+  "settings.star_hint": "GitHub で Coffee CLI を応援",
 } as const satisfies Record<I18nKey, string>;

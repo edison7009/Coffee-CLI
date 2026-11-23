@@ -968,4 +968,6 @@ export const fr = {
   "changelog.close": "Fermer",
   "launchpad.install": "Installer",
   "launchpad.install_tip": "{tool} n’est pas installé. Installer des outils d’agent en ligne de commande est déconseillé : l’environnement et les chemins sont difficiles à configurer. Nous recommandons EchoBird : son assistant IA vérifie votre environnement, l’installe en un clic et configure compte et modèles. Cliquez sur « Installer » pour ouvrir EchoBird.ai et le télécharger.",
+  "settings.star": "Offrez-nous une étoile gratuite",
+  "settings.star_hint": "Soutenez Coffee CLI sur GitHub",
 } as const satisfies Record<I18nKey, string>;

@@ -972,4 +972,6 @@ export const zhTW = {
   "changelog.close": "關閉",
   "launchpad.install": "安裝",
   "launchpad.install_tip": "尚未安裝 {tool}。安裝 Agent 工具不建議直接用指令：環境、路徑等設定難度較高。推薦使用 EchoBird，它的 AI 助手會檢查電腦環境，一鍵安裝並設定好帳號和模型。點擊「安裝」開啟 EchoBird.ai 下載即可。",
+  "settings.star": "幫我們點個免費的星",
+  "settings.star_hint": "在 GitHub 支持我們",
 } as const satisfies Record<I18nKey, string>;
