@@ -624,18 +624,19 @@
 .settings-page--dialog { background: color-mix(in srgb, color-mix(in srgb, var(--bg-app) 60%, #000) 70%, transparent) !important; }
 [data-mode="light"] .settings-page--dialog { background: rgb(0 0 0 / .32) !important; }
 .settings-page--dialog > .settings-modal {
-  padding: 6px; gap: 0; border: 0 !important; border-radius: 12px;
+  padding: 0; gap: 0; border: 0 !important; border-radius: 12px; overflow: hidden;
   background: color-mix(in srgb, var(--bg-app) 88%, #000) !important; background-image: none !important;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 10%, transparent), 0 24px 60px -12px rgb(0 0 0 / .5) !important;
 }
 [data-mode="light"] .settings-page--dialog > .settings-modal { background: color-mix(in srgb, var(--bg-app) 95%, #000) !important; }
-.settings-page--dialog .settings-rail { flex: 0 0 164px; width: 164px; padding: 8px 6px; background: transparent !important; border: 0 !important; }
+.settings-page--dialog .settings-rail { flex: 0 0 170px; width: 170px; padding: 14px 8px; background: transparent !important; border: 0 !important; }
 .settings-page--dialog .settings-rail-back { font-size: 12.5px; color: var(--text-2); }
 .settings-page--dialog .settings-rail-back svg { width: 14px; height: 14px; }
 .settings-page--dialog .settings-rail-item { height: 28px; min-height: 28px; padding: 0 8px; border-radius: 6px; font-size: 13px; }
 .settings-page--dialog .settings-rail-item.active { background: var(--bg-active) !important; color: var(--text-1); font-weight: 500; }
 .settings-page--dialog .settings-rail-version, .settings-page--dialog .settings-rail-version-link { font-size: 11px; color: var(--text-3); }
-.settings-page--dialog .settings-content { border-radius: 8px; background: var(--bg-app) !important; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent); overflow: hidden; }
+/* One surface: the rail and the content side by side, a hairline between them (no inner frame inside the dialog's frame). */
+.settings-page--dialog .settings-content { border-radius: 0; background: transparent !important; box-shadow: none; border-left: 1px solid color-mix(in srgb, var(--text-1) 9%, transparent) !important; overflow: hidden; }
 
 /* The star card at the foot of the rail (as EchoBird's): a quiet tile, the line with a gold star, a hint under it.
    It takes the rail's foot (margin-top: auto), the version sits right under it. */

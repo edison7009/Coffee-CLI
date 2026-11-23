@@ -639,7 +639,6 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit-footer--card .usage-meter strong, .gambit-footer--card .usage-meter-percent { font-weight: 400; }
 /* Model · effort read as one setting. */
 .gambit-footer--card .claude-effort-trigger { padding-left: 2px !important; }
-.gambit-footer--card .claude-effort-trigger::before { content: '·'; margin-right: 3px; }
 /* The card's ＋ attaches; the controls' own attach button does the work, out of sight. */
 .gambit-footer--card .claude-composer-controls > .claude-control-icon:first-child { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden; clip-path: inset(50%); padding: 0 !important; }
 .gambit-pill-attach { display: grid; place-items: center; width: 24px; height: 24px; flex: none; margin-right: 2px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); cursor: pointer; transition: background-color .15s, color .15s; }
