@@ -1495,3 +1495,9 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 [data-layout="code"] .launchpad-card-side > .launchpad-folder:only-child { margin-bottom: 28px; }
 /* Logos drawn as a solid tile (OpenCode, the terminal) would print a grey block: fainter, and only the glyph's shape. */
 [data-layout="code"] .launchpad-card-group:is([data-tool="opencode"], [data-tool="terminal"]) { --brand-mark: .06; }
+/* The faded logo already says which tool it is: no second logo on the left, so the name and its folder get the room. */
+[data-layout="code"] .launchpad-card > .launchpad-icon { display: none; }
+[data-layout="code"] .launchpad-card { padding-left: 18px; }
+/* The rest of the card keeps a fixed layer while the logo turns beside it; otherwise WebKit redraws it at a
+   sub-pixel offset and it seems to shake on hover (as on EchoBird's cards). */
+[data-layout="code"] .launchpad-card > :not(.launchpad-card-mark) { transform: translateZ(0); backface-visibility: hidden; }
