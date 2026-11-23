@@ -1,5 +1,6 @@
 // Explorer.tsx — Left panel: file tree synced from terminal CWD
 
+import { useHoverTip } from '../common/HoverTip';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SidebarFooter } from './SidebarFooter';
 import { WebAccessStatus } from './WebAccessStatus';
@@ -544,6 +545,7 @@ function BrowserFileNode({ entry, parentDirPath, onCtxMenu }: {
 export function Explorer() {
   const { state, dispatch } = useAppState();
   const t = useT();
+  const { tipFor, tip: hoverTip } = useHoverTip();
 
   const activeSession = state.terminals.find(t => t.id === state.activeTerminalId);
   const folderPath = activeSession?.folderPath || null;
@@ -790,11 +792,22 @@ export function Explorer() {
           tree keeps its own scroller so its header stays put. */}
       <div className="explorer-scroll" data-tab={activeTab} ref={scrollRef}>
       <div className="explorer-tabs">
-        <button className="explorer-new-session" onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
+        {/* Code 方案 A: the sidebar's entries as one row of icons (names in the tips), the sessions right under. */}
+        <button className="explorer-icon-button explorer-new-icon" aria-label={t('explorer.new_session')} {...tipFor(t('explorer.new_session'))} onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
           {/* Lucide square-pen; license in /icons/LICENSE-lucide.txt. */}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>
-          <span>{t('explorer.new_session')}</span>
+          <span className="explorer-icon-label">{t('explorer.new_session')}</span>
         </button>
+      <button type="button" className="explorer-icon-button" aria-pressed={!!state.toolSettingsOpen} {...tipFor(t('tools.title'))} onClick={() => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true })}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 17.5h7M17.5 14v7" /></svg><span className="explorer-icon-label">{t('tools.title')}</span>
+        </button>
+        <button type="button" className="explorer-icon-button" aria-pressed={!!state.usageOpen} {...tipFor(t('usage.title'))} onClick={() => dispatch({ type: 'SET_USAGE_OPEN', open: true })}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18M8 16v-5M13 16V5M18 16V9" /></svg><span className="explorer-icon-label">{t('usage.title')}</span>
+        </button>
+        <button type="button" className="explorer-icon-button" aria-pressed={!!state.automationsOpen} {...tipFor(t('automation.title'))} onClick={() => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: true })}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></svg><span className="explorer-icon-label">{t('automation.title')}</span>
+        </button>
+        <span className="explorer-icon-fill" />
         <span className="explorer-view-switch" data-active={activeTab} role="group" aria-label={`${t('explorer.tab.history')} / ${t('explorer.tab.workspace')}`}>
         <span className="explorer-view-thumb" aria-hidden="true" />
         <button
@@ -817,15 +830,6 @@ export function Explorer() {
         </span>
       </div>
 
-      <button type="button" className="explorer-new-session explorer-usage" aria-pressed={!!state.toolSettingsOpen} onClick={() => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true })}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 17.5h7M17.5 14v7" /></svg><span>{t('tools.title')}</span>
-      </button>
-      <button type="button" className="explorer-new-session explorer-usage" aria-pressed={!!state.usageOpen} onClick={() => dispatch({ type: 'SET_USAGE_OPEN', open: true })}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18M8 16v-5M13 16V5M18 16V9" /></svg><span>{t('usage.title')}</span>
-      </button>
-      <button type="button" className="explorer-new-session explorer-usage" aria-pressed={!!state.automationsOpen} onClick={() => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: true })}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></svg><span>{t('automation.title')}</span>
-      </button>
       {(activeTab === 'workspace' && activeSession?.tool && !CWD_AGNOSTIC_TOOLS.has(activeSession.tool)) && (
         <span className={`workspace-dir-btn${searchingWorkspace ? ' is-searching' : ''}`} role="search" aria-label={t('explorer.filter_files')}>
           {searchingWorkspace ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7.5" /><path d="m16 16 5 5" /></svg> : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -902,6 +906,7 @@ export function Explorer() {
 
       <SidebarFooter update={updateButton}><WebAccessStatus /></SidebarFooter>
 
+      {hoverTip}
       {/* Right-click context menu */}
       {ctxMenu && <ContextMenu menu={ctxMenu} onClose={closeCtxMenu} />}
 

@@ -917,7 +917,7 @@ export const zhCN = {
   "layout.code": "Code",
   "layout.work_hint": "只有对话，不启动终端：左侧一条图标，中间全是对话。",
   "layout.code_hint": "多标签、侧栏和终端：完整的工作区。",
-  "launchpad.work_title": "今天想做什么？",
+  "launchpad.work_title": "今天做点什么？",
   "launchpad.work_hint": "选一个助手，开始对话。",
   "ai_remote.summary": "让助手操作你已打开的其他电脑窗口。只对你信任的电脑开启。",
   "ai_remote.windows": "已打开的远程窗口",
@@ -949,4 +949,7 @@ export const zhCN = {
   "tools.running": "正在{step}",
   "tools.result.found": "· {count} 处",
   "rail.close_tab": "关闭对话",
+  "ai_remote.titlebar": "正在操控 {name}",
+  "place.local": "本机",
+  "gambit.more": "更多",
 } as const satisfies Record<I18nKey, string>;

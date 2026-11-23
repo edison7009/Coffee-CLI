@@ -443,9 +443,8 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const [thinkingExpansion, setThinkingExpansion] = useState<Record<string, boolean>>({});
   const virtual = useConversationVirtualizer(s.messages, scrollRef);
   // Adjacent tool calls fold into one group row; the rest of the run renders empty (lib/tool-runs.ts).
-  // 纯净 shows every call as a card (even alone); 专业 folds runs of two or more.
-  const pure = useAppState().state.layoutMode === 'work';
-  const runs = useMemo(() => toolRuns(s.messages, pure ? 1 : 2), [s.messages, pure]);
+  // Every call is a card, alone or folded with its neighbours (both layouts).
+  const runs = useMemo(() => toolRuns(s.messages, 1), [s.messages]);
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainClaudeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);

@@ -944,4 +944,7 @@ export const ru = {
   "tools.running": "{step}…",
   "tools.result.found": "· найдено {count}",
   "rail.close_tab": "Закрыть разговор",
+  "ai_remote.titlebar": "Управляет {name}",
+  "place.local": "Этот компьютер",
+  "gambit.more": "Ещё",
 } as const satisfies Record<I18nKey, string>;

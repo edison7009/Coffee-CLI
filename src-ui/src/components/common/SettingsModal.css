@@ -684,3 +684,68 @@
 .settings-page--dialog.settings-page--closing { animation: settings-page-out 0.12s cubic-bezier(0.4, 0, 1, 1) forwards; }
 .settings-page--dialog > .settings-modal { width: min(920px, calc(100vw - 48px)); height: min(680px, calc(100vh - 80px)); background-color: var(--bg-app) !important; background-image: linear-gradient(var(--bg-panel), var(--bg-panel)) !important; }
 .settings-page--dialog .settings-body { width: 100%; }
+
+/* ── 方案 C: grouped lists, like macOS System Settings ──────────────────────────────────────────────
+   Inside (both layouts): each group of settings is one 9px-rounded card on bg-card, rows split by a 7% hairline;
+   a row is a 13px/500 title with an 11.5px note on the left and its control on the right. Flat controls:
+   a light segmented track, borderless key caps, a small blue switch, 11.5px text buttons, a 4px track with a
+   white knob. Selected = deeper fill + the blue round check. No outlines. */
+.settings-section-label { font-size: 12px; font-weight: 500; color: var(--text-2); }
+.settings-sound-list { border: 0 !important; border-radius: 9px !important; background: var(--bg-card) !important; overflow: hidden; }
+.settings-sound-list > * + *, .settings-sound-item + .settings-sound-item, .settings-sound-list > .settings-choice-row + .settings-choice-row { border-top: 1px solid color-mix(in srgb, var(--text-1) 7%, transparent) !important; }
+.settings-sound-row { min-height: 48px; padding: 8px 14px; }
+.settings-sound-title { font-size: 13px; font-weight: 500; }
+.settings-choice-row { align-items: center; }
+.settings-choice-row .settings-sound-title { padding-top: 0; }
+.settings-choice-hint, .settings-sound-title .settings-choice-hint { font-size: 11.5px; color: var(--text-3); }
+.settings-modal .settings-switch { width: 34px; height: 20px; border-radius: 10px; }
+.settings-modal .settings-switch > span { width: 16px; height: 16px; top: 2px; left: 2px; }
+.settings-modal .settings-switch[aria-checked="true"] > span { transform: translateX(14px); }
+.settings-modal .settings-btn-danger, .settings-modal .settings-btn-danger:hover:not(:disabled) { color: #e06666 !important; }
+.settings-modal :is(.settings-btn, .settings-scale-reset, .settings-sound-change, .settings-voice-scan, .settings-term-chip.reset) { padding: 4px 9px; border: 0 !important; border-radius: 6px; background: transparent; color: var(--text-3); font-size: 11.5px; transition: background-color .15s, color .15s; }
+.settings-modal :is(.settings-btn, .settings-scale-reset, .settings-sound-change, .settings-voice-scan, .settings-term-chip.reset):hover:not(:disabled) { background: var(--bg-hover); color: var(--text-1); }
+.settings-modal .settings-range::-webkit-slider-runnable-track { height: 4px; background: linear-gradient(to right, var(--text-2) var(--range-progress), color-mix(in srgb, var(--text-3) 30%, transparent) var(--range-progress)); }
+.settings-modal .settings-range::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: -5px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .35); }
+.settings-modal .settings-range::-moz-range-track { height: 4px; background: linear-gradient(to right, var(--text-2) var(--range-progress), color-mix(in srgb, var(--text-3) 30%, transparent) var(--range-progress)); }
+.settings-modal .settings-range::-moz-range-thumb { background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .35); }
+/* Segmented choices (and 明亮 / 夜晚 / 跟随系统): a light track, the chosen part on bg-active. */
+.settings-modal .segmented-tabs, .settings-modal .settings-mode-tabs { gap: 2px; padding: 2px; border-radius: 7px; background: color-mix(in srgb, var(--text-1) 6%, transparent); }
+.settings-modal .segmented-tabs .tool-settings-indicator { background: var(--bg-active) !important; border-radius: 5px; }
+.settings-modal .segmented-tabs > button { color: var(--text-3); font-size: 11.5px; }
+.settings-modal .segmented-tabs > button[aria-checked="true"] { color: var(--text-1); }
+.settings-modal .settings-mode-tab { padding: 4px 10px; border-radius: 5px; color: var(--text-3); font-size: 11.5px; font-weight: 500; }
+.settings-modal .settings-mode-tab.active { background: var(--bg-active); color: var(--text-1); }
+/* Key caps: no outlines. The chosen set sits on bg-active; each key is a small bg-hover square. */
+.settings-modal .settings-key-card { border: 0 !important; background: transparent; border-radius: 7px; padding: 4px 6px; }
+.settings-modal .settings-key-card:hover { background: var(--bg-hover); }
+.settings-modal .settings-key-card.active { background: var(--bg-active) !important; }
+.settings-modal .settings-key-card kbd, .settings-modal .segmented-tabs kbd { border: 0 !important; background: var(--bg-hover); border-radius: 4px; font: 10.5px/18px ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* Appearance: palettes, shapes and icon styles are flat; the chosen one is bg-active with the blue check. */
+.settings-modal :is(.settings-chip, .settings-icon-chip, .settings-term-chip:not(.reset)) { position: relative; border: 0 !important; background: color-mix(in srgb, var(--text-1) 5%, transparent); color: var(--text-2); transition: background-color .15s, color .15s; }
+.settings-modal :is(.settings-chip, .settings-icon-chip, .settings-term-chip:not(.reset)):hover { background: var(--bg-hover); color: var(--text-1); }
+.settings-modal :is(.settings-chip, .settings-icon-chip, .settings-term-chip).active { background: var(--bg-active) !important; color: var(--text-1); }
+.settings-modal :is(.settings-chip, .settings-icon-chip).active::after { content: ''; position: absolute; top: -5px; right: -5px; width: 14px; height: 14px; border-radius: 50%; background: var(--switch-on, #0a84ff) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 8px no-repeat; }
+.settings-modal .settings-lang-item.active { background: var(--bg-active); color: var(--text-1); }
+.settings-modal .settings-lang-check { color: var(--switch-on, #0a84ff); }
+/* The title: no rule under it, 15px / 600. */
+.settings-modal .settings-header { border-bottom: 0 !important; }
+.settings-modal .settings-header-title { font-size: 15px; font-weight: 600; }
+.settings-modal .settings-group-gap { background: transparent; margin: 14px 0 0; }
+
+/* The dialog's shell (Clear): a ground one step darker, 12px corners, 6px inside, a 10% hairline and a soft
+   shadow; the rail sits on the ground, the content is a panel on it (8px, 9% hairline). */
+.settings-page--dialog { background: color-mix(in srgb, color-mix(in srgb, var(--bg-app) 60%, #000) 70%, transparent) !important; }
+[data-mode="light"] .settings-page--dialog { background: rgb(0 0 0 / .32) !important; }
+.settings-page--dialog > .settings-modal {
+  padding: 6px; gap: 0; border: 0 !important; border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-app) 88%, #000) !important; background-image: none !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 10%, transparent), 0 24px 60px -12px rgb(0 0 0 / .5) !important;
+}
+[data-mode="light"] .settings-page--dialog > .settings-modal { background: color-mix(in srgb, var(--bg-app) 95%, #000) !important; }
+.settings-page--dialog .settings-rail { flex: 0 0 150px; width: 150px; padding: 8px 6px; background: transparent !important; border: 0 !important; }
+.settings-page--dialog .settings-rail-back { font-size: 12.5px; color: var(--text-2); }
+.settings-page--dialog .settings-rail-back svg { width: 14px; height: 14px; }
+.settings-page--dialog .settings-rail-item { height: 28px; min-height: 28px; padding: 0 8px; border-radius: 6px; font-size: 13px; }
+.settings-page--dialog .settings-rail-item.active { background: var(--bg-active) !important; color: var(--text-1); font-weight: 500; }
+.settings-page--dialog .settings-rail-version, .settings-page--dialog .settings-rail-version-link { font-size: 11px; color: var(--text-3); }
+.settings-page--dialog .settings-content { border-radius: 8px; background: var(--bg-app) !important; box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent); overflow: hidden; }

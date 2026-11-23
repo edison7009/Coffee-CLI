@@ -912,7 +912,7 @@ export const fr = {
   "layout.code": "Code",
   "layout.work_hint": "Seulement la conversation, sans terminal : une barre d’icônes et le chat.",
   "layout.code_hint": "Onglets, barres latérales et terminaux : l’espace de travail complet.",
-  "launchpad.work_title": "Sur quoi travaille-t-on aujourd’hui ?",
+  "launchpad.work_title": "On fait quoi aujourd’hui ?",
   "launchpad.work_hint": "Choisissez un assistant pour commencer une conversation.",
   "ai_remote.summary": "Laissez les assistants piloter les fenêtres d’autres ordinateurs que vous avez ouvertes. À activer seulement pour des ordinateurs de confiance.",
   "ai_remote.windows": "Fenêtres distantes ouvertes",
@@ -944,4 +944,7 @@ export const fr = {
   "tools.running": "{step}…",
   "tools.result.found": "· {count} résultats",
   "rail.close_tab": "Fermer la conversation",
+  "ai_remote.titlebar": "Pilote {name}",
+  "place.local": "Cet ordinateur",
+  "gambit.more": "Plus",
 } as const satisfies Record<I18nKey, string>;

@@ -912,7 +912,7 @@ export const de = {
   "layout.code": "Code",
   "layout.work_hint": "Nur die Unterhaltung, keine Terminals: eine Symbolleiste und der Chat.",
   "layout.code_hint": "Tabs, Seitenleisten und Terminals: der volle Arbeitsbereich.",
-  "launchpad.work_title": "Woran arbeiten wir heute?",
+  "launchpad.work_title": "Was machen wir heute?",
   "launchpad.work_hint": "Wähle einen Assistenten, um ein Gespräch zu beginnen.",
   "ai_remote.summary": "Assistenten dürfen geöffnete Fenster anderer Computer bedienen. Nur für Computer einschalten, denen du vertraust.",
   "ai_remote.windows": "Geöffnete Remote-Fenster",
@@ -944,4 +944,7 @@ export const de = {
   "tools.running": "{step} …",
   "tools.result.found": "· {count} Treffer",
   "rail.close_tab": "Unterhaltung schließen",
+  "ai_remote.titlebar": "Bedient {name}",
+  "place.local": "Dieser Computer",
+  "gambit.more": "Mehr",
 } as const satisfies Record<I18nKey, string>;

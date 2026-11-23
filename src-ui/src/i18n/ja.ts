@@ -947,4 +947,7 @@ export const ja = {
   "tools.running": "{step}中",
   "tools.result.found": "· {count} 件",
   "rail.close_tab": "会話を閉じる",
+  "ai_remote.titlebar": "{name} を操作中",
+  "place.local": "このコンピューター",
+  "gambit.more": "その他",
 } as const satisfies Record<I18nKey, string>;

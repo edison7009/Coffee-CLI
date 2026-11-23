@@ -99,22 +99,35 @@
 .icon-rail-tip strong { font-weight: 500; overflow-wrap: anywhere; }
 .icon-rail-tip small { color: var(--text-3); font-size: 12px; }
 
-/* Open conversations: the project's own icon with the tool in its corner, or the tool alone. */
-.icon-rail-sessions { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+/* Open conversations (Clear 方案 A): the title's first character on a quiet tile, the tool's mark in the
+   lower corner, the state in the upper one. The open one sits on a deeper tile with a short bar at the edge. */
+.icon-rail-sessions { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 2px 0; }
 .icon-rail-sessions::-webkit-scrollbar { display: none; }
-.icon-rail-session { width: 40px; height: 40px; }
-/* The icon is the whole button: no tile behind it. Others sit a little faded; the open one is full strength
-   with a short bar at the rail's edge. Hover brings an icon to full strength — nothing moves. */
-.icon-rail-session, .icon-rail-session:hover, .icon-rail-session[aria-current="true"] { background: transparent; }
-.icon-rail-session > :is(.icon-rail-project, .icon-rail-tool) { opacity: .6; transition: opacity .15s; }
-.icon-rail-session:hover > :is(.icon-rail-project, .icon-rail-tool), .icon-rail-session[aria-current="true"] > :is(.icon-rail-project, .icon-rail-tool) { opacity: 1; }
-.icon-rail-session[aria-current="true"]::before { content: ''; position: absolute; left: -4px; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: var(--text-1); }
-.icon-rail-project { width: 28px; height: 28px; border-radius: 7px; object-fit: contain; }
-.icon-rail-tool { display: grid; place-items: center; width: 28px; height: 28px; }
-.icon-rail-tool > *, .icon-rail-tool svg, .icon-rail-tool img { width: 28px !important; height: 28px !important; border-radius: 7px; }
-.icon-rail-tool-badge { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 13px; height: 13px; border-radius: 4px; background: var(--bg-app); box-shadow: 0 0 0 1.5px var(--bg-app); }
+.icon-rail-session { width: 34px; height: 34px; background: color-mix(in srgb, var(--text-1) 5%, transparent); }
+.icon-rail-session:hover { background: var(--bg-hover); }
+.icon-rail-session[aria-current="true"] { background: var(--bg-active); }
+.icon-rail-session[aria-current="true"]::before { content: ''; position: absolute; left: -7px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--text-1); }
+.icon-rail-letter { font: 600 13px/1 var(--font-nav, var(--font)); color: var(--text-2); }
+.icon-rail-session:hover .icon-rail-letter, .icon-rail-session[aria-current="true"] .icon-rail-letter { color: var(--text-1); }
+.icon-rail-tool-badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 15px; height: 15px; border-radius: 5px; background: var(--bg-app); }
 .icon-rail-tool-badge > *, .icon-rail-tool-badge svg, .icon-rail-tool-badge img { width: 11px !important; height: 11px !important; }
-.icon-rail-state { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--text-3) 40%, transparent); border-top-color: var(--text-1); box-sizing: border-box; width: 8px; height: 8px; animation: icon-rail-spin 1s linear infinite; }
-.icon-rail-state.is-waiting { border: 0; background: var(--blue); width: 6px; height: 6px; animation: none; }
+.icon-rail-state { position: absolute; right: -3px; top: -3px; display: grid; place-items: center; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-app); }
+.icon-rail-state > i { display: block; border-radius: 50%; }
+.icon-rail-state.is-working > i { width: 8px; height: 8px; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--text-3) 40%, transparent); border-top-color: var(--text-1); animation: icon-rail-spin 1s linear infinite; }
+.icon-rail-state.is-unread > i { width: 6px; height: 6px; background: var(--blue); }
+.icon-rail-state.is-waiting > i { width: 7px; height: 7px; box-shadow: inset 0 0 0 1.5px var(--blue); }
 @keyframes icon-rail-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .icon-rail-state { animation-duration: 2.4s; } }
+@media (prefers-reduced-motion: reduce) { .icon-rail-state.is-working > i { animation-duration: 2.4s; } }
+
+/* Clear 方案 A window layers: the window (title bar, rail, the margin around the content) sits one step darker,
+   and the conversation is a panel on it — 8px corners, a 1px line drawn with box-shadow, 6px clear of the
+   window's right and bottom edges (none on the rail's side). The darker ground is the panel's own wide shadow,
+   so textured shapes keep their texture underneath. */
+:root[data-layout="work"] { --clear-ground: rgb(0 0 0 / .12); }
+:root[data-layout="work"][data-mode="light"] { --clear-ground: rgb(0 0 0 / .06); }
+:root[data-layout="work"] .titlebar { background-image: linear-gradient(var(--clear-ground), var(--clear-ground)); }
+:root[data-layout="work"] .app-layout:not(.is-compact) { overflow: hidden; }
+:root[data-layout="work"] .app-layout:not(.is-compact) > .panel-center {
+  margin: 0 6px 6px 0; border-radius: 8px; overflow: hidden;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent), 0 0 0 100vmax var(--clear-ground);
+}

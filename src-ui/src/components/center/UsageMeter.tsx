@@ -10,7 +10,18 @@ function tone(remaining: number) {
 }
 
 /** Clicking refreshes in the background; the numbers simply change when the reply arrives. */
-export function UsageMeter({ quotas, onRefresh }: { quotas: Quota[]; onRefresh?: () => void }) {
+/** A small ring filled to how much is left (方案 A's composer line). */
+function Ring({ percent }: { percent: number }) {
+  const r = 5.5, c = 2 * Math.PI * r;
+  return <svg className="usage-ring" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+    <circle cx="7" cy="7" r={r} fill="none" strokeWidth="2" className="usage-ring-track" />
+    <circle cx="7" cy="7" r={r} fill="none" strokeWidth="2" className="usage-ring-fill" strokeDasharray={`${c * Math.max(0, Math.min(100, percent)) / 100} ${c}`} transform="rotate(-90 7 7)" strokeLinecap="round" />
+  </svg>;
+}
+
+/** Clicking refreshes in the background; the numbers simply change when the reply arrives.
+ *  `compact`: only the window closest to running out, as a ring and its percent; every reading is in the tip. */
+export function UsageMeter({ quotas, onRefresh, compact = false }: { quotas: Quota[]; onRefresh?: () => void; compact?: boolean }) {
   const t = useT();
   const shown = visibleQuotas(quotas);
   const ticking = shown.some(quota => quota.resetAt);
@@ -48,6 +59,16 @@ export function UsageMeter({ quotas, onRefresh }: { quotas: Quota[]; onRefresh?:
       <span className="usage-meter-bar" aria-hidden="true"><span style={{ width: `${remaining}%` }} /></span>
       </span>;
   });
+  if (compact) {
+    const windows = shown.filter(quota => quota.balance === undefined);
+    const tightest = windows.reduce<Quota | undefined>((low, quota) => !low || remainingPercent(quota) < remainingPercent(low) ? quota : low, undefined);
+    const balance = shown.find(quota => quota.balance !== undefined);
+    const percent = tightest ? Math.round(remainingPercent(tightest)) : undefined;
+    return <button type="button" className="usage-meter usage-meter--compact" data-tip={labels.join(' · ')} aria-label={`${t('usage.label')}: ${labels.join('; ')}`} onClick={onRefresh} disabled={!onRefresh}>
+      {percent !== undefined ? <><Ring percent={percent} /><span className="usage-meter-percent" data-tone={tone(percent)}>{percent}%</span></>
+        : balance ? <strong>{formatBalance(balance)}</strong> : null}
+    </button>;
+  }
   // The button's name carries every reading, since a named button hides its children's names.
   return <button type="button" className="usage-meter" aria-label={`${t('usage.label')}: ${labels.join('; ')}`} onClick={onRefresh} disabled={!onRefresh}>{items}</button>;
 }

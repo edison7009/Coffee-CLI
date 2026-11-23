@@ -91,12 +91,12 @@ try {
   assert.equal(await page.locator('[data-fixture-view][data-visible="true"]:visible').count(), 4, 'all visible views remain active for scrolling and rendering');
   await page.getByRole('button', { name: 'Usage statistics', exact: true }).click();
   await page.getByRole('region', { name: 'Usage statistics', exact: true }).waitFor();
-  const navigationStyles = await page.evaluate(() => ['.explorer-tabs .explorer-new-session', '.explorer-usage', '.history-search-trigger'].map(selector => {
+  const navigationStyles = await page.evaluate(() => ['.explorer-tabs .explorer-new-icon', '.explorer-tabs .explorer-icon-button:nth-child(3)'].map(selector => {
     const button = document.querySelector(selector), style = getComputedStyle(button), icon = button.querySelector('svg').getBoundingClientRect();
     return { font: style.font, padding: style.padding, iconX: icon.x, iconWidth: icon.width, iconHeight: icon.height };
   }));
-  assert.deepEqual(navigationStyles[1], navigationStyles[0], 'statistics use the same typography and icon alignment as New session');
-  assert.deepEqual(navigationStyles[1], navigationStyles[2], 'statistics use the same typography and icon alignment as Search');
+  // Code 方案 A: the entries are one row of icons — statistics sizes its icon exactly like New session.
+  assert.deepEqual({ ...navigationStyles[1], iconX: 0 }, { ...navigationStyles[0], iconX: 0 }, 'statistics use the same icon button as New session');
   assert.equal(await page.locator('[data-fixture-view]:visible').count(), 0, 'statistics hide native surfaces without ending their sessions');
   assert.equal(await page.locator('.gambit').count(), 0, 'statistics do not leave the composer over the charts');
   await row('Claude desktop task').click(); await count(4);

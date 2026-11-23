@@ -947,4 +947,7 @@ export const ko = {
   "tools.running": "{step} 중",
   "tools.result.found": "· {count}곳",
   "rail.close_tab": "대화 닫기",
+  "ai_remote.titlebar": "{name} 조작 중",
+  "place.local": "이 컴퓨터",
+  "gambit.more": "더 보기",
 } as const satisfies Record<I18nKey, string>;

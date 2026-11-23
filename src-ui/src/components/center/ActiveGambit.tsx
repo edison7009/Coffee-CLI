@@ -16,6 +16,7 @@
 // switching tabs swaps what's shown inside the (still-open) panel so
 // text can't be misdirected to the wrong terminal.
 
+import { useT } from '../../i18n/useT';
 import { useCallback, useEffect } from 'react';
 import { useAppState, useAppStateRef, matchHotkeyScheme } from '../../store/app-state';
 import { sendSessionPrompt } from '../../lib/send-session-prompt';
@@ -23,6 +24,7 @@ import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCod
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
 import { RemoteControlPicker } from './RemoteControlPicker';
+import { remoteWindowName } from '../../lib/remote-control';
 import { useRemoteControlState } from '../../lib/remote-control-state';
 import { useCompact } from '../../lib/viewport';
 import { controlClaude, useClaudeSession } from '../../lib/claude-session';
@@ -60,6 +62,7 @@ function remoteHost(toolData: string | undefined): string {
 
 export function ActiveGambit() {
   const { state, dispatch } = useAppState();
+  const t = useT();
   const compact = useCompact();
   const stateRef = useAppStateRef();
   const orchestration = useOrchestration();
@@ -175,6 +178,7 @@ export function ActiveGambit() {
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
       remoteControl={activeId && remote?.attached ? <RemoteControlPicker key={`remote:${activeId}`} sessionId={activeId} state={remote} onState={setRemote} /> : undefined}
+      placeDevice={remote?.attached && remote.pick ? (name => name ? remoteWindowName(name, t('remote_control.window_prefix')) : null)(remote.windows.find(window => window.window === remote.pick)?.title) : null}
       worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode || isPi)
         // Sits beside the tool's composer controls, keyed by session: a shared key would strand a stale switch in the footer.
         ? <WorktreeControl key={`worktree:${activeSession.id}`} tab={activeSession} started={started} running={running} /> : undefined}

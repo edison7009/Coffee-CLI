@@ -83,3 +83,8 @@
 .changes-detail-pane > .diff-panel { position:relative; left:auto; right:auto; bottom:auto; flex:1; width:100%; height:100%; min-height:0; box-shadow:none; border-top:0; }
 :is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .panel-right .changes-fullview .changes-row.selected { background:color-mix(in srgb,var(--accent) 15%,transparent) !important; }
 @media (max-height:540px) { .changes-branch-header { padding-top:8px; } .changes-footer { padding-top:5px; padding-bottom:5px; } }
+
+/* 方案 A: a file row is its name and its +/− counts; the folder is in the hover title, and the group header
+   (uncommitted / untracked / committed) already says what an M said; added, deleted and renamed keep their letter. */
+.changes-row .changes-path, .changes-row .changes-status-m { display: none; }
+.changes-row .changes-name { overflow: hidden; text-overflow: ellipsis; }

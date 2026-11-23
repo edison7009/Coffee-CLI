@@ -24,3 +24,10 @@
 @container (max-width: 470px) { .usage-meter { display:none; } }
 @media(prefers-reduced-motion:reduce) { .usage-meter-bar > span { transition:none; } }
 @media(forced-colors:active) { .usage-meter-bar { border:1px solid CanvasText; background:Canvas; } .usage-meter-bar > span { background:Highlight; } .usage-meter-percent { color:CanvasText; } }
+
+/* Compact (the composer line): a ring for the window closest to running out and its percent; hover for all. */
+.usage-meter--compact { position: relative; gap: 5px; }
+.usage-ring-track { stroke: color-mix(in srgb, var(--text-3) 28%, transparent); }
+.usage-ring-fill { stroke: var(--text-2); }
+.usage-meter--compact .usage-meter-percent { color: var(--text-2); }
+.usage-meter--compact[data-tip]:hover::after { content: attr(data-tip); position: absolute; z-index: 100; bottom: calc(100% + 8px); right: 0; width: max-content; max-width: 280px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); font-weight: 500; line-height: 1.4; white-space: normal; pointer-events: none; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; }

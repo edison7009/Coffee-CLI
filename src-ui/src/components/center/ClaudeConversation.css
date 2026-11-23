@@ -219,17 +219,26 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 .claude-step-detail { padding:6px 8px 10px 32px; }
 .claude-row--group.claude-row--done::before { background:var(--success,#79c99e); }
 
-/* 工作式: a plain chat, not a timeline. No rail line or status dots; the assistant writes on the page,
+/* Both layouts (Clear / Code 方案 A): a plain chat, not a timeline. No rail line or status dots; the assistant writes on the page,
    and each tool step (single or grouped) is one quiet card with regular-weight text. Same components,
    same order — only the look changes. Also covers Codex, OpenCode, Pi and DeepSeek Harness, which share
    these rows. */
-[data-layout="work"] .claude-row { border-left:0; margin-left:0; padding-left:0; padding-bottom:22px; }
-[data-layout="work"] .claude-row::before { display:none; }
-[data-layout="work"] .claude-row--nested { margin-left:20px; }
-[data-layout="work"] .claude-row--assistant > time,[data-layout="work"] .claude-row--reasoning > time { display:none; }
-[data-layout="work"] .claude-row--tool:not(.claude-row--group) > .claude-tool { padding:8px 12px; border-radius:var(--shape-radius-panel,8px); background:color-mix(in srgb,var(--text-1) 4%,transparent); }
-[data-layout="work"] .claude-tool-heading strong { font-weight:500; color:var(--text-2); }
-[data-layout="work"] .claude-row--running > .claude-tool .claude-tool-heading strong { color:var(--text-1); }
+.claude-row { border-left:0; margin-left:0; padding-left:0; padding-bottom:14px; }
+.claude-row::before { display:none; }
+.claude-row--nested { margin-left:20px; }
+.claude-row--assistant > time,.claude-row--reasoning > time { display:none; }
+.claude-row--tool:not(.claude-row--group) > .claude-tool { padding:8px 12px; border-radius:var(--shape-radius-panel,8px); background:color-mix(in srgb,var(--text-1) 4%,transparent); }
+.claude-tool-heading strong { font-weight:500; color:var(--text-2); }
+.claude-row--running > .claude-tool .claude-tool-heading strong { color:var(--text-1); }
 /* Shapes that clear plain fills (global.css's glass/carbon rule) would leave the step cards invisible: keep their quiet fill. */
-[data-layout="work"] .panel-center .claude-row .claude-tool-group,
-[data-layout="work"] .panel-center .claude-row--tool:not(.claude-row--group) > .claude-tool { background:color-mix(in srgb,var(--text-1) 5%,transparent) !important; }
+.panel-center .claude-thread .claude-row .claude-tool-group,
+.panel-center .claude-thread .claude-row--tool:not(.claude-row--group) > .claude-tool { background:color-mix(in srgb,var(--text-1) 5%,transparent) !important; }
+/* The user's bubble carries no floating timestamp, and Clear drops the turn ticks in the margin. */
+.claude-row--user > time { display:none; }
+[data-layout="work"] .conversation-navigation { display:none; }
+/* The copy button floats over the row's lower edge (it shows on hover) instead of adding a 27px line under
+   every message, so paragraphs and steps sit close like a chat. */
+.claude-thread .claude-row { position:relative; }
+.claude-thread .claude-row > .conversation-copy { position:absolute; bottom:-12px; z-index:1; }
+.claude-thread .claude-row--assistant > .conversation-copy { left:0; }
+.claude-thread .claude-row--user > .conversation-copy { right:0; }

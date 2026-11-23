@@ -19,3 +19,8 @@ html.is-macos .titlebar-work-title { padding-left: 4px; }
 .titlebar-layout-switch > button:hover { color: var(--text-1); }
 .titlebar-layout-switch > button[aria-checked="true"] { background: var(--bg-active); color: var(--text-1); }
 .titlebar-layout-switch > button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+/* Clear: the computer this conversation operates, as a quiet chip beside the mode switch. */
+.titlebar-device-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; margin-right: 8px; border: 0; border-radius: 99px; background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); font: var(--type-caption) var(--font); cursor: pointer; transition: background-color .15s, color .15s; }
+.titlebar-device-chip:hover { background: var(--bg-hover); color: var(--text-1); }
+.titlebar-device-chip > i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }

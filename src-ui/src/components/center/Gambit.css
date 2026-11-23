@@ -568,71 +568,86 @@
 .claude-control-menu.remote-pick-menu button.remote-pick-control { align-items: center; justify-content: flex-start; gap: 10px; color: var(--text-2); }
 .remote-pick-plus { display: inline-grid; place-items: center; width: 26px; flex: none; font-size: 16px; }
 
-/* 专业: the wrapper around the controls is inert, so the footer lays out exactly as before. */
+/* Outside the card the wrapper around the controls is inert, so the old footer lays out exactly as before. */
 .gambit-meta-off { display: contents; }
 
-/* 纯净 (Claude desktop style): one rounded line — ＋, the draft, voice, send — that grows upward with the
-   draft, and under it, outside the box, one quiet line with every control (folder, permissions,
-   collaboration, remote window, usage, model, effort, context). The controls are the
-   same components as in 专业; only their placement changes. */
-.gambit.gambit--minimal {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-    grid-template-areas: "files files files files" "attach input voice send" "hint hint hint hint" "meta meta meta meta";
-    grid-template-rows: auto auto auto auto;
-    align-content: end;
-    column-gap: 4px;
-    padding: 0;
-    background: transparent !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    border-radius: 0;
+/* 方案 A (both layouts): the composer is a flat card — the draft on top, one quiet row of controls under it
+   (＋ · permissions | collaboration | remote …… usage | model · effort · mic · send) — with a tab on its
+   top edge saying where the conversation works. Flat: a 1px line drawn with box-shadow, a faint drop. */
+.gambit.gambit--card {
+    --card-line: color-mix(in srgb, var(--text-1) 13%, transparent);
+    display: flex; flex-direction: column; overflow: visible;
+    border-radius: 7px; background: var(--bg-input) !important;
+    box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgb(0 0 0 / .12) !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
 }
-.gambit--minimal::before {
-    content: '';
-    grid-area: attach / attach / send / send;
-    z-index: -1;
-    border-radius: 22px;
-    background: var(--bg-panel);
-    box-shadow: var(--gambit-shadow);
+.gambit--card > .gambit-dock-resize { display: none; }
+.gambit--card > .gambit-input { flex: 1; min-height: 0; }
+.gambit.gambit--docked.gambit--card .gambit-textarea { padding: 10px 12px 6px; font-size: 13px; line-height: 1.55; }
+.gambit--card .gambit-textarea::placeholder { font-size: 13px; }
+/* The place tab: the card's own colour, rounded on top only, standing on the card's edge. */
+.gambit-place { position: absolute; left: 10px; bottom: 100%; display: inline-flex; align-items: center; gap: 6px; height: 26px; max-width: calc(100% - 20px); padding: 0 10px; border: 0; border-radius: 7px 7px 0 0; background: var(--bg-input); box-shadow: 0 0 0 1px var(--card-line); clip-path: inset(-2px -2px 0 -2px); color: var(--text-2); font: var(--type-caption) var(--font); font-size: 11.5px; white-space: nowrap; }
+button.gambit-place { cursor: pointer; transition: color .15s; }
+button.gambit-place:hover { color: var(--text-1); }
+button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.gambit-place > svg { width: 13px; height: 13px; flex: none; }
+.gambit-place-folder { display: inline-flex; align-items: center; gap: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-3); }
+.gambit-place-tool, .gambit-place-tool > *, .gambit-place-tool svg, .gambit-place-tool img { display: inline-flex; width: 12px !important; height: 12px !important; }
+.gambit-place-chev { width: 12px !important; height: 12px !important; color: var(--text-3); }
+
+/* The control row. Every item: 22px tall, 11.5px, quiet until hovered; nothing moves. */
+.gambit-footer.gambit-footer--card { display: flex; align-items: center; justify-content: flex-start; gap: 1px; flex-wrap: nowrap; padding: 0 6px 6px; min-width: 0; overflow: visible; }
+/* Only while measuring whether everything fits (Gambit.tsx): tips and notices above the row must not be clipped. */
+.gambit-footer.gambit-footer--card.is-measuring { overflow: hidden; }
+.gambit-footer--card.is-open { flex-wrap: wrap; row-gap: 2px; }
+.gambit-footer--card .gambit-meta { display: contents; }
+.gambit-footer--card .claude-composer-controls, .gambit-footer--card .gambit-capabilities { display: contents; }
+.gambit-footer--card .claude-model-controls { display: flex; align-items: center; gap: 1px; margin-left: auto; min-width: 0; }
+.gambit-footer--card :is(.gambit-meta > :not(.claude-composer-controls), .claude-composer-controls > :not(.claude-model-controls, .gambit-capabilities), .gambit-capabilities > *, .claude-model-controls > *) {
+    box-sizing: border-box; height: 22px; min-height: 22px; margin: 0; display: inline-flex; align-items: center; gap: 4px; flex: none;
+    padding: 0 5px; border: 0; border-radius: 5px; background: transparent !important; color: var(--text-3);
+    font: 11.5px/1 var(--font); white-space: nowrap; transition: background-color .15s, color .15s;
 }
-.gambit--minimal > .gambit-dock-resize { display: none; }
-.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; }
-.gambit--minimal > .gambit-input { grid-area: input; align-self: center; max-height: 100%; }
-.gambit.gambit--docked.gambit--minimal .gambit-textarea { padding: 10px 6px 8px; }
-.gambit--minimal > .gambit-footer { display: contents; }
-.gambit-pill-attach { grid-area: attach; align-self: end; display: grid; place-items: center; width: 32px; height: 32px; margin: 0 0 7px 8px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-2); cursor: pointer; transition: background-color .15s, color .15s; }
+.gambit-footer--card :is(button, .gambit-capability.is-picker):hover { background: var(--bg-hover) !important; color: var(--text-1); }
+.gambit-footer--card .gambit-capability.is-remote.is-tied { color: var(--text-1); }
+.gambit-footer--card .gambit-capability > svg, .gambit-footer--card .claude-control-icon svg { width: 13px; height: 13px; }
+/* The place tab says the folder; the row does not repeat it. */
+.gambit-footer--card .gambit-meta > .gambit-workspace { display: none; }
+/* Hairline separators between neighbouring settings: 1px × 11px, between permissions | collaboration | remote
+   on the left and usage | model on the right. */
+.gambit-footer--card :is(.claude-permission-control ~ .gambit-capabilities > :first-child, .gambit-capabilities > * + *, .gambit-voice-slot ~ .claude-model-control) { position: relative; margin-left: 7px !important; }
+.gambit-footer--card :is(.claude-permission-control ~ .gambit-capabilities > :first-child, .gambit-capabilities > * + *, .gambit-voice-slot ~ .claude-model-control)::after { content: ''; position: absolute; left: -4px; top: 5.5px; width: 1px; height: 11px; background: color-mix(in srgb, var(--text-3) 35%, transparent); }
+.gambit-footer--card .usage-meter strong, .gambit-footer--card .usage-meter-percent { font-weight: 400; }
+/* Model · effort read as one setting. */
+.gambit-footer--card .claude-effort-trigger { padding-left: 2px !important; }
+.gambit-footer--card .claude-effort-trigger::before { content: '·'; margin-right: 3px; }
+/* The card's ＋ attaches; the controls' own attach button does the work, out of sight. */
+.gambit-footer--card .claude-composer-controls > .claude-control-icon:first-child { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden; clip-path: inset(50%); padding: 0 !important; }
+.gambit-pill-attach { display: grid; place-items: center; width: 24px; height: 24px; flex: none; margin-right: 2px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); cursor: pointer; transition: background-color .15s, color .15s; }
+.gambit-pill-attach > svg { width: 15px; height: 15px; }
 .gambit-pill-attach:hover { background: var(--bg-hover); color: var(--text-1); }
 .gambit-pill-attach:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
-.gambit--minimal .gambit-voice-anchor { grid-area: voice; align-self: end; display: grid; place-items: center; height: 32px; margin-bottom: 7px; }
-.gambit--minimal .gambit-send { grid-area: send; align-self: end; width: 32px; height: 32px; margin: 0 8px 7px 2px; }
-.gambit--minimal .gambit-send-hint { grid-area: hint; justify-self: end; padding: 4px 12px 0; }
-.gambit-meta { grid-area: meta; justify-self: stretch; display: flex; align-items: center; gap: 2px; min-width: 0; padding: 6px 2px 0; flex-wrap: wrap; justify-content: flex-start; }
-.gambit-meta .claude-composer-controls { display: contents; }
-.gambit-meta :is(.claude-model-control, .claude-effort-trigger, .claude-permission-control, .claude-tasks-control) { height: 26px; padding: 0 8px; background: transparent !important; color: var(--text-3); font-size: var(--type-caption); }
-.gambit-meta :is(.claude-model-control, .claude-effort-trigger, .claude-permission-control):hover { color: var(--text-1); background: var(--bg-hover) !important; }
-/* The box's ＋ attaches; the controls' own attach button stays (it does the work) but out of sight. */
-.gambit-meta .claude-composer-controls > .claude-control-icon:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); padding: 0; }
-.gambit-meta :is(.gambit-workspace, .gambit-capability, .claude-control-icon, .gambit-worktree-toggle) { background: transparent !important; color: var(--text-3); }
-.gambit--minimal .gambit-textarea { line-height: 1.5; }
+.gambit-footer--card .gambit-voice-anchor { flex: none; margin-left: 2px; }
+.gambit-footer--card .gambit-voice { width: 24px; height: 24px; border-radius: 6px; background: transparent; }
+.gambit-footer--card .gambit-send { flex: none; width: 24px; height: 24px; margin-left: 2px; border-radius: 6px; }
+.gambit-footer--card .gambit-send svg { width: 13px; height: 13px; }
+.gambit-footer--card .gambit-send-hint { flex: none; }
+.gambit-footer--card .usage-meter { gap: 4px; }
+/* Too many to fit: the less used ones (commands, worktree, context, background tasks) wait behind 「⋯」. */
+.gambit-footer--card.is-tight:not(.is-open) :is(.claude-composer-controls > .claude-control-icon ~ .claude-control-icon, .gambit-worktree-toggle, .claude-context-control, .claude-tasks-control, .gambit-capability.is-orchestration) { display: none !important; }
+.gambit-more { display: grid; place-items: center; width: 24px; height: 22px; flex: none; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; transition: background-color .15s, color .15s; }
+.gambit-more:hover, .gambit-more[aria-expanded="true"] { background: var(--bg-hover); color: var(--text-1); }
 
-/* Every item on the line under the box: one height, one baseline, one font — nothing sits higher than its neighbour. */
-.gambit-meta > *, .gambit-meta .claude-composer-controls > *, .gambit-meta .gambit-capabilities > * { box-sizing: border-box; height: 26px; min-height: 26px; margin: 0; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: var(--shape-radius-btn, 5px); font: var(--type-caption) var(--font); line-height: 1; vertical-align: middle; }
-.gambit-meta .claude-composer-controls > .claude-context-control { padding: 0 5px; }
-.gambit-meta .gambit-capabilities { display: inline-flex; align-items: center; gap: 2px; height: 26px; margin: 0; padding: 0; }
-.gambit-meta .usage-meter { padding: 0 7px; background: transparent; }
-.gambit-meta .usage-meter-item { display: inline-flex; align-items: center; gap: 4px; }
-.gambit-meta .usage-meter-bar { display: none; }
-.gambit-meta .gambit-workspace-icon, .gambit-meta .gambit-workspace-icon > * { width: 13px; height: 13px; }
-.gambit-meta .claude-composer-controls > .claude-context-control { background: transparent !important; }
-
-/* Two groups like 专业's footer: what goes with the prompt on the left (folder, worktree, commands, permissions,
-   collaboration, remote window), how it runs on the right (usage, model, effort, context). The line spans the
-   box's full width, so both ends line up with the box's edges. */
-.gambit-meta .claude-composer-controls > .claude-model-controls { margin-left: auto; padding: 0; gap: 2px; height: auto; }
-.gambit-meta .claude-model-controls > * { box-sizing: border-box; height: 26px; min-height: 26px; margin: 0; display: inline-flex; align-items: center; gap: 5px; padding: 0 7px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: transparent !important; color: var(--text-3); font: var(--type-caption) var(--font); line-height: 1; }
-.gambit-meta .claude-model-controls > :is(.claude-model-control, .claude-effort-trigger):hover { color: var(--text-1); background: var(--bg-hover) !important; }
-.gambit-meta .claude-model-controls > .claude-context-control { padding: 0 5px; }
-/* The mic sits in the box like ＋ and send: no fill of its own until hovered. */
-.gambit--minimal .gambit-voice { width: 32px; height: 32px; border-radius: 50%; background: transparent; }
+/* 方案 A, both layouts: the composer's controls are quiet labels with an icon each — folder, permissions,
+   collaboration — no fill until hovered, so the eye reads them as one line of settings. */
+.gambit-footer--card .gambit-workspace-icon { display: none; }
+.gambit-footer--card .gambit-workspace::before,
+.gambit-footer--card .claude-permission-control::before,
+.gambit-footer--card .gambit-capability.is-orchestration::before {
+    content: ''; width: 13px; height: 13px; flex: none; margin-right: 1px; background: currentColor;
+    -webkit-mask: var(--chip-icon) center / contain no-repeat; mask: var(--chip-icon) center / contain no-repeat;
+}
+.gambit-footer--card .gambit-workspace { --chip-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z'/%3E%3C/svg%3E"); display: inline-flex; align-items: center; gap: 5px; }
+.gambit-footer--card .claude-permission-control { --chip-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z'/%3E%3C/svg%3E"); display: inline-flex; align-items: center; gap: 5px; }
+.gambit-footer--card .gambit-capability.is-orchestration { --chip-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E"); display: inline-flex; align-items: center; gap: 5px; }
+.gambit-footer--card :is(.gambit-capability, .claude-model-control) { overflow: visible !important; }

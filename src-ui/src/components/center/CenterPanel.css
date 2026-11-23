@@ -1376,7 +1376,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 
 /* 工作式's new conversation: one quiet question above the conversation-capable assistants. */
 .launchpad-work-head { margin: 0 0 22px; text-align: center; }
-.launchpad-work-head h1 { margin: 0; color: var(--text-1); font: 500 26px/1.3 var(--font-nav, var(--font)); letter-spacing: -0.01em; }
+.launchpad-work-head h1 { margin: 0; color: var(--text-1); font: 600 21px/1.3 var(--font-nav, var(--font)); letter-spacing: -0.01em; }
 .launchpad-work-head p { margin: 6px 0 0; color: var(--text-3); font-size: var(--type-caption); }
 
 /* Tab status, quietly (tabs 方案 A): a thin ring while working, one blue dot while waiting for you,
@@ -1406,3 +1406,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 [data-layout="work"] .launchpad-card-name { font-size: var(--type-body); }
 [data-layout="work"] .launchpad-card .launchpad-card-path { font-size: var(--type-caption); color: var(--text-3); }
 [data-layout="work"] .launchpad-folder svg { width: 20px; height: 20px; }
+
+/* Code 方案 A tabs: the open tab always offers its ×; the others show their state in that slot. */
+.chrome-tab.active .tab-close-btn { opacity: 1; pointer-events: auto; }
+.chrome-tab.active .tab-status-grid { opacity: 0; }

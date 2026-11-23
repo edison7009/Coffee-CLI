@@ -916,7 +916,7 @@ export const zhTW = {
   "layout.code": "Code",
   "layout.work_hint": "只有對話，不啟動終端：左側一條圖示，中間全是對話。",
   "layout.code_hint": "多分頁、側欄和終端：完整的工作區。",
-  "launchpad.work_title": "今天想做什麼？",
+  "launchpad.work_title": "今天做點什麼？",
   "launchpad.work_hint": "選一個助手，開始對話。",
   "ai_remote.summary": "讓助手操作你已開啟的其他電腦視窗。只對你信任的電腦開啟。",
   "ai_remote.windows": "已開啟的遠端視窗",
@@ -948,4 +948,7 @@ export const zhTW = {
   "tools.running": "正在{step}",
   "tools.result.found": "· {count} 處",
   "rail.close_tab": "關閉對話",
+  "ai_remote.titlebar": "正在操控 {name}",
+  "place.local": "本機",
+  "gambit.more": "更多",
 } as const satisfies Record<I18nKey, string>;

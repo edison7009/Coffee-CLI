@@ -87,6 +87,8 @@ interface GambitProps {
   browser?: boolean;
   /** The remote control chip (RemoteControlPicker), for a tab that can operate remote windows. */
   remoteControl?: React.ReactNode;
+  /** Where this conversation works (方案 A's tab on the card): a remote computer's name, or null for this one. */
+  placeDevice?: string | null;
   /** Controls beside the target label: the worktree switch for desktop conversations, New chat for Coffee Agent. */
   worktreeControl?: React.ReactNode;
 }
@@ -152,7 +154,8 @@ function DraftActions({ enabled, canShare, label, shareLabel, clearLabel, tips, 
   </span>;
 }
 
-const MINIMAL_MIN_HEIGHT = 84; // 纯净: the one-line box plus the line of controls under it
+const CARD_MIN_HEIGHT = 76; // 方案 A: the card — one line to type, one line of controls
+const PLACE_TAB_HEIGHT = 26; // the place tab standing on the card's top edge
 const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here and scrolls instead
 const LS_DOCK_H = 'cc-gambit-dock-h';
 /** The strip a phone keeps clear at the bottom (the iPhone home indicator); 0 where there is none. The
@@ -161,6 +164,20 @@ const SAFE_BOTTOM = 'env(safe-area-inset-bottom, 0px)';
 
 /** A phone or tablet: focusing a field there raises the on-screen keyboard. */
 const isTouchScreen = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
+
+/** 方案 A's place tab on the card's top edge: this computer (本机) or the remote one, and the project. */
+function PlaceTab({ device, folder, toolIcon, switchable, onPick }: { device: string | null; folder: string; toolIcon?: React.ReactNode; switchable: boolean; onPick: () => void }) {
+  const t = useT();
+  const monitor = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{device ? <><rect x="2" y="4" width="13" height="9" rx="2" /><rect x="9" y="11" width="13" height="9" rx="2" /></> : <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>}</svg>;
+  const inner = <>
+    {monitor}<span className="gambit-place-device">{device ?? t('place.local')}</span>
+    {folder && <span className="gambit-place-folder">{toolIcon != null && <span className="gambit-place-tool" aria-hidden="true">{toolIcon}</span>}{folder}</span>}
+  </>;
+  // A conversation that can work on other computers switches there from the tab.
+  return switchable
+    ? <button type="button" className="gambit-place" onClick={onPick}>{inner}<svg className="gambit-place-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></button>
+    : <div className="gambit-place">{inner}</div>;
+}
 
 function GambitImpl({
   sessionId,
@@ -188,20 +205,23 @@ function GambitImpl({
   computer,
   browser,
   remoteControl,
+  placeDevice,
   worktreeControl,
 }: GambitProps) {
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
   const desktop = claude || codex || dsh || opencode || pi;
   // 纯净: the one-line box for every conversation, and for the new-conversation page before a tool is picked.
-  const minimalShell = useAppState().state.layoutMode === 'work' && (!!desktop || !tool);
+  // 方案 A's card: every desktop conversation in both layouts, and Clear's new conversation before a tool is picked.
+  const workLayout = useAppState().state.layoutMode === 'work';
+  const cardShell = !!desktop || (workLayout && !tool);
   // Every desktop conversation accepts prompts during a running turn.
   const steerable = claude || codex || dsh || opencode || pi;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   // A selected dictation source can fill any tool's composer.
   const voiceTool = claude ? 'claude' : codex ? 'codex' : tool;
   // While listening the live waveform takes the usage meter's place, wherever the meter is.
-  const meter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} />;
+  const meter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} compact />;
   const usageMeter = <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot>;
   const suggestion = draft ? undefined : offered;
   // Whether the draft can go out as a prompt link (some text, within the link limit).
@@ -260,7 +280,7 @@ function GambitImpl({
   // Height the draft needs. The dragged height stays the floor, so clearing the draft returns to it.
   const [contentH, setContentH] = useState(0);
   // 纯净: one line that grows with the draft; the dragged height applies to 专业 only.
-  const effectiveH = Math.max(minimalShell ? MINIMAL_MIN_HEIGHT : dockedH, contentH);
+  const effectiveH = Math.max(cardShell ? CARD_MIN_HEIGHT : dockedH, contentH);
   // Caches the latest height written to the DOM during a resize drag, so
   // onUp commits it back to React state once without thrashing intermediate
   // renders. Null when no resize is in progress.
@@ -313,12 +333,13 @@ function GambitImpl({
     const root = document.documentElement;
     const body = document.body;
     body.classList.add('gambit-docked');
-    root.style.setProperty('--gambit-dock-h', `calc(${effectiveH}px + ${SAFE_BOTTOM})`);
+    // The card's place tab stands above it, so the conversation keeps clear of the tab too.
+    root.style.setProperty('--gambit-dock-h', `calc(${effectiveH + (cardShell ? PLACE_TAB_HEIGHT : 0)}px + ${SAFE_BOTTOM})`);
     return () => {
       body.classList.remove('gambit-docked');
       root.style.removeProperty('--gambit-dock-h');
     };
-  }, [effectiveH]);
+  }, [effectiveH, cardShell]);
 
   // Persist dock height. Cheap to write — runs only on settle.
   useEffect(() => {
@@ -473,6 +494,34 @@ function GambitImpl({
 
   const { state: appState, dispatch: appDispatch } = useAppState();
   const compactLayout = useCompact();
+  // The card's control row: when it cannot hold every control, the less used ones step behind 「⋯」.
+  const footerRef = useRef<HTMLDivElement>(null);
+  const [footerTight, setFooterTight] = useState(false);
+  const [footerOpen, setFooterOpen] = useState(false);
+  useEffect(() => { setFooterOpen(false); }, [sessionId]);
+  useLayoutEffect(() => {
+    const row = footerRef.current;
+    if (!row || !cardShell) { setFooterTight(false); return; }
+    const measure = () => {
+      // Lay the row out on one line with everything shown, then put it back as it was.
+      const open = row.classList.contains('is-open');
+      row.classList.remove('is-tight', 'is-open');
+      row.classList.add('is-measuring');
+      const over = row.scrollWidth > row.clientWidth + 1;
+      row.classList.remove('is-measuring');
+      row.classList.toggle('is-tight', over);
+      row.classList.toggle('is-open', open && over);
+      setFooterTight(over);
+      if (!over) setFooterOpen(false);
+    };
+    measure();
+    // The row's width changes with the window; its contents change as the session loads (model names, chips).
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    const mutations = new MutationObserver(measure);
+    mutations.observe(row, { childList: true, subtree: true, characterData: true });
+    return () => { observer.disconnect(); mutations.disconnect(); };
+  }, [cardShell, sessionId]);
 
   // Auto-grow the textarea to fit its content as the user types.
   useLayoutEffect(() => {
@@ -820,18 +869,19 @@ function GambitImpl({
   const workShell = appState.layoutMode === 'work' && !compactLayout;
   const dockStyle: React.CSSProperties = {
     transform: 'none',
-    // Clear: the rail is see-through, so the box keeps the same gap to the rail's icons as to the window's
-    // right edge (icons end 15px inside the 48px rail; 48px leaves 15px, the right edge gets 16px).
-    left: workShell ? 48 : leftPanelHidden ? 8 : 'calc(var(--w-left) + 8px)',
-    right: workShell ? 16 : rightPanelHidden ? 8 : 'calc(var(--w-right) + 8px)',
-    bottom: `calc(8px + ${SAFE_BOTTOM})`,
+    // Clear: inside the content panel (rail 48px, panel inset 6px on the right), 16px from either panel edge.
+    left: workShell ? 64 : leftPanelHidden ? 8 : 'calc(var(--w-left) + 8px)',
+    right: workShell ? 22 : rightPanelHidden ? 8 : 'calc(var(--w-right) + 8px)',
+    bottom: workShell ? `calc(20px + ${SAFE_BOTTOM})` : `calc(8px + ${SAFE_BOTTOM})`,
     top: 'auto',
     width: 'auto',
     height: effectiveH,
   };
 
-  // 纯净: one line that grows with the draft, and every control on a quiet line under it.
-  const minimal = minimalShell;
+  // 方案 A: a flat card — the draft on top, one quiet row of controls under it — with a tab on its top edge
+  // saying where the conversation works. `minimal` is Clear's version (no pre-input actions on the edge).
+  const card = cardShell;
+  const minimal = card && workLayout;
 
   const capabilitiesStatus = (orchestration || computer || browser || remoteControl) && <div className="gambit-capabilities" role="status">
     {orchestration && <OrchestrationPicker sessionId={sessionId} />}
@@ -843,7 +893,7 @@ function GambitImpl({
   return (
     <div
       ref={rootRef}
-      className={`gambit gambit--docked${minimal ? ' gambit--minimal' : ''}`}
+      className={`gambit gambit--docked${card ? ' gambit--card' : ''}${minimal ? ' gambit--minimal' : ''}`}
       style={dockStyle}
       onMouseDown={(e) => e.stopPropagation() /* don't let global focus enforcer steal focus back to xterm */}
       // Block native WebView context menu across the whole Gambit panel.
@@ -873,6 +923,8 @@ function GambitImpl({
         </div>)}
       </div>}
 
+      {card && <PlaceTab device={placeDevice ?? null} folder={workspaceName} toolIcon={toolIcon} switchable={!!remoteControl} onPick={() => rootRef.current?.querySelector<HTMLButtonElement>('.gambit-capability.is-remote')?.click()} />}
+
       {/* Input box: the textarea auto-grows to fit its content. */}
       <div
         className="gambit-input"
@@ -894,7 +946,7 @@ function GambitImpl({
           ref={textareaRef}
           className="gambit-textarea"
           value={draft}
-          placeholder={suggestion ? undefined : phone || minimal ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
+          placeholder={suggestion ? undefined : phone || card ? t('gambit.placeholder_short') : t('gambit.placeholder', { send: sendCombo, newline: newlineCombo })}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={onKeyDown}
           onCompositionEnd={() => { compositionEndRef.current = performance.now(); }}
@@ -907,7 +959,7 @@ function GambitImpl({
         {suggestion && <div className="gambit-suggestion" aria-hidden="true">{suggestion}</div>}
       </div>
 
-      <div className={`gambit-footer${desktop ? ' gambit-footer--claude' : ''}${!desktop && attachable ? ' gambit-footer--attach' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}${minimal ? ' gambit-footer--minimal' : ''}`}>
+      <div className={`gambit-footer${desktop ? ' gambit-footer--claude' : ''}${!desktop && attachable ? ' gambit-footer--attach' : ''}${capabilitiesStatus ? ' gambit-footer--capabilities' : ''}${card ? ' gambit-footer--card' : ''}${card && footerTight ? ' is-tight' : ''}${card && footerOpen ? ' is-open' : ''}`} ref={footerRef}>
 
         {/* Target label — leftmost footer item, symmetric to the send button.
             Shows the active tab's folder or remote host so a prompt can't be
@@ -916,11 +968,11 @@ function GambitImpl({
             No folder icon: every directory would get the same glyph, so it's
             pure noise (and read as a different brightness than the text). */}
         {/* 纯净: the box's own ＋; it presses the controls' attach button, so attaching works the same. */}
-        {minimal && (desktop || attachable) && <button type="button" className="gambit-pill-attach" aria-label={t('claude.attach')} onClick={() => { if (desktop) rootRef.current?.querySelector<HTMLButtonElement>('.claude-composer-controls > .claude-control-icon')?.click(); else void attachFiles(); }}>
+        {card && (desktop || attachable) && <button type="button" className="gambit-pill-attach" aria-label={t('claude.attach')} onClick={() => { if (desktop) rootRef.current?.querySelector<HTMLButtonElement>('.claude-composer-controls > .claude-control-icon')?.click(); else void attachFiles(); }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
         </button>}
         {/* 纯净: the controls become one quiet line under the box; the wrapper is inert in 专业. */}
-        <span className={minimal ? 'gambit-meta' : 'gambit-meta-off'}>
+        <span className={card ? 'gambit-meta' : 'gambit-meta-off'}>
         {workspaceName && (
           <span className="gambit-workspace">
             {toolIcon != null && <span className="gambit-workspace-icon">{toolIcon}</span>}
@@ -928,8 +980,8 @@ function GambitImpl({
           </span>
         )}
         {worktreeControl}
-        {!desktop && minimal && capabilitiesStatus}
-        {!desktop && minimal && usageMeter}
+        {!desktop && card && capabilitiesStatus}
+        {!desktop && card && usageMeter}
         {claude && <ClaudeComposerControls sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} quota={usageMeter}>{capabilitiesStatus}</ClaudeComposerControls>}
         {codex && <CodexComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</CodexComposerControls>}
 
@@ -937,9 +989,9 @@ function GambitImpl({
         {pi && <PiComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</PiComposerControls>}
         {dsh && <DshComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</DshComposerControls>}
         </span>
-        {!desktop && attachable && !minimal && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
-        {!desktop && !minimal && capabilitiesStatus}
-        {!desktop && !minimal && usageMeter}
+        {!desktop && attachable && !card && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}
+        {!desktop && !card && capabilitiesStatus}
+        {!desktop && !card && usageMeter}
 
         {sendFailed && (
           <span className="gambit-send-hint" role="status">
@@ -953,6 +1005,11 @@ function GambitImpl({
         )}
 
 
+
+        {/* Controls that do not fit the row wait behind 「⋯」, which opens the row onto a second line (never cut short). */}
+        {card && footerTight && <button type="button" className="gambit-more" aria-label={t('gambit.more')} aria-expanded={footerOpen} onClick={() => setFooterOpen(open => !open)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
+        </button>}
 
         <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool ?? ''} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />
 

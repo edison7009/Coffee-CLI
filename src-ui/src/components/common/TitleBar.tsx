@@ -9,6 +9,8 @@
 //   3. Multi-agent layout mode — only visible when the active tab is a
 //      multi-agent quadrant. Two modes: grid (2×2) and columns (1×4).
 
+import { useRemoteControlState } from '../../lib/remote-control-state';
+import { remoteWindowName } from '../../lib/remote-control';
 import { useEffect } from 'react';
 import { commands, isTauri } from '../../tauri';
 import { useAppState, useAppDispatch, schemeLabels } from '../../store/app-state';
@@ -59,6 +61,8 @@ export function TitleBar() {
   const toggleLeft  = () => dispatch({ type: 'TOGGLE_LEFT_PANEL' });
   const toggleRight = () => dispatch({ type: 'TOGGLE_RIGHT_PANEL' });
   const activeTab = state.terminals.find(t => t.id === state.activeTerminalId);
+  const [remote] = useRemoteControlState(state.activeTerminalId ?? '', work && !!activeTab && ['claude', 'codex', 'opencode', 'dsh'].includes(activeTab.tool ?? '') && !activeTab.parentId);
+  const remotePicked = remote?.attached ? remote.windows.find(window => window.window === remote.pick) : undefined;
   const claudeComposerLocked = isConversationSession(activeTab) && !state.diffTabActive;
   const gambitOpen = claudeComposerLocked || state.gambitOpen;
 
@@ -129,6 +133,10 @@ export function TitleBar() {
           all layout toggles so the panels and the keyboard read as one set.
           Active signal travels via .is-active background only. */}
       <div className="titlebar-layout-toggles" data-toggle-display={state.titlebarToggleDisplay}>
+        {/* Clear: which computer this conversation is operating, one click from its window. */}
+        {work && remotePicked && <button type="button" className="titlebar-device-chip" onClick={() => void commands.remoteWindowFocus(remotePicked.window).catch(() => {})}>
+          <i aria-hidden="true" />{t('ai_remote.titlebar', { name: remoteWindowName(remotePicked.title, t('remote_control.window_prefix')) })}
+        </button>}
         {/* 纯净 ↔ 专业, in both shells (the changelog moved to Settings, under the version). */}
         <div className="titlebar-layout-switch" role="radiogroup" aria-label={t('layout.title')}>
           {(['work', 'code'] as const).map(mode => <button key={mode} type="button" role="radio" aria-checked={state.layoutMode === mode}

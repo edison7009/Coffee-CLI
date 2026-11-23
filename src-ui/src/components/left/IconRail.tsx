@@ -5,19 +5,19 @@ import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { createPortal } from 'react-dom';
 import { getToolIcon } from '../center/CenterPanel';
-import { useProjectIcon } from '../../lib/project-icon';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { getTabOrder, type TerminalSession } from '../../store/app-state';
 import { HistoryBoard } from '../right/HistoryBoard';
 import { refreshHistory } from '../../lib/history-cache';
 import { WebAccessStatus } from './WebAccessStatus';
-import { getUnreadSessionReplies, subscribeSessionReplies } from '../../lib/session-replies';
+import { getUnreadSessionReplies, sessionReplyKey, subscribeSessionReplies } from '../../lib/session-replies';
 import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
 const ICONS: Record<string, ReactNode> = {
   new: <><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></>,
   conversations: <><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></>,
+  search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   automations: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></>,
   usage: <path d="M3 3v18h18M8 16v-5M13 16V5M18 16V9" />,
   changes: <><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M6 9v12" /></>,
@@ -62,19 +62,20 @@ function useRailTip() {
   return { tipFor, tip: node, hide: () => setTip(null) };
 }
 
-/** One open conversation: its project's icon with the tool's mark in the corner, or the tool alone. */
-function SessionButton({ session, active, onPick, tipFor }: { session: TerminalSession; active: boolean; onPick: () => void; tipFor: ReturnType<typeof useRailTip>['tipFor'] }) {
+/** One open conversation (Clear 方案 A): the first character of its title on a quiet tile, the tool's mark
+ *  in the lower corner and its state in the upper one — a spinner while it works, a hollow blue ring when it
+ *  waits for you, a blue dot for a reply you have not read. The full title (and close) is in the tip. */
+function SessionButton({ session, active, unread, onPick, tipFor }: { session: TerminalSession; active: boolean; unread: boolean; onPick: () => void; tipFor: ReturnType<typeof useRailTip>['tipFor'] }) {
   const t = useT();
-  const projectIcon = useProjectIcon(session.folderPath);
   const folder = session.folderPath?.split(/[\\/]/).filter(Boolean).pop() ?? '';
   const title = session.toolTitle || (session.tool ? getToolDisplayName(session.tool) : t('explorer.new_session'));
-  const working = session.agentStatus === 'working', waiting = session.agentStatus === 'wait_input';
+  const letter = Array.from(title.trim())[0]?.toUpperCase() ?? '·';
+  const state = session.agentStatus === 'working' ? 'working' : session.agentStatus === 'wait_input' ? 'waiting' : unread && !active ? 'unread' : '';
   return <button type="button" className="icon-rail-button icon-rail-session" aria-label={folder ? `${title} · ${folder}` : title} aria-current={active || undefined} onClick={onPick}
     {...tipFor(title, folder || undefined, { label: t('rail.close_tab'), onClose: () => window.dispatchEvent(new CustomEvent('coffee-close-tab', { detail: session.id })) })}>
-    {projectIcon
-      ? <><img className="icon-rail-project" src={projectIcon} alt="" draggable={false} /><span className="icon-rail-tool-badge" aria-hidden="true">{getToolIcon(session.tool)}</span></>
-      : <span className="icon-rail-tool" aria-hidden="true">{getToolIcon(session.tool)}</span>}
-    {(working || waiting) && <i className={`icon-rail-state${waiting ? ' is-waiting' : ''}`} aria-hidden="true" />}
+    <span className="icon-rail-letter" aria-hidden="true">{letter}</span>
+    <span className="icon-rail-tool-badge" aria-hidden="true">{getToolIcon(session.tool)}</span>
+    {state && <span className={`icon-rail-state is-${state}`} aria-hidden="true"><i /></span>}
   </button>;
 }
 
@@ -102,28 +103,32 @@ export function IconRail() {
   }, [listOpen]);
 
   // A finished reply nobody has read yet (the same record the conversation list marks).
-  const unread = useSyncExternalStore(subscribeSessionReplies, getUnreadSessionReplies, getUnreadSessionReplies).size > 0;
+  const unread = useSyncExternalStore(subscribeSessionReplies, getUnreadSessionReplies, getUnreadSessionReplies);
   const button = (key: string, label: string, onClick: () => void, pressed: boolean, extra?: ReactNode) =>
     <button type="button" className="icon-rail-button" aria-label={label} aria-pressed={pressed} onClick={onClick} {...tipFor(label)}>{glyph(key)}{extra}</button>;
   // The open tabs, in tab order: 代码式's tab strip, as icons.
   const sessions = getTabOrder(state).map(id => state.terminals.find(session => session.id === id)).filter((session): session is TerminalSession => !!session?.tool);
 
   return <nav className="icon-rail" aria-label={t('rail.label')}>
+    {/* Start something, or find something. */}
     {button('new', t('explorer.new_session'), () => window.dispatchEvent(new Event('coffee-new-session')), false)}
     <button ref={toggle} type="button" className="icon-rail-button" aria-label={t('rail.conversations')} aria-expanded={listOpen} aria-haspopup="dialog"
       onClick={() => setListOpen(open => !open)} onMouseEnter={() => { hide(); holdList(); }} onMouseLeave={releaseList}>
-      {glyph('conversations')}{unread && <i className="icon-rail-badge" aria-hidden="true" />}
+      {glyph('search')}
     </button>
+    {/* What is open. */}
+    {sessions.length > 0 && <span className="icon-rail-separator" aria-hidden="true" />}
+    <div className="icon-rail-sessions" role="list" aria-label={t('rail.open_tabs')}>
+      {sessions.map(session => <div role="listitem" key={session.id}><SessionButton session={session} active={session.id === state.activeTerminalId && !state.diffTabActive} tipFor={tipFor}
+        unread={!!session.resumeToken && !!session.tool && unread.has(sessionReplyKey(session.tool, session.resumeToken))}
+        onPick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })} /></div>)}
+    </div>
+    <span className="icon-rail-spacer" />
+    {/* Everything else. */}
     {button('automations', t('automation.title'), () => dispatch({ type: 'SET_AUTOMATIONS_OPEN', open: !state.automationsOpen }), !!state.automationsOpen)}
     {button('usage', t('usage.title'), () => dispatch({ type: 'SET_USAGE_OPEN', open: !state.usageOpen }), !!state.usageOpen)}
     {button('changes', t('rail.changes'), () => dispatch({ type: 'TOGGLE_RIGHT_PANEL' }), !state.rightPanelHidden)}
     {button('tools', t('tools.title'), () => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: !state.toolSettingsOpen }), !!state.toolSettingsOpen)}
-    {sessions.length > 0 && <span className="icon-rail-separator" aria-hidden="true" />}
-    <div className="icon-rail-sessions" role="list" aria-label={t('rail.open_tabs')}>
-      {sessions.map(session => <div role="listitem" key={session.id}><SessionButton session={session} active={session.id === state.activeTerminalId && !state.diffTabActive} tipFor={tipFor}
-        onPick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: session.id })} /></div>)}
-    </div>
-    <span className="icon-rail-spacer" />
     {/* The sidebar's device menu, worn as an icon: its label stays for screen readers. */}
     <span className="icon-rail-button icon-rail-devices" {...tipFor(t('rail.devices'))}>{glyph('devices')}<WebAccessStatus /></span>
     {button('settings', t('settings.title'), () => dispatch({ type: 'TOGGLE_SETTINGS' }), !!state.settingsOpen)}

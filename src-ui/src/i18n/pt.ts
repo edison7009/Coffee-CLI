@@ -912,7 +912,7 @@ export const pt = {
   "layout.code": "Code",
   "layout.work_hint": "Só a conversa, sem terminais: uma barra de ícones e o chat.",
   "layout.code_hint": "Abas, barras laterais e terminais: o espaço de trabalho completo.",
-  "launchpad.work_title": "No que vamos trabalhar hoje?",
+  "launchpad.work_title": "O que vamos fazer hoje?",
   "launchpad.work_hint": "Escolha um assistente para começar uma conversa.",
   "ai_remote.summary": "Deixe os assistentes operarem janelas de outros computadores que você abriu. Ative só para computadores confiáveis.",
   "ai_remote.windows": "Janelas remotas abertas",
@@ -944,4 +944,7 @@ export const pt = {
   "tools.running": "{step}…",
   "tools.result.found": "· {count} resultados",
   "rail.close_tab": "Fechar conversa",
+  "ai_remote.titlebar": "Operando {name}",
+  "place.local": "Este computador",
+  "gambit.more": "Mais",
 } as const satisfies Record<I18nKey, string>;
