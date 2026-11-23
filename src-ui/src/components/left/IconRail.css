@@ -119,15 +119,15 @@
 @keyframes icon-rail-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .icon-rail-state.is-working > i { animation-duration: 2.4s; } }
 
-/* Clear 方案 A window layers: the window (title bar, rail, the margin around the content) sits one step darker,
-   and the conversation is a panel on it — 8px corners, a 1px line drawn with box-shadow, 6px clear of the
-   window's right and bottom edges (none on the rail's side). The darker ground is the panel's own wide shadow,
-   which paints the window's ground colour (styles/clear-palette.css) everywhere around the panel. */
+/* Clear 方案 A window layers: the window (title bar, rail) sits one step darker, and the conversation is a page
+   on it that runs to the window's right and bottom edges. Only the two sides facing the title bar and the rail
+   carry a 1px line, meeting in one rounded corner. The darker ground is the page's own wide shadow, which paints
+   the window's ground colour (styles/clear-palette.css) behind that corner. */
 :root[data-layout="work"] .titlebar { background-image: linear-gradient(var(--clear-ground), var(--clear-ground)); }
 :root[data-layout="work"] .app-layout:not(.is-compact) { overflow: hidden; }
 :root[data-layout="work"] .app-layout:not(.is-compact) > .panel-center {
-  margin: 0 6px 6px 0; border-radius: 8px; overflow: hidden; background: var(--bg-app);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-1) 9%, transparent), 0 0 0 100vmax var(--clear-ground);
+  border: solid color-mix(in srgb, var(--text-1) 9%, transparent); border-width: 1px 0 0 1px; border-top-left-radius: 8px;
+  overflow: hidden; background: var(--bg-app); box-shadow: 0 0 0 100vmax var(--clear-ground);
 }
 
 /* Changes beside the rail: the right panel's own content (pre-input, changes, diff), a little wider. */
