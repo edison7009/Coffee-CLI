@@ -253,9 +253,12 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 
 /* Links and openable paths in every conversation are the app's blue (the switch colour), not the palette's
    accent, which on warm palettes read as brown text — the colour people expect of something they can open. */
-.md-body a, .claude-row .md-body a, .claude-tool-heading > .claude-file-path { color:var(--switch-on, #0a84ff); }
-::highlight(conversation-path) { color:var(--switch-on, #0a84ff); }
-.conversation-copy--copied, .conversation-copy--copied:hover { color:var(--switch-on, #0a84ff); }
+/* Day: a clear blue; night: a softer, lighter blue that reads on dark without glaring (as Claude's own app does). */
+:root { --link: #0a6cdf; }
+:root[data-mode="dark"] { --link: #7ab3ff; }
+.md-body a, .claude-row .md-body a, .claude-tool-heading > .claude-file-path { color:var(--link); }
+::highlight(conversation-path) { color:var(--link); }
+.conversation-copy--copied, .conversation-copy--copied:hover { color:var(--link); }
 
 /* The copy action is always there (not only on hover), in line under its message. */
 .claude-thread .claude-row > .conversation-copy { position:static; display:inline-flex; margin:2px 0 0 -6px; opacity:1; }

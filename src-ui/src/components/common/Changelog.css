@@ -11,7 +11,7 @@
 .changelog-body .md-body :is(h1,h2,h3,h4) { margin:16px 0 8px; font-size:1.05em; }
 .changelog-body .md-body :is(ul,ol) { padding-inline-start:22px; }
 .changelog-body .md-body li { margin:6px 0; }
-.changelog-body .md-body a { color:var(--switch-on, #0a84ff); }
+.changelog-body .md-body a { color:var(--link, #0a6cdf); }
 .changelog-body .md-inline-code { background:var(--bg-hover); padding:1px 4px; border-radius:var(--shape-radius-btn); font-family:var(--mono); }
 .changelog-body .md-code { max-width:100%; overflow:auto; background:var(--bg-hover); padding:10px; }
 .changelog-status { padding:24px 0; text-align:center; color:var(--text-2); }
