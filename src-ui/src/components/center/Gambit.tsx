@@ -232,7 +232,7 @@ function GambitImpl({
   const voiceTool = claude ? 'claude' : codex ? 'codex' : tool;
   // While listening the live waveform takes the usage meter's place, wherever the meter is.
   const meter = <UsageMeter quotas={usage.quotas} onRefresh={usage.refresh} compact />;
-  const usageMeter = <VoiceUsageSlot waveKey={sessionId}>{meter}</VoiceUsageSlot>;
+  const usageMeter = <VoiceUsageSlot waveKey={sessionId} inline={cardShell && workLayout}>{meter}</VoiceUsageSlot>;
   const suggestion = draft ? undefined : offered;
   // Whether the draft can go out as a prompt link (some text, within the link limit).
   const canShare = canSharePrompt(draftForSend(draft));
@@ -1089,7 +1089,7 @@ function GambitImpl({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
         </button>}
 
-        <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool ?? ''} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} />
+        <VoiceInputButton key={`${sessionId}:${voiceTool}`} tool={voiceTool ?? ''} cwd={cwd} waveKey={sessionId} draft={draft} onDraftChange={onDraftChange} inlineWave={minimal} />
 
         <button
           className={`gambit-send${sendFailed ? ' gambit-send--failed' : ''}${!running && !draft.trim() ? ' gambit-send--empty' : ''}`}

@@ -647,6 +647,8 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit-pill-attach:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 .gambit-footer--card .gambit-voice-anchor { flex: none; margin-left: 2px; }
 .gambit-footer--card .gambit-voice { width: 24px; height: 24px; border-radius: 6px; background: transparent; }
+/* Listening on the card: a quiet fill and a bright mic (the solid accent fill would be cleared to transparent above). */
+.gambit-footer--card .gambit-voice:is(.is-recording, .is-finishing) { background: var(--bg-hover); color: var(--accent); }
 .gambit-footer--card .gambit-send { flex: none; width: 24px; height: 24px; margin-left: 2px; border-radius: 6px; }
 .gambit-footer--card .gambit-send svg { width: 13px; height: 13px; }
 .gambit-footer--card .gambit-send-hint { flex: none; }
@@ -697,7 +699,7 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit--card.gambit--minimal > .gambit-footer { display: contents; }
 .gambit--card.gambit--minimal .gambit-pill-attach { grid-area: attach; align-self: end; width: 28px; height: 28px; margin: 0 0 4px 5px; border-radius: 50%; }
 .gambit--card.gambit--minimal .gambit-more { grid-area: more; align-self: end; margin-bottom: 7px; }
-.gambit--card.gambit--minimal .gambit-voice-anchor { grid-area: voice; align-self: end; margin: 0 0 4px; }
+.gambit--card.gambit--minimal .gambit-voice-anchor { grid-area: voice; align-self: end; align-items: center; gap: 6px; margin: 0 6px 4px; }
 .gambit--card.gambit--minimal .gambit-voice { width: 28px; height: 28px; border-radius: 50%; }
 .gambit--card.gambit--minimal .gambit-send { grid-area: send; align-self: end; width: 28px; height: 28px; margin: 0 5px 4px 2px; border-radius: 50%; }
 .gambit--card.gambit--minimal .gambit-send-hint { grid-area: hint; justify-self: end; padding: 4px 12px 0; }

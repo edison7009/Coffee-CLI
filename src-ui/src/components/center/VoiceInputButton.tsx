@@ -24,7 +24,7 @@ function joinDraft(draft: string, spoken: string, current: string): string {
   return joinAttached(before + (wide(before.slice(-1)) || wide(spoken[0]) ? '' : ' ') + spoken, tokens);
 }
 
-export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: { tool: string; cwd?: string; waveKey: string; draft: string; onDraftChange: (text: string) => void }) {
+export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange, inlineWave = false }: { tool: string; cwd?: string; waveKey: string; draft: string; onDraftChange: (text: string) => void; /** Work: the waveform sits right of the mic instead of in the usage meter's place. */ inlineWave?: boolean }) {
   const t = useT();
   const appLanguage = useAppLanguage();
   const language = appLanguage.split('-')[0];
@@ -150,6 +150,7 @@ export function VoiceInputButton({ tool, cwd, waveKey, draft, onDraftChange }: {
       >
         <VoiceGlyph busy={phase === 'connecting' || phase === 'finishing'} />
       </button>
+      {inlineWave && <VoiceWave waveKey={waveKey} width={0} />}
     </span>
   );
 }
@@ -223,8 +224,8 @@ export function VoiceWave({ waveKey, width }: { waveKey: string; width: number }
 
 /** The usage meter's slot: while listening the waveform takes the meter's place and width, so a narrow
  *  footer never squeezes it and nothing else in the row moves; the meter comes back when the text is in. */
-export function VoiceUsageSlot({ waveKey, children }: { waveKey: string; children: ReactNode }) {
-  const listening = useVoiceWaveVisible(waveKey);
+export function VoiceUsageSlot({ waveKey, children, inline = false }: { waveKey: string; children: ReactNode; /** The waveform shows beside the mic instead; the meter stays. */ inline?: boolean }) {
+  const listening = useVoiceWaveVisible(waveKey) && !inline;
   const slot = useRef<HTMLSpanElement>(null);
   const [width, setWidth] = useState(0);
   useLayoutEffect(() => {
