@@ -953,6 +953,7 @@ export const vi = {
   "ai_remote.titlebar": "Đang điều khiển {name}",
   "place.local": "Máy này",
   "gambit.more": "Thêm",
-  "tools.mode.terminal": "Terminal",
+  "tools.mode.terminal": "Terminal gốc",
   "tools.modes": "Dùng được trong: {modes}",
+  "tools.mode.desktop": "IDE máy tính",
 } as const satisfies Record<I18nKey, string>;

@@ -1420,10 +1420,13 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 .library-list > .library-row:hover { background: var(--bg-hover) !important; }
 .library-row .library-item-icon { width: 22px; height: 22px; flex: none; }
 .library-row .library-item-icon > *, .library-row .library-item-icon svg, .library-row .library-item-icon img { width: 22px !important; height: 22px !important; }
-.library-row .library-item-name { flex: none; width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-1); font-size: var(--type-body); font-weight: 500; }
-.library-modes { display: inline-flex; gap: 4px; flex: none; }
-.library-mode { width: 54px; padding: 2px 0; border-radius: 5px; text-align: center; font-size: 11.5px; color: var(--text-3); opacity: .45; }
+.library-row .library-item-name { flex: none; width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-1); font-size: var(--type-body); font-weight: 500; }
+.library-modes { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.library-mode { min-width: 54px; padding: 2px 8px; border-radius: 5px; text-align: center; font-size: 11.5px; color: var(--text-3); opacity: .45; white-space: nowrap; }
+/* Code is one mode with two ways to open a tool: the group names it, its two cells say how. */
+.library-mode-group { display: inline-flex; align-items: center; gap: 3px; padding: 2px; border-radius: 7px; background: color-mix(in srgb, var(--text-1) 4%, transparent); }
+.library-mode-group > b { padding: 0 6px 0 7px; color: var(--text-2); font-size: 11.5px; font-weight: 500; }
 .library-mode.is-on { opacity: 1; color: var(--text-2); background: color-mix(in srgb, var(--text-1) 6%, transparent); }
 .library-row-fill { flex: 1; }
 .library-row .library-gear-btn { position: static; opacity: 1; margin: 0; }
-@container (max-width: 560px) { .library-modes { display: none; } }
+@container (max-width: 640px) { .library-modes { display: none; } }

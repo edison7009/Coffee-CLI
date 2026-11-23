@@ -1488,13 +1488,21 @@ export function CenterPanel() {
               const pinId = `agent:${item.key}`;
               const isPinned = pinnedItems.includes(pinId);
               const hasGear = CONFIGURABLE_AGENT_TOOLS.has(item.key);
-              const modes: [string, boolean][] = [['Clean', workLaunchable(item.key)], ['Code', true], [t('tools.mode.terminal'), item.key !== 'dsh']];
+              // Two modes: Clean (its desktop conversation only) and Code, which opens a tool as its IDE-style desktop
+              // conversation or in its own native terminal.
+              const clean = workLaunchable(item.key), desktop = clean, terminal = item.key !== 'dsh';
+              const supported = [clean && 'Clean', `Code: ${[desktop && t('tools.mode.desktop'), terminal && t('tools.mode.terminal')].filter(Boolean).join(' / ')}`].filter(Boolean).join(' · ');
               return (
                 <div key={item.key} role="listitem" className={`library-item library-row ${isPinned ? 'is-pinned' : ''}`} onClick={() => togglePin(pinId)}>
                   <div className="library-item-icon">{item.icon}</div>
                   <span className="library-item-name">{item.label}</span>
-                  <span className="library-modes" aria-label={t('tools.modes', { modes: modes.filter(([, on]) => on).map(([label]) => label).join(' · ') })}>
-                    {modes.map(([label, on]) => <span key={label} className={`library-mode${on ? ' is-on' : ''}`} aria-hidden="true">{label}</span>)}
+                  <span className="library-modes" aria-label={t('tools.modes', { modes: supported })}>
+                    <span className={`library-mode${clean ? ' is-on' : ''}`} aria-hidden="true">Clean</span>
+                    <span className="library-mode-group" aria-hidden="true">
+                      <b>Code</b>
+                      <span className={`library-mode is-sub${desktop ? ' is-on' : ''}`}>{t('tools.mode.desktop')}</span>
+                      <span className={`library-mode is-sub${terminal ? ' is-on' : ''}`}>{t('tools.mode.terminal')}</span>
+                    </span>
                   </span>
                   <span className="library-row-fill" />
                   {hasGear && (

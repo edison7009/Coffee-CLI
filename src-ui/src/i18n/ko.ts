@@ -952,6 +952,7 @@ export const ko = {
   "ai_remote.titlebar": "{name} 조작 중",
   "place.local": "이 컴퓨터",
   "gambit.more": "더 보기",
-  "tools.mode.terminal": "터미널",
+  "tools.mode.terminal": "네이티브 터미널",
   "tools.modes": "사용 가능: {modes}",
+  "tools.mode.desktop": "IDE 데스크톱",
 } as const satisfies Record<I18nKey, string>;

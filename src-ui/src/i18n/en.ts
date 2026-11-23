@@ -955,8 +955,9 @@ export const en = {
   "ai_remote.titlebar": "Operating {name}",
   "place.local": "This computer",
   "gambit.more": "More",
-  "tools.mode.terminal": "Terminal",
+  "tools.mode.terminal": "Native terminal",
   "tools.modes": "Runs in: {modes}",
+  "tools.mode.desktop": "IDE desktop",
 } as const;
 
 export type I18nKey = keyof typeof en;

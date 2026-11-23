@@ -949,6 +949,7 @@ export const de = {
   "ai_remote.titlebar": "Bedient {name}",
   "place.local": "Dieser Computer",
   "gambit.more": "Mehr",
-  "tools.mode.terminal": "Terminal",
+  "tools.mode.terminal": "Natives Terminal",
   "tools.modes": "Läuft in: {modes}",
+  "tools.mode.desktop": "IDE-Desktop",
 } as const satisfies Record<I18nKey, string>;

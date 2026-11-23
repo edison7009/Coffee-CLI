@@ -949,6 +949,7 @@ export const pt = {
   "ai_remote.titlebar": "Operando {name}",
   "place.local": "Este computador",
   "gambit.more": "Mais",
-  "tools.mode.terminal": "Terminal",
+  "tools.mode.terminal": "Terminal nativo",
   "tools.modes": "Funciona em: {modes}",
+  "tools.mode.desktop": "Desktop IDE",
 } as const satisfies Record<I18nKey, string>;

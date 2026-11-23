@@ -953,6 +953,7 @@ export const zhTW = {
   "ai_remote.titlebar": "正在操控 {name}",
   "place.local": "本機",
   "gambit.more": "更多",
-  "tools.mode.terminal": "終端",
+  "tools.mode.terminal": "原生終端",
   "tools.modes": "可用：{modes}",
+  "tools.mode.desktop": "IDE 桌面",
 } as const satisfies Record<I18nKey, string>;

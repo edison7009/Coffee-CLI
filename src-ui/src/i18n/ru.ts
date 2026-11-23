@@ -949,6 +949,7 @@ export const ru = {
   "ai_remote.titlebar": "Управляет {name}",
   "place.local": "Этот компьютер",
   "gambit.more": "Ещё",
-  "tools.mode.terminal": "Терминал",
+  "tools.mode.terminal": "Нативный терминал",
   "tools.modes": "Работает в: {modes}",
+  "tools.mode.desktop": "IDE-десктоп",
 } as const satisfies Record<I18nKey, string>;
