@@ -188,6 +188,11 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-scroll-bottom:focus-visible { outline:1px solid var(--accent); outline-offset:2px; }
 /* Material shapes may leave the terminal surface translucent; frost it so the chip still reads over text. */
 :is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .claude-scroll-bottom { background:color-mix(in srgb,var(--bg-terminal) 70%,transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+/* Day: the night recipe (a lighter grey over the page, a heavy dark shadow) turns muddy on white. A white chip
+   with a faint hairline and a soft, light shadow floats the same way. */
+[data-mode="light"] .claude-scroll-bottom { background:#fff; color:var(--text-2); box-shadow:0 0 0 1px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.08); }
+[data-mode="light"] .claude-scroll-bottom:hover { background:#f6f6f7; color:var(--text-1); }
+[data-mode="light"]:is([data-shape="glass"],[data-shape="carbon"],[data-shape="monogram"]) .claude-scroll-bottom { background:rgb(255 255 255 / .82); }
 .claude-reconnect { position:absolute; left:50%; bottom:20px; transform:translateX(-50%); z-index:3; border-radius:var(--shape-radius-btn); font:13px var(--font); }
 body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 20px); }
 .claude-approval { padding:16px; margin:8px 0 24px 20px; border:1px solid var(--accent); border-radius:var(--shape-radius-btn,6px); background:var(--bg-terminal); }
