@@ -653,6 +653,12 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit-footer--card .gambit-send svg { width: 13px; height: 13px; }
 .gambit-footer--card .gambit-send-hint { flex: none; }
 .gambit-footer--card .usage-meter { gap: 4px; }
+/* The worktree chip sits inside a wrapper span, so the row's shared 22px label style misses it: give its button
+   the same height, type and quiet fill, with no per-font padding offset. */
+.gambit-footer--card .gambit-worktree { gap: 4px; font: 11.5px/1 var(--font); }
+.gambit-footer--card :is(.gambit-worktree-toggle, .gambit-worktree-merge) { height: 22px; padding: 0 5px; gap: 5px; border-radius: 5px; background: transparent; color: var(--text-3); font: 11.5px/1 var(--font); transition: background-color .15s; }
+.gambit-footer--card .gambit-worktree[data-locked] .gambit-worktree-toggle { color: var(--text-2); }
+.gambit-footer--card .gambit-worktree-box { width: 12px; height: 12px; margin-top: 0; }
 /* Too many to fit: the less used ones (commands, worktree, context, background tasks) wait behind 「⋯」. */
 .gambit-footer--card.is-tight:not(.is-open) :is(.claude-composer-controls > .claude-control-icon ~ .claude-control-icon, .gambit-worktree-toggle, .claude-context-control, .claude-tasks-control, .gambit-capability.is-orchestration) { display: none !important; }
 .gambit-more { display: grid; place-items: center; width: 24px; height: 22px; flex: none; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--text-3); cursor: pointer; transition: background-color .15s, color .15s; }
