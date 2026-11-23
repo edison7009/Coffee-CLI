@@ -459,16 +459,34 @@
  * solid app colour (not rgba) so the hue stays the same over panel /
  * glass / any backdrop — and .diff-line IS in the glass whitelist
  * (global.css) so the bg survives glass nuclear-transparent. */
+/* 方案 A: a faint tint on the line (about a third of the old strength), the line-number slot a step deeper and
+ * the number itself in the colour, so the change still reads at a glance without glaring. */
 .diff-line-add {
-  background: color-mix(in srgb, var(--green) 14%, var(--bg-app));
+  background: color-mix(in srgb, var(--green) 9%, var(--bg-app));
 }
 .diff-line-del {
-  background: color-mix(in srgb, var(--red) 14%, var(--bg-app));
+  background: color-mix(in srgb, var(--red) 9%, var(--bg-app));
+}
+.diff-line-add .diff-line-num {
+  background: color-mix(in srgb, var(--green) 16%, var(--bg-app));
+  color: var(--green);
+  opacity: 1;
+}
+.diff-line-del .diff-line-num {
+  background: color-mix(in srgb, var(--red) 16%, var(--bg-app));
+  color: var(--red);
+  opacity: 1;
 }
 
 [data-mode="light"] .diff-line-add {
-  background: color-mix(in srgb, var(--green) 12%, var(--bg-app));
+  background: color-mix(in srgb, var(--green) 8%, var(--bg-app));
 }
 [data-mode="light"] .diff-line-del {
-  background: color-mix(in srgb, var(--red) 12%, var(--bg-app));
+  background: color-mix(in srgb, var(--red) 8%, var(--bg-app));
+}
+[data-mode="light"] .diff-line-add .diff-line-num {
+  background: color-mix(in srgb, var(--green) 14%, var(--bg-app));
+}
+[data-mode="light"] .diff-line-del .diff-line-num {
+  background: color-mix(in srgb, var(--red) 14%, var(--bg-app));
 }
