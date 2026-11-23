@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { shownMessageText } from '../../lib/worker-prompt';
 import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
@@ -159,7 +160,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
     lastScrollTop.current = scroll.scrollTop;
     setScrolled(!pinned.current);
   }, []);
-  const copy = (message: ClaudeMessage) => { void clipboardWrite(message.content).then(() => { setCopied(message.id); setTimeout(() => setCopied(''), 1500); }); };
+  const copy = (message: ClaudeMessage) => { void clipboardWrite(shownMessageText(message.content)).then(() => { setCopied(message.id); setTimeout(() => setCopied(''), 1500); }); };
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const noModel = s.error === 'no-model' || (s.ready && !s.model && !s.models.length);

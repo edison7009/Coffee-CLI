@@ -628,10 +628,12 @@ export function HistoryBoard({ searchRequested = false, onSearchOpened }: { sear
         // 方案 C: a second line only when there is something to say — working, waiting on you, or a reply you haven't
         // read — written out in words, with the pull request's state beside it. Quiet rows stay one line with a time.
         const pr = gitStatus?.pull_request;
+        // Sub-tasks still under way (working, starting, or waiting on you): finished ones are not "N sub-tasks" any more.
+        const liveWorkers = workers.filter(task => ['working', 'starting', 'waiting'].includes(workerState(task, state.terminals.find(tab => tab.id === task.sessionId)))).length;
         const prText = pr ? `PR #${pr.number} ${t(pr.ci ? `history.git.ci_${pr.ci}` : `history.git.${pr.state}`)}` : '';
         const statusParts = (lead: ReactNode, rest: string[]) => <>{lead}{rest.filter(Boolean).map(part => <span key={part} className="history-card-status-part">{part}</span>)}</>;
         const statusLine = needsAttention ? statusParts(<span className="history-card-status-wait">{t('history.needs_attention')}</span>, [prText])
-          : isWorking ? statusParts(<><span className="history-card-status-spin" aria-hidden="true" />{t('claude.status.working')}</>, [workers.length ? t('claude.status.background_short', { count: workers.length }) : '', prText])
+          : isWorking ? statusParts(<><span className="history-card-status-spin" aria-hidden="true" />{t('claude.status.working')}</>, [liveWorkers ? t('claude.status.background_short', { count: liveWorkers }) : '', prText])
           : isUnread ? statusParts(<><span className="history-card-status-dot" aria-hidden="true" />{t('history.unread_reply')}</>, [dateStr])
           : null;
         return (

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { shownMessageText } from '../../lib/worker-prompt';
 import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
@@ -355,7 +356,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
     void loadCodexHistory(sessionId);
   };
   const toggle = (id: string) => setExpanded(old => ({ ...old, [id]: !old[id] }));
-  const copy = (id: string, content: string) => { void clipboardWrite(content).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
+  const copy = (id: string, content: string) => { void clipboardWrite(shownMessageText(content)).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
   const tool = (message: CodexMessage) => {
     const label = orchestrationToolLabel(str(message.item.tool), t, str(message.item.server));
     return <div className={`codex-tool is-${message.interrupted ? 'interrupted' : message.toolStatus ?? 'reasoning'}`} key={message.id}>

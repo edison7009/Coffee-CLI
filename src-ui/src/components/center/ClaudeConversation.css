@@ -113,6 +113,7 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 }
 .claude-expand-tab[aria-expanded="true"] { height:28px; align-items:center; padding:0; background:var(--frame-fill); border-top:1px solid color-mix(in srgb,var(--text-1) 6%,transparent); }
 .claude-expandable:has(.claude-io-row + .claude-io-row) .claude-expand-tab[aria-expanded="true"] { background:linear-gradient(var(--bg-hover), var(--bg-hover)), var(--frame-fill); }
+.claude-expand-tab.is-inline, .claude-expand-tab.is-inline[aria-expanded="true"] { position:static; width:100%; height:28px; align-items:center; padding:0; border-radius:0; background:var(--frame-fill); border-top:1px solid var(--border); }
 .claude-expand-tab:hover { color:var(--text-1); }
 .claude-expand-tab:focus-visible { outline:1px solid var(--accent); outline-offset:-2px; }
 /* A plain code block keeps its border on the code itself, clipped by the preview: the strip closes the frame. */

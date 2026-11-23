@@ -14,3 +14,8 @@ export function parseWorkerPrompt(text: string): WorkerPrompt | null {
   const task = text.slice(at + MARK.length).trim();
   return task ? { id, task, instructions: text.slice(0, at).trim() } : null;
 }
+
+/** What a message reads as: a sub-task's opening instruction is its task (for copying, navigation); anything else as is. */
+export function shownMessageText(text: string): string {
+  return parseWorkerPrompt(text)?.task ?? text;
+}

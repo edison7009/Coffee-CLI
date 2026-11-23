@@ -40,7 +40,8 @@
 .tab-children { display:inline-flex; align-items:center; justify-content:center; flex:none; min-width:18px; height:18px; margin-left:6px; padding:0 5px; border:0; border-radius:9px; background:color-mix(in srgb,var(--text-1) 9%,transparent); color:var(--text-2); font:600 11px/1 var(--font); font-variant-numeric:tabular-nums; cursor:pointer; transition:background-color .15s,color .15s; }
 .tab-children:hover, .tab-children[aria-expanded="true"] { background:color-mix(in srgb,var(--text-1) 16%,transparent); color:var(--text-1); }
 .tab-children[data-state="working"] { color:#D97757; background:color-mix(in srgb,#D97757 16%,transparent); }
-.tab-children[data-state="waiting"] { color:#fff; background:var(--blue); }
+/* Light blues in dark palettes, deep blues in light ones: the digit takes the page colour, readable on both. */
+.tab-children[data-state="waiting"] { color:var(--bg-app); background:var(--blue); }
 .tab-children:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
 .tab-children-menu { min-width:220px; max-width:280px; padding:4px; }
 .tab-children-item { display:flex; align-items:center; gap:8px; width:100%; }

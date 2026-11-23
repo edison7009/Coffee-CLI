@@ -1,4 +1,5 @@
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { shownMessageText } from '../../lib/worker-prompt';
 import { toolKind, toolResult, toolRuns, toolRunStatus, toolRunSummary, toolTarget, toolVerbKey } from '../../lib/tool-runs';
 import { startErrorText } from '../../lib/start-error';
 import { useWorktreePending } from '../../lib/worktree-pending';
@@ -175,9 +176,9 @@ function ToolCopy({ content, expanded = false, onToggle }: { content: string; ex
 
 /** Expand / collapse along the block's own bottom edge, inside its frame: collapsed, the last lines fade into the
  *  block's fill under "展开 ⌄"; open, a "收起 ⌃" strip there, so collapsing never needs a scroll back up. */
-function ExpandTab({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+function ExpandTab({ expanded, onToggle, inline = false }: { expanded: boolean; onToggle: () => void; inline?: boolean }) {
   const t = useT();
-  return <button type="button" className="claude-expand-tab" aria-expanded={expanded} onClick={onToggle}>
+  return <button type="button" className={`claude-expand-tab${inline ? ' is-inline' : ''}`} aria-expanded={expanded} onClick={onToggle}>
     <span>{t(expanded ? 'claude.collapse' : 'claude.expand_tab')}</span>
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={expanded ? 'm18 15-6-6-6 6' : 'm6 9 6 6 6-6'} /></svg>
   </button>;
@@ -234,12 +235,17 @@ function BashIO({ command, output, failed }: { command: string; output?: string;
   const [inRef, inOverflow] = useOverflow(180, [command]);
   const [outRef, outOverflow] = useOverflow(180, [output]);
   const overflow = inOverflow || (output !== undefined && outOverflow);
-  return <div className={`claude-expandable${overflow ? ' has-tab' : ''}${overflow && expanded ? ' is-open' : ''}`}>
+  // The fade belongs over the row that is cut off. When only the command is (its output short), a fade at the
+  // bottom would hide the output instead: the strip becomes the frame's own last row, over nothing.
+  const bottomClipped = output !== undefined ? outOverflow : inOverflow;
+  const inline = overflow && !bottomClipped;
+  return <div className={`claude-expandable${overflow ? ' has-tab' : ''}${overflow && expanded && !inline ? ' is-open' : ''}`}>
     <div className="claude-io">
       <div className="claude-io-row"><span>{t('claude.input')}</span><ToolBody content={command} path="command.sh" plain={false} previewHeight={180} expanded={expanded} bodyRef={inRef} onToggle={inOverflow ? toggle : undefined} /></div>
       {output !== undefined && <div className={`claude-io-row ${failed}`}><span>{t('claude.output')}</span><ToolBody content={output} path="output.txt" plain previewHeight={180} expanded={expanded} bodyRef={outRef} onToggle={outOverflow ? toggle : undefined} /></div>}
+      {inline && <ExpandTab expanded={expanded} onToggle={toggle} inline />}
     </div>
-    {overflow && <ExpandTab expanded={expanded} onToggle={toggle} />}
+    {overflow && !inline && <ExpandTab expanded={expanded} onToggle={toggle} />}
   </div>;
 }
 
@@ -541,7 +547,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
     }
     void loadClaudeHistory(sessionId);
   };
-  const copy = (message: ClaudeMessage) => { void clipboardWrite(message.content).then(() => { setCopied(message.id); setTimeout(() => setCopied(''), 1500); }); };
+  const copy = (message: ClaudeMessage) => { void clipboardWrite(shownMessageText(message.content)).then(() => { setCopied(message.id); setTimeout(() => setCopied(''), 1500); }); };
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length && (!s.ready || !s.error);

@@ -385,13 +385,36 @@ export function CenterPanel() {
   // A tab's sub-windows (方案 B, revised): not tabs of their own; the parent shows how many, and hovering the number
   // lists them. The menu stays while the pointer is on the number or on the menu.
   const families = useMemo(() => tabFamilies(state.terminals, orchestration.tasks), [state.terminals, orchestration.tasks]);
-  const [childMenu, setChildMenu] = useState<{ parentId: string; left: number; top: number } | null>(null);
+  const [childMenu, setChildMenu] = useState<{ parentId: string; left: number; top: number; focus?: boolean } | null>(null);
+  const childMenuRef = useRef<HTMLDivElement>(null);
   const childMenuTimer = useRef<number | undefined>(undefined);
-  const openChildMenu = (parentId: string, anchor: HTMLElement) => {
+  const openChildMenu = (parentId: string, anchor: HTMLElement, focus = false) => {
     window.clearTimeout(childMenuTimer.current);
     const rect = anchor.getBoundingClientRect();
-    setChildMenu({ parentId, left: Math.max(8, Math.min(rect.left - 8, window.innerWidth - 288)), top: rect.bottom + 6 });
+    setChildMenu({ parentId, left: Math.max(8, Math.min(rect.left - 8, window.innerWidth - 288)), top: rect.bottom + 6, focus });
   };
+  // Opened by a click or a key (hover already opens it), it closes the way menus do: Escape or a click elsewhere.
+  // From the keyboard, focus goes to the first sub-window and the arrows move between them.
+  useEffect(() => {
+    if (!childMenu) return;
+    if (childMenu.focus) childMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    const anchor = () => document.querySelector<HTMLElement>(`.chrome-tab[data-tab-id="${CSS.escape(childMenu.parentId)}"] .tab-children`);
+    const outside = (event: PointerEvent) => {
+      const target = event.target as Element;
+      if (!childMenuRef.current?.contains(target) && !target.closest?.('.tab-children')) setChildMenu(null);
+    };
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setChildMenu(null); anchor()?.focus(); return; }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      const items = [...(childMenuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+      if (!items.length) return;
+      event.preventDefault();
+      const at = items.indexOf(document.activeElement as HTMLElement);
+      items[(at + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+    };
+    document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', keys);
+    return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', keys); };
+  }, [childMenu]);
   const holdChildMenu = () => window.clearTimeout(childMenuTimer.current);
   const closeChildMenuSoon = () => { window.clearTimeout(childMenuTimer.current); childMenuTimer.current = window.setTimeout(() => setChildMenu(null), 200); };
   useEffect(() => () => window.clearTimeout(childMenuTimer.current), []);
@@ -1322,7 +1345,7 @@ export function CenterPanel() {
                 const kids = compact ? undefined : families.children.get(session.id);
                 return kids && <button type="button" className="tab-children" data-state={familyState(kids)} aria-haspopup="menu" aria-expanded={childMenu?.parentId === session.id}
                   aria-label={t('tab.sub_windows', { count: kids.length })} onPointerDown={event => event.stopPropagation()}
-                  onClick={event => { event.stopPropagation(); openChildMenu(session.id, event.currentTarget); }}
+                  onClick={event => { event.stopPropagation(); openChildMenu(session.id, event.currentTarget, event.detail === 0); }}
                   onMouseEnter={event => openChildMenu(session.id, event.currentTarget)} onMouseLeave={closeChildMenuSoon}>{kids.length}</button>;
               })()}
               <div className={`tab-actions${showAgentStatus || worker ? '' : ' tab-actions--close-only'}`}>
@@ -1370,7 +1393,7 @@ export function CenterPanel() {
             diff entirely. No status-grid (diff has no agent state). */}
         {/* The parent's sub-windows, from its number: each with its state, a click switches to it. */}
         {childMenu && families.children.get(childMenu.parentId) && createPortal(
-          <div className="ctx-menu tab-children-menu" role="menu" aria-label={t('tab.sub_windows', { count: families.children.get(childMenu.parentId)!.length })}
+          <div ref={childMenuRef} className="ctx-menu tab-children-menu" role="menu" aria-label={t('tab.sub_windows', { count: families.children.get(childMenu.parentId)!.length })}
             style={{ position: 'fixed', left: childMenu.left, top: childMenu.top }} onMouseEnter={holdChildMenu} onMouseLeave={closeChildMenuSoon}>
             {families.children.get(childMenu.parentId)!.map(child => <button key={child.id} type="button" role="menuitem"
               className={`ctx-menu-item tab-children-item${child.id === activeTerminalId && contentActive ? ' is-active' : ''}`}

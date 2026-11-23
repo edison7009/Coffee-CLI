@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { shownMessageText } from '../../lib/worker-prompt';
 import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
@@ -205,7 +206,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
     void loadOpenCodeHistory(sessionId);
   };
   const toggle = (id: string) => setExpanded(old => ({ ...old, [id]: !old[id] }));
-  const copy = (id: string, content: string) => { void clipboardWrite(content).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
+  const copy = (id: string, content: string) => { void clipboardWrite(shownMessageText(content)).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
   const tool = (message: OpenCodeRow) => {
     const body = message.role === 'reasoning' ? message.content : [message.input !== undefined && Object.keys(obj(message.input)).length ? pretty(message.input) : typeof message.input === 'string' ? message.input : '', message.content].filter(Boolean).join('\n\n');
     return <div className={`codex-tool is-${message.toolStatus ?? 'reasoning'}`} key={message.id}>

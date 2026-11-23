@@ -1,6 +1,6 @@
 // 工作式's left edge: one narrow column of icons in place of the sidebar. Conversations open as a
 // list beside it; everything else opens the same pages the sidebar opens in 代码式.
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { createPortal } from 'react-dom';
@@ -124,7 +124,7 @@ export function IconRail() {
   // The open tabs, in tab order: 代码式's tab strip, as icons.
   // Sub-windows are not tiles of their own: their parent's tip lists them.
   const orchestration = useOrchestration();
-  const families = tabFamilies(state.terminals, orchestration.tasks);
+  const families = useMemo(() => tabFamilies(state.terminals, orchestration.tasks), [state.terminals, orchestration.tasks]);
   const sessions = getTabOrder(state).map(id => state.terminals.find(session => session.id === id)).filter((session): session is TerminalSession => !!session?.tool && !families.childIds.has(session.id));
 
   return <nav className="icon-rail" aria-label={t('rail.label')}>

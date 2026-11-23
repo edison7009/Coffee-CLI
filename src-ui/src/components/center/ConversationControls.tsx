@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { parseWorkerPrompt } from '../../lib/worker-prompt';
+import { parseWorkerPrompt, shownMessageText } from '../../lib/worker-prompt';
 import { WorkerTaskCard } from './WorkerTaskCard';
 import { useT } from '../../i18n/useT';
 
@@ -236,7 +236,7 @@ export const ConversationNavigation = memo(function ConversationNavigation({
           role="tooltip"
           style={{ top: tooltipTop }}
         >
-          <span>{hoveredItem.content.replace(/\s+/g, ' ').trim()}</span>
+          <span>{shownMessageText(hoveredItem.content).replace(/\s+/g, ' ').trim()}</span>
         </div>
       )}
     </nav>

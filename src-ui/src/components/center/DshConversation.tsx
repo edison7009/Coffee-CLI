@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { shownMessageText } from '../../lib/worker-prompt';
 import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
@@ -166,7 +167,7 @@ export function DshConversation({ sessionId, cwd, resumeToken, isActive, isVisib
   };
   // Activity rows start open so each step's card shows as it happens; a click folds one away.
   const groupOpen = (id: string) => expanded[id] ?? true;
-  const copy = (id: string, content: string) => { void clipboardWrite(content).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
+  const copy = (id: string, content: string) => { void clipboardWrite(shownMessageText(content)).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation codex-conversation dsh-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scroll} onPointerDownCapture={e => { if (e.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onWheelCapture={e => { if (e.deltaY < 0 && !e.ctrlKey) pause(); }} onTouchMoveCapture={pause} onKeyDownCapture={e => { if (['ArrowUp', 'PageUp', 'Home'].includes(e.key) && !(e.target as HTMLElement).closest('input,textarea,select')) pause(); }} onScroll={() => {
