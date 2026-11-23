@@ -326,7 +326,7 @@ fn browsers_only_type_into_terminals_and_leave_sessions_to_the_desktop() {
     // Everyday desktop features pass through.
     for cmd in ["list_directory", "get_usage_statistics", "git_changes", "load_tasks", "get_native_history", "list_tools", "claude_session_preview", "dsh_session_history"] { assert!(ok(cmd, json!({})), "{cmd}"); }
     // The desktop window, host devices, credentials, pairing, installers and the agent hub are not.
-    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "open_url", "voice_input_start", "download_and_install_update", "update_cli", "orchestration_sync", "window_control_set_tool", "window_control_resolve", "window_control_tools", "window_control_state", "window_control_set_pick", "take_pending_launch", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
+    for cmd in ["window_close", "pick_folder", "show_in_folder", "load_password", "save_password", "mobile_rpc_set_enabled", "mobile_rpc_revoke_device", "mobile_rpc_mirror", "open_url", "voice_input_start", "download_update", "install_downloaded_update", "update_cli", "orchestration_sync", "window_control_set_tool", "window_control_resolve", "window_control_tools", "window_control_state", "window_control_set_pick", "take_pending_launch", "start_fs_watcher", "plugin:dialog|open", "Window_Close", "a;b", ""] {
         assert!(!ok(cmd, json!({})), "{cmd}");
     }
     // Typing reaches the desktop's terminals; starting, sizing, closing and conversations go through the desktop.

@@ -29,14 +29,14 @@ pub const FORWARDED_EVENTS: [&str; 8] = [
     "fs-refresh", "tasks-changed", "orchestration-updated",
 ];
 
-const DENIED: [&str; 26] = [
+const DENIED: [&str; 27] = [
     // The desktop window and the host's own devices, dialogs and speakers.
     "window_minimize", "window_maximize", "window_close", "show_main_window", "set_frosted_backdrop", "set_background_mode",
     "pick_folder", "notify_sound_choose", "show_in_folder", "open_url", "read_clipboard_image", "save_clipboard_image", "play_notify_sound",
     // One global watcher: a browser switching folders would move the desktop's.
     "start_fs_watcher", "stop_fs_watcher",
     // Credentials, installers and account binding stay on the desktop.
-    "save_password", "load_password", "delete_password", "download_and_install_update", "update_cli", "install_browser_control",
+    "save_password", "load_password", "delete_password", "download_update", "install_downloaded_update", "update_cli", "install_browser_control",
     "maintain_tool_integration",
     // The desktop's launch queue and orchestration hub.
     "take_pending_launch", "orchestration_sync", "orchestration_pending", "orchestration_resolve",
