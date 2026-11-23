@@ -2256,6 +2256,9 @@ body.resizing-panels .pane-resizer {
 }
 :root:not([data-shape="panel"]) .app-layout > .panel-left::after { right: 0; }
 :root:not([data-shape="panel"]) .app-layout > .panel-right::after { left: 0; }
+/* The centre gets the same hairline along its top, under the tab strip, so it reads as one page framed on the
+   three sides it shares with the window chrome and the two side panels (Clean draws its page the same way). */
+:root[data-layout="code"]:not([data-shape="panel"]) .app-layout:not(.is-compact) > .panel-center { border-top: 1px solid var(--border); }
 
 /* Explorer panel-content: overflow hidden so welcome state flex-center works */
 .explorer-content {
