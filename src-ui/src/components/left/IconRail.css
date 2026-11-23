@@ -146,3 +146,25 @@
 /* As wide as the conversation list beside it: the two flyouts open from the same rail. */
 .icon-rail-list.icon-rail-changes { padding: 0; }
 .icon-rail-changes > * { flex: 1; min-height: 0; }
+
+/* The new-conversation menu beside the rail: the tools, each opening its folders one level further. It sizes to
+   its content (not the full height the lists take) and lets the folder menu stand out to its right. */
+.icon-rail-list.icon-rail-new { bottom: auto; width: 240px; padding: 6px; overflow: visible; }
+.rail-new { display: flex; flex-direction: column; gap: 1px; }
+.rail-new-head { padding: 4px 8px 6px; color: var(--text-3); font-size: 12px; }
+.rail-new-tool { position: relative; }
+.rail-new-row, .rail-new-folder { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 38px; padding: 4px 8px; border: 0; border-radius: max(0px, calc(var(--radius-md, 12px) - 6px)); background: transparent; color: var(--text-1); font: inherit; text-align: left; cursor: pointer; transition: background-color .15s; }
+.rail-new-tool.is-open > .rail-new-row, .rail-new-row:hover, .rail-new-folder:hover, .rail-new-row:focus-visible, .rail-new-folder:focus-visible { background: var(--bg-hover); outline: 0; }
+.rail-new-row:disabled { opacity: .4; cursor: default; background: transparent; }
+.rail-new-icon { display: inline-flex; flex: none; width: 18px; height: 18px; }
+.rail-new-icon > *, .rail-new-icon svg, .rail-new-icon img { width: 100% !important; height: 100% !important; }
+.rail-new-text { display: flex; flex: 1; flex-direction: column; min-width: 0; line-height: 1.3; }
+.rail-new-text strong { overflow: hidden; font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.rail-new-text small { overflow: hidden; color: var(--text-3); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.rail-new-chevron { flex: none; color: var(--text-3); }
+.rail-new-folders { position: absolute; top: -6px; left: calc(100% + 8px); z-index: 1; display: flex; flex-direction: column; gap: 1px; width: 260px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-panel); box-shadow: var(--shadow-panel); animation: icon-rail-list-in .12s ease-out; }
+.rail-new-folders::before { content: ''; position: absolute; top: 0; bottom: 0; left: -10px; width: 10px; }
+.rail-new-folder { min-height: 36px; }
+.rail-new-folder > svg { flex: none; color: var(--text-3); }
+.rail-new-open strong { color: var(--text-2); font-weight: 400; }
+.rail-new-sep { height: 1px; margin: 3px 6px; background: var(--border); }

@@ -14,6 +14,7 @@ import { WebAccessStatus } from './WebAccessStatus';
 import { getUnreadSessionReplies, sessionReplyKey, subscribeSessionReplies } from '../../lib/session-replies';
 import { useOrchestration } from '../../lib/orchestration';
 import { tabFamilies, type TabChild } from '../../lib/tab-family';
+import { NewSessionMenu } from './NewSessionMenu';
 import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
@@ -97,12 +98,14 @@ export function IconRail() {
   const t = useT();
   const { tipFor, tip, hide } = useRailTip();
   // One side list at a time, opened by hovering its icon: the conversations, or the changes (修改记录).
-  const [flyout, setFlyout] = useState<'conversations' | 'changes' | null>(null);
+  // 'new': the new-conversation menu (tools, then their folders) opened by hovering the + button.
+  const [flyout, setFlyout] = useState<'conversations' | 'changes' | 'new' | null>(null);
+  const newToggle = useRef<HTMLButtonElement>(null);
   const listOpen = flyout !== null;
   const list = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), changesToggle = useRef<HTMLButtonElement>(null);
   // The list opens on hover and stays while the pointer is on the button or the list; leaving both closes it.
   const closeTimer = useRef<number | undefined>(undefined);
-  const holdList = (which?: 'conversations' | 'changes') => { window.clearTimeout(closeTimer.current); if (which) setFlyout(which); };
+  const holdList = (which?: 'conversations' | 'changes' | 'new') => { window.clearTimeout(closeTimer.current); if (which) setFlyout(which); };
   const releaseList = () => { window.clearTimeout(closeTimer.current); closeTimer.current = window.setTimeout(() => setFlyout(null), 220); };
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
@@ -111,8 +114,8 @@ export function IconRail() {
   useEffect(() => {
     if (!listOpen) return;
     if (flyout === 'conversations') refreshHistory();
-    const outside = (e: PointerEvent) => { const target = e.target as Node; if (!list.current?.contains(target) && !toggle.current?.contains(target) && !changesToggle.current?.contains(target) && !(target as Element).closest?.('.ctx-menu, .settings-overlay, .folder-menu')) setFlyout(null); };
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { (flyout === 'changes' ? changesToggle : toggle).current?.focus(); setFlyout(null); } };
+    const outside = (e: PointerEvent) => { const target = e.target as Node; if (!list.current?.contains(target) && !toggle.current?.contains(target) && !changesToggle.current?.contains(target) && !newToggle.current?.contains(target) && !(target as Element).closest?.('.ctx-menu, .settings-overlay, .folder-menu')) setFlyout(null); };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { (flyout === 'changes' ? changesToggle : flyout === 'new' ? newToggle : toggle).current?.focus(); setFlyout(null); } };
     document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', escape); };
   }, [listOpen, flyout]);
@@ -129,7 +132,11 @@ export function IconRail() {
 
   return <nav className="icon-rail" aria-label={t('rail.label')}>
     {/* Start something, or find something. */}
-    {button('new', t('explorer.new_session'), () => window.dispatchEvent(new Event('coffee-new-session')), false)}
+    {/* Click: the start page in the middle, as before. Hover: the tools and their folders, beside the rail. */}
+    <button ref={newToggle} type="button" className="icon-rail-button" aria-label={t('explorer.new_session')} aria-expanded={flyout === 'new'} aria-haspopup="menu"
+      onClick={() => { setFlyout(null); window.dispatchEvent(new Event('coffee-new-session')); }} onMouseEnter={() => { hide(); holdList('new'); }} onMouseLeave={releaseList}>
+      {glyph('new')}
+    </button>
     <button ref={toggle} type="button" className="icon-rail-button" aria-label={t('rail.conversations')} aria-expanded={flyout === 'conversations'} aria-haspopup="dialog"
       onClick={() => setFlyout(open => open === 'conversations' ? null : 'conversations')} onMouseEnter={() => { hide(); holdList('conversations'); }} onMouseLeave={releaseList}>
       {glyph('search')}
@@ -158,6 +165,9 @@ export function IconRail() {
     {button('settings', t('settings.title'), () => dispatch({ type: 'TOGGLE_SETTINGS' }), !!state.settingsOpen)}
     {flyout === 'conversations' && <div ref={list} className="icon-rail-list" role="dialog" aria-label={t('rail.conversations')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
       <div className="explorer-history-host"><HistoryBoard /></div>
+    </div>}
+    {flyout === 'new' && <div ref={list} className="icon-rail-list icon-rail-new" role="dialog" aria-label={t('explorer.new_session')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
+      <NewSessionMenu onDone={() => setFlyout(null)} />
     </div>}
     {flyout === 'changes' && <div ref={list} className="icon-rail-list icon-rail-changes" role="dialog" aria-label={t('rail.changes')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
       <RightPanel />

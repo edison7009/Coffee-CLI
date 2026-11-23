@@ -850,6 +850,27 @@ export function CenterPanel() {
     window.addEventListener('coffee-new-session', openNewSession);
     return () => window.removeEventListener('coffee-new-session', openNewSession);
   }, [terminals, dispatch]);
+  // Clean's rail starts a tool from its hover menu: a new conversation first, then — once it is the active,
+  // still-empty tab — the same launch the cards make, in the folder picked there (or the folder picker).
+  const railLaunch = useRef<{ tool: ToolType; folder?: string } | null>(null);
+  useEffect(() => {
+    const launch = (event: Event) => {
+      const detail = (event as CustomEvent<{ tool: ToolType; folder?: string }>).detail;
+      if (!detail?.tool) return;
+      railLaunch.current = detail;
+      window.dispatchEvent(new Event('coffee-new-session'));
+    };
+    window.addEventListener('coffee-launch', launch);
+    return () => window.removeEventListener('coffee-launch', launch);
+  }, []);
+  useEffect(() => {
+    const pending = railLaunch.current;
+    const active = terminals.find(session => session.id === activeTerminalId);
+    if (!pending || !active || active.tool !== null) return;
+    railLaunch.current = null;
+    if (pending.folder) launchFromCard(pending.tool, pending.folder); else void handlePickFolder(pending.tool);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs when the new tab becomes the active one
+  }, [activeTerminalId, terminals]);
 
   // External launch (`coffee-cli launch --tool <id> [--cwd <dir>]` or a
   // `coffeecli://new?prompt=…` link) — reached from the cold-start drain
