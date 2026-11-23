@@ -1558,6 +1558,8 @@ export function CenterPanel() {
                                     selectTool(tool.key);
                                   }}
                                 >
+                                  {/* Code: the tool's logo, large and faded, in the corner its colour shows from (as EchoBird's model cards). */}
+                                  {state.layoutMode !== 'work' && <span className="launchpad-card-mark" aria-hidden="true">{tool.icon}</span>}
                                   <div className="launchpad-icon">{tool.icon}</div>
                                   <div className="launchpad-card-info">
                                     {/* Name line: the tool name, then its update or remote chip. */}
