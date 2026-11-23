@@ -188,6 +188,9 @@
 
 /* ─── Textarea ─────────────────────────────────────────────── */
 .gambit-textarea {
+    /* Block, not the textarea's default inline-block: on the text baseline it left a descender's worth of space
+       (3-4px) under itself, so the box it grows into could always scroll a little. */
+    display: block;
     width: 100%;
     box-sizing: border-box;
     min-height: 1.5em;
@@ -595,7 +598,8 @@
 }
 .gambit--card > .gambit-dock-resize { display: none; }
 .gambit--card > .gambit-input { flex: 1; min-height: 0; }
-.gambit.gambit--docked.gambit--card .gambit-textarea { padding: 10px 12px 6px; font-size: 13px; line-height: 1.55; }
+/* Whole-pixel line heights, so each line is exactly as tall as the next and the box grows by whole lines. */
+.gambit.gambit--docked.gambit--card .gambit-textarea { padding: 10px 12px 6px; font-size: 13px; line-height: 20px; }
 .gambit--card .gambit-textarea::placeholder { font-size: 13px; }
 /* The place tab: the card's own colour, rounded on top only, standing on the card's edge. */
 .gambit-place { position: absolute; left: 10px; bottom: 100%; display: inline-flex; align-items: center; gap: 6px; height: 26px; max-width: calc(100% - 20px); padding: 0 10px; border: 0; border-radius: 7px 7px 0 0; background: var(--bg-input); box-shadow: 0 0 0 1px var(--card-line); clip-path: inset(-2px -2px 0 -2px); color: var(--text-2); font: var(--type-caption) var(--font); font-size: 11.5px; white-space: nowrap; }
@@ -688,7 +692,7 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 }
 .gambit--card.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; padding: 4px 4px 0; }
 .gambit--card.gambit--minimal > .gambit-input { grid-area: input; align-self: center; max-height: 100%; }
-.gambit.gambit--docked.gambit--card.gambit--minimal .gambit-textarea { padding: 8px 6px 6px; font-size: 13.5px; }
+.gambit.gambit--docked.gambit--card.gambit--minimal .gambit-textarea { padding: 8px 6px 6px; font-size: 13.5px; line-height: 21px; }
 .gambit--card.gambit--minimal > .gambit-footer { display: contents; }
 .gambit--card.gambit--minimal .gambit-pill-attach { grid-area: attach; align-self: end; width: 28px; height: 28px; margin: 0 0 4px 5px; border-radius: 50%; }
 .gambit--card.gambit--minimal .gambit-more { grid-area: more; align-self: end; margin-bottom: 7px; }
