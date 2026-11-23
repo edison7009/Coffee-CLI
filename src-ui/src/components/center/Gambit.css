@@ -280,8 +280,8 @@
     gap: 6px;
     flex-shrink: 0;
     min-width: 0;
-    padding: 4px 12px 7px;
-    border-bottom: 1px solid var(--border);
+    /* No line under the row: the pictures alone set it apart from the words. */
+    padding: 8px 12px 2px;
     overflow-x: auto;
 }
 .gambit-attachment {
@@ -680,7 +680,7 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
     border-radius: 18px; background: var(--bg-input);
     box-shadow: 0 0 0 1px var(--card-line), 0 1px 2px rgb(0 0 0 / .12);
 }
-.gambit--card.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; padding-inline: 4px; border-bottom: 0; }
+.gambit--card.gambit--minimal > .gambit-attachments { grid-area: files; margin-bottom: 6px; padding: 4px 4px 0; }
 .gambit--card.gambit--minimal > .gambit-input { grid-area: input; align-self: center; max-height: 100%; }
 .gambit.gambit--docked.gambit--card.gambit--minimal .gambit-textarea { padding: 8px 6px 6px; font-size: 13.5px; }
 .gambit--card.gambit--minimal > .gambit-footer { display: contents; }
