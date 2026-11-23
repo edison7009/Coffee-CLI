@@ -20,8 +20,9 @@ import './IconRail.css';
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
 const ICONS: Record<string, ReactNode> = {
   new: <><path d="M12 5v14M5 12h14" /></>,
-  conversations: <><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
+  // Lucide message-square: the conversations list is a list of conversations, not a search.
+  conversations: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
   automations: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2 2" /><path d="M5 3 2 6" /><path d="m22 6-3-3" /></>,
   usage: <path d="M3 3v18h18M8 16v-5M13 16V5M18 16V9" />,
   changes: <><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7" /><path d="M6 9v12" /></>,
@@ -151,7 +152,7 @@ export function IconRail() {
     </button>
     <button ref={toggle} type="button" className="icon-rail-button" aria-label={t('rail.conversations')} aria-expanded={flyout === 'conversations'} aria-haspopup="dialog"
       onClick={() => setFlyout(open => open === 'conversations' ? null : 'conversations')} onMouseEnter={() => { hide(); holdList('conversations'); }} onMouseLeave={releaseList}>
-      {glyph('search')}
+      {glyph('conversations')}
     </button>
     {/* Changes open the same way, beside the rail: in Clear they belong with the conversation, not a right column. */}
     <button ref={changesToggle} type="button" className="icon-rail-button" aria-label={t('rail.changes')} aria-expanded={flyout === 'changes'} aria-haspopup="dialog"
