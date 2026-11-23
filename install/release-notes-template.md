@@ -1,7 +1,7 @@
 <details open>
 <summary><b>简体中文</b></summary>
 
-### Coffee CLI v4.0.8 · 全新 Work 模式
+### Coffee CLI v4.0.9 · 全新 Work 模式
 
 - **全新 Work 模式：** 只有对话、不启动终端：左侧一条图标，中间全是对话。在「设置 → 外观 → 界面风格」里可以在 Work 和 Code 之间切换，手机端跟随电脑的模式。
 - **Code 模式焕新：** 启动页每张工具卡片记住各自上次的项目文件夹，可选 IDE 桌面或 CLI 原生终端；子任务收在父对话的数量下面，标签栏更清爽。
@@ -15,7 +15,7 @@
 <details>
 <summary><b>English</b></summary>
 
-### Coffee CLI v4.0.8 · The New Work Layout
+### Coffee CLI v4.0.9 · The New Work Layout
 
 - **New Work layout:** Just the conversation, no terminals: an icon rail on the left and the chat filling the rest. Switch between Work and Code under Settings → Appearance → Layout; a phone follows the desktop's layout.
 - **Code refreshed:** Each tool card on the start page remembers its own last project folder and opens in the IDE desktop or the native CLI terminal; sub-windows sit under their parent's count, keeping the tab strip tidy.
@@ -29,7 +29,7 @@
 <details>
 <summary><b>繁體中文</b></summary>
 
-### Coffee CLI v4.0.8 · 全新 Work 模式
+### Coffee CLI v4.0.9 · 全新 Work 模式
 
 - **全新 Work 模式：** 只有對話、不啟動終端：左側一條圖示，中間全是對話。在「設定 → 外觀 → 介面風格」裡可以在 Work 和 Code 之間切換，手機端跟隨電腦的模式。
 - **Code 模式煥新：** 啟動頁每張工具卡片記住各自上次的專案資料夾，可選 IDE 桌面或 CLI 原生終端；子任務收在父對話的數量下面，分頁列更清爽。
@@ -43,7 +43,7 @@
 <details>
 <summary><b>日本語</b></summary>
 
-### Coffee CLI v4.0.8 · 新しい Work レイアウト
+### Coffee CLI v4.0.9 · 新しい Work レイアウト
 
 - **新しい Work レイアウト：** 会話だけ、ターミナルなし。左にアイコン列、残りはすべて会話です。「設定 → 外観 → レイアウト」で Work と Code を切り替えられ、スマホはパソコンのレイアウトに合わせます。
 - **Code を刷新：** スタートページの各ツールカードがそれぞれ前回のプロジェクトフォルダーを覚え、IDE デスクトップか CLI ネイティブターミナルで開きます。サブウィンドウは親の件数の下にまとまり、タブ列がすっきりしました。
@@ -57,7 +57,7 @@
 <details>
 <summary><b>한국어</b></summary>
 
-### Coffee CLI v4.0.8 · 새로운 Work 레이아웃
+### Coffee CLI v4.0.9 · 새로운 Work 레이아웃
 
 - **새로운 Work 레이아웃:** 터미널 없이 대화만: 왼쪽에 아이콘 막대, 나머지는 모두 대화입니다. "설정 → 외관 → 레이아웃"에서 Work와 Code를 전환할 수 있고, 휴대폰은 컴퓨터의 레이아웃을 따릅니다.
 - **Code 새 단장:** 시작 페이지의 도구 카드마다 지난번 프로젝트 폴더를 기억하고 IDE 데스크톱 또는 CLI 네이티브 터미널로 엽니다. 하위 창은 상위 대화의 개수 아래에 모여 탭 줄이 깔끔해졌습니다.

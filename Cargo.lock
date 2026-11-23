@@ -826,7 +826,7 @@ dependencies = [
 
 [[package]]
 name = "coffee-cli"
-version = "4.0.8"
+version = "4.0.9"
 dependencies = [
  "aes",
  "aes-gcm",
