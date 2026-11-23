@@ -101,6 +101,9 @@ export function IconRail() {
   // 'new': the new-conversation menu (tools, then their folders) opened by hovering the + button.
   const [flyout, setFlyout] = useState<'conversations' | 'changes' | 'new' | null>(null);
   const newToggle = useRef<HTMLButtonElement>(null);
+  // Opened from the keyboard (arrow on +): focus goes into the menu.
+  const [newByKey, setNewByKey] = useState(false);
+  useEffect(() => { if (flyout !== 'new') setNewByKey(false); }, [flyout]);
   const listOpen = flyout !== null;
   const list = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), changesToggle = useRef<HTMLButtonElement>(null);
   // The list opens on hover and stays while the pointer is on the button or the list; leaving both closes it.
@@ -134,7 +137,8 @@ export function IconRail() {
     {/* Start something, or find something. */}
     {/* Click: the start page in the middle, as before. Hover: the tools and their folders, beside the rail. */}
     <button ref={newToggle} type="button" className="icon-rail-button" aria-label={t('explorer.new_session')} aria-expanded={flyout === 'new'} aria-haspopup="menu"
-      onClick={() => { setFlyout(null); window.dispatchEvent(new Event('coffee-new-session')); }} onMouseEnter={() => { hide(); holdList('new'); }} onMouseLeave={releaseList}>
+      onClick={() => { setFlyout(null); window.dispatchEvent(new Event('coffee-new-session')); }} onMouseEnter={() => { hide(); holdList('new'); }} onMouseLeave={releaseList}
+      onKeyDown={event => { if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); setNewByKey(true); holdList('new'); } }}>
       {glyph('new')}
     </button>
     <button ref={toggle} type="button" className="icon-rail-button" aria-label={t('rail.conversations')} aria-expanded={flyout === 'conversations'} aria-haspopup="dialog"
@@ -167,7 +171,7 @@ export function IconRail() {
       <div className="explorer-history-host"><HistoryBoard /></div>
     </div>}
     {flyout === 'new' && <div ref={list} className="icon-rail-list icon-rail-new" role="dialog" aria-label={t('explorer.new_session')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
-      <NewSessionMenu onDone={() => setFlyout(null)} />
+      <NewSessionMenu autoFocus={newByKey} onDone={() => setFlyout(null)} />
     </div>}
     {flyout === 'changes' && <div ref={list} className="icon-rail-list icon-rail-changes" role="dialog" aria-label={t('rail.changes')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
       <RightPanel />

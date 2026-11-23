@@ -168,3 +168,5 @@
 .rail-new-folder > svg { flex: none; color: var(--text-3); }
 .rail-new-open strong { color: var(--text-2); font-weight: 400; }
 .rail-new-sep { height: 1px; margin: 3px 6px; background: var(--border); }
+/* Showing a file's diff, the changes flyout widens so code lines are not wrapped at every turn. */
+.icon-rail-list.icon-rail-changes:has([role="tab"][id$="-detail-tab"][aria-selected="true"]) { width: min(560px, calc(100vw - 80px)); }

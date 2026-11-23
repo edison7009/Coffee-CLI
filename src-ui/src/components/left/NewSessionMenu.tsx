@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n/useT';
 import { commands } from '../../tauri';
 import { getToolIcon } from '../center/CenterPanel';
@@ -14,29 +14,51 @@ function launchFromRail(tool: string, folder?: string) {
   window.dispatchEvent(new CustomEvent('coffee-launch', { detail: { tool, folder } }));
 }
 
+// Which tools are installed, kept for a minute like the start page's scan: hovering + again doesn't probe every
+// tool's binary again.
+let installedCache: { at: number; value: Record<string, boolean> } | null = null;
+const INSTALLED_TTL_MS = 60_000;
+
 function readJson<T>(key: string, fallback: T): T {
   try { const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null'); return (value ?? fallback) as T; } catch { return fallback; }
 }
 const folderName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 
-export function NewSessionMenu({ onDone }: { onDone: () => void }) {
+export function NewSessionMenu({ onDone, autoFocus = false }: { onDone: () => void; autoFocus?: boolean }) {
   const t = useT();
-  const [installed, setInstalled] = useState<Record<string, boolean>>({});
+  const [installed, setInstalled] = useState<Record<string, boolean>>(() => installedCache?.value ?? {});
+  const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [home, setHome] = useState<string | null>(null);
   const recents = useSyncExternalStore(subscribeProjectFolders, getProjectFolders, getProjectFolders);
   useEffect(() => {
     let alive = true;
-    void commands.checkToolsInstalled().then(result => { if (alive) setInstalled(result); }).catch(() => {});
+    if (!installedCache || Date.now() - installedCache.at > INSTALLED_TTL_MS) {
+      void commands.checkToolsInstalled().then(result => { installedCache = { at: Date.now(), value: result }; if (alive) setInstalled(result); }).catch(() => {});
+    }
+    if (autoFocus) root.current?.querySelector<HTMLElement>('.rail-new-row:not(:disabled)')?.focus();
     import('@tauri-apps/api/path').then(path => path.homeDir()).then(dir => { if (alive) setHome(dir); }).catch(() => {});
     return () => { alive = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once, as the menu opens
   }, []);
   // The start page's pinned tools, in its order; Clean starts only those with a desktop conversation.
   const pinned = readJson<unknown[]>('coffee_pinned_items', []).filter((id): id is string => typeof id === 'string' && id.startsWith('agent:')).map(id => id.slice(6));
-  const tools = (pinned.length ? pinned : [...WORK_TOOLS]).filter(tool => WORK_TOOLS.has(tool));
+  const pinnedHere = pinned.filter(tool => WORK_TOOLS.has(tool));
+  // None pinned that Clean can start (only terminal tools): offer all of Clean's own rather than an empty menu.
+  const tools = pinnedHere.length ? pinnedHere : [...WORK_TOOLS];
   const lastFolders = readJson<Record<string, string>>('coffee:last-folder-by-tool', {});
   const launch = (tool: string, folder?: string) => { onDone(); launchFromRail(tool, folder); };
-  return <div className="rail-new" role="menu" aria-label={t('explorer.new_session')}>
+  // Arrows: up / down between the tools (or folders), right into a tool's folders, left back to the tool.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement, inFolders = !!target.closest('.rail-new-folders');
+    const list = inFolders ? [...target.closest('.rail-new-folders')!.querySelectorAll<HTMLElement>('.rail-new-folder')]
+      : [...(root.current?.querySelectorAll<HTMLElement>('.rail-new-row:not(:disabled)') ?? [])];
+    const at = list.indexOf(target);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); list[(at + (event.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus(); }
+    else if (event.key === 'ArrowRight' && !inFolders) { event.preventDefault(); requestAnimationFrame(() => target.parentElement?.querySelector<HTMLElement>('.rail-new-folder')?.focus()); }
+    else if (event.key === 'ArrowLeft' && inFolders) { event.preventDefault(); target.closest('.rail-new-tool')?.querySelector<HTMLElement>('.rail-new-row')?.focus(); }
+  };
+  return <div ref={root} className="rail-new" role="menu" aria-label={t('explorer.new_session')} onKeyDown={onKeyDown}>
     <div className="rail-new-head">{t('explorer.new_session')}</div>
     {tools.map(tool => {
       const disabled = installed[tool] === false, last = lastFolders[tool];
