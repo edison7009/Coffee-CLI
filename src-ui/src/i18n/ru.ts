@@ -960,4 +960,5 @@ export const ru = {
   "worker.instructions_hide": "Скрыть инструкции",
   "worker.label": "Подзадача",
   "tab.sub_windows": "Подокон: {count}",
+  "titlebar.conversation_menu": "Меню разговора",
 } as const satisfies Record<I18nKey, string>;

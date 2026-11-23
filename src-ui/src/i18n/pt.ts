@@ -960,4 +960,5 @@ export const pt = {
   "worker.instructions_hide": "Ocultar instruções",
   "worker.label": "Subtarefa",
   "tab.sub_windows": "{count} subjanelas",
+  "titlebar.conversation_menu": "Menu da conversa",
 } as const satisfies Record<I18nKey, string>;

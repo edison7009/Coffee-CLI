@@ -960,4 +960,5 @@ export const fr = {
   "worker.instructions_hide": "Masquer les instructions",
   "worker.label": "Sous-tâche",
   "tab.sub_windows": "{count} sous-fenêtres",
+  "titlebar.conversation_menu": "Menu de la conversation",
 } as const satisfies Record<I18nKey, string>;

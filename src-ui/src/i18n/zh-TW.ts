@@ -964,4 +964,5 @@ export const zhTW = {
   "worker.instructions_hide": "收起指令",
   "worker.label": "子任務",
   "tab.sub_windows": "{count} 個子視窗",
+  "titlebar.conversation_menu": "對話選單",
 } as const satisfies Record<I18nKey, string>;

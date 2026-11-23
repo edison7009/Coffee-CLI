@@ -964,4 +964,5 @@ export const vi = {
   "worker.instructions_hide": "Ẩn chỉ dẫn",
   "worker.label": "Tác vụ con",
   "tab.sub_windows": "{count} cửa sổ con",
+  "titlebar.conversation_menu": "Menu cuộc trò chuyện",
 } as const satisfies Record<I18nKey, string>;

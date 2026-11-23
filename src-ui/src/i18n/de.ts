@@ -960,4 +960,5 @@ export const de = {
   "worker.instructions_hide": "Anweisungen ausblenden",
   "worker.label": "Teilaufgabe",
   "tab.sub_windows": "{count} Unterfenster",
+  "titlebar.conversation_menu": "Gesprächsmenü",
 } as const satisfies Record<I18nKey, string>;

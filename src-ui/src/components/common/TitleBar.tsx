@@ -9,6 +9,7 @@
 //   3. Multi-agent layout mode — only visible when the active tab is a
 //      multi-agent quadrant. Two modes: grid (2×2) and columns (1×4).
 
+import { WorkTitle } from './WorkTitle';
 import { useRemoteControlState } from '../../lib/remote-control-state';
 import { remoteWindowName } from '../../lib/remote-control';
 import { useEffect } from 'react';
@@ -76,7 +77,7 @@ export function TitleBar() {
   // approach on the same Tauri version and is structurally cleaner.
   const onDragMouseDown = async (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    if ((e.target as HTMLElement).closest('button')) return;
+    if ((e.target as HTMLElement).closest('button, input')) return;
     // Tool tabs now live in the bar — a press on the tab strip must reach the
     // tab's own click / pointer-reorder handlers, not start a window drag.
     if ((e.target as HTMLElement).closest('.chrome-tabs-header')) return;
@@ -88,7 +89,7 @@ export function TitleBar() {
     } catch { /* Best-effort operation; failure is non-fatal. */ }
   };
   const onDragDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button')) return;
+    if ((e.target as HTMLElement).closest('button, input')) return;
     if ((e.target as HTMLElement).closest('.chrome-tabs-header')) return;
     maximize();
   };
@@ -107,16 +108,8 @@ export function TitleBar() {
           above the center column, with the layout toggles + window controls to
           their right. The flexible spacer between them stays a draggable handle. */}
       <div className="titlebar-tabs" id="titlebar-tab-slot" hidden={work} />
-      {/* 纯净: 「项目 / 对话标题」, like a path to where you are; nothing before a conversation has started. */}
-      {work && (() => {
-        const folder = activeTab?.tool ? activeTab.folderPath?.split(/[\\/]/).filter(Boolean).pop() : undefined;
-        const name = activeTab?.tool ? activeTab.toolTitle : undefined;
-        return (folder || name) ? <div className="titlebar-work-title">
-          {folder && <span className="titlebar-work-folder">{folder}</span>}
-          {folder && name && <span className="titlebar-work-slash" aria-hidden="true">/</span>}
-          {name && <span className="titlebar-work-name">{name}</span>}
-        </div> : null;
-      })()}
+      {/* Work: 「project / conversation ⌄」, the ⌄ opening the conversation's menu; nothing before one has started. */}
+      {work && activeTab?.tool && <WorkTitle key={activeTab.id} tab={activeTab} />}
       <div className="titlebar-drag-spacer" />
       {/* Icons come straight from Lucide (lucide.dev, ISC license). No
           runtime dependency — just the d-paths copied inline so we

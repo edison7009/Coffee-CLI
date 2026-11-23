@@ -963,4 +963,5 @@ export const ko = {
   "worker.instructions_hide": "지시 접기",
   "worker.label": "하위 작업",
   "tab.sub_windows": "하위 창 {count}개",
+  "titlebar.conversation_menu": "대화 메뉴",
 } as const satisfies Record<I18nKey, string>;
