@@ -36,7 +36,7 @@ const ICON_PROPS = {
   strokeLinejoin: 'round' as const,
 };
 
-export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSplit, splitFull, onOpenWorker, onDetachWorker }: { menu: SessionCtxMenuState; onClose: () => void; onRename: (session: SavedSession) => void; onDelete: (session: SavedSession) => void; onOpenSplit?: (session: SavedSession) => void; splitFull?: boolean; onOpenWorker?: () => void; onDetachWorker?: () => void }) {
+export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSplit, splitFull, onOpenWorker, onDetachWorker, onCloseConversation }: { menu: SessionCtxMenuState; onClose: () => void; /** For the open conversation (the title bar's menu): close it instead of deleting it. */ onCloseConversation?: () => void; onRename: (session: SavedSession) => void; onDelete: (session: SavedSession) => void; onOpenSplit?: (session: SavedSession) => void; splitFull?: boolean; onOpenWorker?: () => void; onDetachWorker?: () => void }) {
   const t = useT();
   const menuRef = useRef<HTMLDivElement>(null);
   const { session } = menu;
@@ -153,7 +153,10 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
 
       {hasGroup2 && <div className="ctx-menu-divider" />}
 
-      <button className="ctx-menu-item" onClick={handleDelete}>
+      {onCloseConversation ? <button className="ctx-menu-item" onClick={() => { onClose(); onCloseConversation(); }}>
+        <svg {...ICON_PROPS}><path d="M18 6 6 18M6 6l12 12"/></svg>
+        {t('menu.close_conversation')}
+      </button> : <button className="ctx-menu-item" onClick={handleDelete}>
         <svg {...ICON_PROPS}>
           <polyline points="3 6 5 6 21 6"/>
           <path d="m19 6-.867 13.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 6"/>
@@ -161,7 +164,7 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
           <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
         </svg>
         {t('menu.delete')}
-      </button>
+      </button>}
     </div>,
     document.body,
   );

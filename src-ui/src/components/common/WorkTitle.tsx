@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n/useT';
-import { useAppState, type TerminalSession } from '../../store/app-state';
+import type { TerminalSession } from '../../store/app-state';
 import type { SavedSession } from '../../tauri';
 import { getHistorySnapshot, subscribeHistory } from '../../lib/history-cache';
 import { getRenamedSnapshot, setCustomName, subscribeRenamed } from '../../lib/renamed-sessions';
-import { hideSession } from '../../lib/hidden-sessions';
 import { SessionContextMenu, type SessionCtxMenuState } from '../right/SessionContextMenu';
 
 /** Work's title bar: 「project / conversation」, and a ⌄ after the title that opens the same menu as right-clicking
- *  the conversation in the list (rename, pin, copy its id or resume command, reveal, delete). */
+ *  the conversation in the list (rename, pin, copy its id or resume command, reveal), with close in place of delete. */
 export function WorkTitle({ tab }: { tab: TerminalSession }) {
   const t = useT();
-  const { dispatch } = useAppState();
   const history = useSyncExternalStore(subscribeHistory, getHistorySnapshot, getHistorySnapshot);
   const renamed = useSyncExternalStore(subscribeRenamed, getRenamedSnapshot, getRenamedSnapshot);
   const [menu, setMenu] = useState<SessionCtxMenuState | null>(null);
@@ -40,6 +38,8 @@ export function WorkTitle({ tab }: { tab: TerminalSession }) {
     </button>}
     {menu && <SessionContextMenu menu={menu} onClose={() => setMenu(null)}
       onRename={() => setEditing(name ?? '')}
-      onDelete={item => { hideSession(item.tool, item.id); dispatch({ type: 'REMOVE_TERMINAL', id: tab.id }); }} />}
+      onDelete={() => {}}
+      // An open conversation is closed, not deleted: the same as its tab's ×, history kept.
+      onCloseConversation={() => window.dispatchEvent(new CustomEvent('coffee-close-tab', { detail: tab.id }))} />}
   </div>;
 }

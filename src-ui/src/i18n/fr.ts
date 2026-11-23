@@ -961,4 +961,5 @@ export const fr = {
   "worker.label": "Sous-tâche",
   "tab.sub_windows": "{count} sous-fenêtres",
   "titlebar.conversation_menu": "Menu de la conversation",
+  "menu.close_conversation": "Fermer la conversation",
 } as const satisfies Record<I18nKey, string>;

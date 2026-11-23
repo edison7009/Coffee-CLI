@@ -52,7 +52,7 @@ const context = {
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
 context.sendSessionPrompt = evaluate('lib/send-session-prompt.ts', 'sendSessionPrompt', context);
 const host = evaluate('components/center/ActiveGambit.tsx', 'ActiveGambit', { ...context, useCompact: () => false });
-const titlebar = evaluate('components/common/TitleBar.tsx', 'TitleBar', { ...context, useCompact: () => false });
+const titlebar = evaluate('components/common/TitleBar.tsx', 'TitleBar', { ...context, useCompact: () => false, usePhone: () => false, WorkTitle: () => null });
 function buttons(node) {
   if (!node || typeof node !== 'object') return [];
   return [...(node.type === 'button' ? [node] : []), ...(node.children ?? []).flat(Infinity).flatMap(buttons)];

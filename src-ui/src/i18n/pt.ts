@@ -961,4 +961,5 @@ export const pt = {
   "worker.label": "Subtarefa",
   "tab.sub_windows": "{count} subjanelas",
   "titlebar.conversation_menu": "Menu da conversa",
+  "menu.close_conversation": "Fechar conversa",
 } as const satisfies Record<I18nKey, string>;

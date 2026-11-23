@@ -964,4 +964,5 @@ export const ja = {
   "worker.label": "サブタスク",
   "tab.sub_windows": "サブウィンドウ {count} 個",
   "titlebar.conversation_menu": "会話メニュー",
+  "menu.close_conversation": "会話を閉じる",
 } as const satisfies Record<I18nKey, string>;

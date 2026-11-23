@@ -967,6 +967,7 @@ export const en = {
   "worker.label": "Sub-task",
   "tab.sub_windows": "{count} sub-windows",
   "titlebar.conversation_menu": "Conversation menu",
+  "menu.close_conversation": "Close conversation",
 } as const;
 
 export type I18nKey = keyof typeof en;

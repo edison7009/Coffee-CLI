@@ -966,4 +966,5 @@ export const zhCN = {
   "worker.label": "子任务",
   "tab.sub_windows": "{count} 个子窗口",
   "titlebar.conversation_menu": "对话菜单",
+  "menu.close_conversation": "关闭对话",
 } as const satisfies Record<I18nKey, string>;
