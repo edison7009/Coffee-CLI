@@ -702,6 +702,5 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit--card.gambit--minimal .gambit-send { grid-area: send; align-self: end; width: 28px; height: 28px; margin: 0 5px 4px 2px; border-radius: 50%; }
 .gambit--card.gambit--minimal .gambit-send-hint { grid-area: hint; justify-self: end; padding: 4px 12px 0; }
 .gambit--card.gambit--minimal .gambit-meta { grid-area: meta; display: flex; align-items: center; gap: 1px; min-width: 0; padding: 6px 4px 0; flex-wrap: wrap; row-gap: 2px; overflow: visible; }
-/* Below the line the folder is shown again (Code shows it on the place tab). */
+/* No folder below the line: Work's title already names it, Code's place tab does. */
 .gambit-footer--card.gambit-footer--card .gambit-meta > .gambit-workspace { display: none; }
-.gambit--minimal .gambit-footer--card .gambit-meta > .gambit-workspace { display: inline-flex !important; }
