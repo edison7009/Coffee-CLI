@@ -558,38 +558,39 @@ textarea,
     --bg-terminal: #1f2723; /* Match bg-app */
 }
 
-/* ─── 黑曜石 — near-black surfaces with quiet charcoal borders ──── */
+/* ─── 石墨 — Clean's own night: a dark grey ground with a near-black page (styles/clear-palette.css), so the
+   default palette looks the same in Code as in Clean. Side panels are the ground, the centre is the page. ──── */
 [data-theme="obsidian"] {
-    --bg-app: #0a0a0a;
-    --bg-panel: #101010;
-    --bg-card: rgba(222, 222, 222, 0.02);
-    --bg-input: #151515;
-    --bg-input-focus: #1a1a1a;
-    --bg-hover: rgba(133, 133, 133, 0.07);
-    --bg-active: rgba(133, 133, 133, 0.11);
+    --bg-app: #0b0b0c;
+    --bg-panel: #18181a;
+    --bg-card: #161618;
+    --bg-input: #161618;
+    --bg-input-focus: #19191b;
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-active: rgba(255, 255, 255, 0.1);
 
-    --border: #1f1f1f;
-    --border-input: #282828;
-    --border-focus: #5b5b5b;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-input: rgba(255, 255, 255, 0.12);
+    --border-focus: rgba(255, 255, 255, 0.3);
 
-    --text-1: #dedede;
-    --text-2: #b5b5b5;
-    --text-3: #9b9b9b;
+    --text-1: #ececee;
+    --text-2: #a8a8ad;
+    --text-3: #7a7a80;
 
-    --accent: #858585;
-    --accent-hover: #969696;
-    --accent-active: #7a7a7a;
-    --accent-bg: rgba(133, 133, 133, 0.11);
+    --accent: #a8a8ad;
+    --accent-hover: #c4c4c8;
+    --accent-active: #8e8e93;
+    --accent-bg: #232326;
 
-    --green: #98b89d;
-    --red: #d99a9a;
-    --blue: #93b3d2;
+    --green: #81c995;
+    --red: #f28b82;
+    --blue: #8ab4f8;
 
-    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.28);
-    --shadow-rgb: 133, 133, 133;
+    --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.3);
+    --shadow-rgb: 0, 0, 0;
     --glass-blur: blur(24px);
 
-    --bg-terminal: #0a0a0a; /* Match bg-app */
+    --bg-terminal: #0b0b0c; /* Match bg-app */
 }
 
 /* ─── 苔藓 — green, deep ──── */
@@ -1344,25 +1345,35 @@ textarea,
 /* ─── 瓷白 — day, deep ────
    Cool porcelain, a clear step below 明亮's warm cream — as the two neutrals
    of this column they were reading as two whites. */
+/* 石墨, day: Clean's own day — a pale grey ground with a white page. */
 [data-mode="light"][data-theme="obsidian"] {
-    --bg-app: #eaecee;
-    --bg-panel: #d9dde2;
-    --bg-hover: rgba(60, 74, 93, 0.07);
-    --bg-active: rgba(60, 74, 93, 0.11);
+    --bg-app: #ffffff;
+    --bg-panel: #f7f7f8;
+    --bg-card: #f4f4f5;
+    --bg-input: #ffffff;
+    --bg-input-focus: #ffffff;
+    --bg-hover: rgba(0, 0, 0, 0.045);
+    --bg-active: rgba(0, 0, 0, 0.075);
+    --bg-terminal: #ffffff;
 
-    --border: rgba(43, 46, 49, 0.14);
-    --border-input: rgba(43, 46, 49, 0.2);
-    --border-focus: rgba(60, 74, 93, 0.6);
+    --border: rgba(0, 0, 0, 0.08);
+    --border-input: rgba(0, 0, 0, 0.12);
+    --border-focus: rgba(0, 0, 0, 0.3);
 
-    --text-1: #2b2e31;
-    --text-2: #44474b;
-    --text-3: #56595d;
+    --text-1: #1f1f1f;
+    --text-2: #5f6164;
+    --text-3: #8b8d91;
 
-    --accent: #3c4a5d;
-    --accent-hover: #323e4d;
-    --accent-active: #2a3441;
-    --accent-bg: rgba(60, 74, 93, 0.12);
+    --accent: #5f6164;
+    --accent-hover: #4a4c4f;
+    --accent-active: #3a3c3f;
+    --accent-bg: #f0f0f1;
 
+    --green: #1e8e3e;
+    --red: #c5221f;
+    --blue: #1a73e8;
+    --shadow-rgb: 0, 0, 0;
+    --shadow-panel: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* ─── 玫瑰 — day, deep ────
@@ -2993,10 +3004,10 @@ html.is-windows[data-frost="frost"] #root {
     --border-input: rgba(0, 0, 0, 0.14);
 }
 
-/* Keep Obsidian's charcoal dividers instead of Panel's brighter defaults. */
-[data-shape="panel"][data-theme="obsidian"] {
-    --border: #1f1f1f;
-    --border-input: #282828;
+/* Keep 石墨's quiet dividers instead of Panel's brighter defaults. */
+[data-shape="panel"][data-theme="obsidian"]:not([data-mode="light"]) {
+    --border: rgba(255, 255, 255, 0.08);
+    --border-input: rgba(255, 255, 255, 0.12);
 }
 
 /* Panel shape, light mode: the deep half of every pair draws its chrome — card
@@ -3269,14 +3280,11 @@ html.is-windows[data-frost="frost"] #root {
 }
 /* Graphite on stone (the default): black basalt as on the EchoBird site, large
    stones at raised contrast under a faint diagonal sheen, no pale grain. */
+/* The stone takes 石墨's own (Clean's) night colours; only the texture is added. */
 [data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) {
-    --bg-app: #101112;
-    --bg-panel: #151617;
-    --bg-input: #18191a;
-    --bg-input-focus: #1d1e1f;
-    --border: #232527;
-    --border-input: #2b2d30;
-    --bg-terminal: #101112;
+    --bg-app: #0b0b0c;
+    --bg-panel: #18181a;
+    --bg-terminal: #0b0b0c;
 }
 [data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) #root {
     background: var(--bg-app);
