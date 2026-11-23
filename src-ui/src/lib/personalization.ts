@@ -47,7 +47,7 @@ export const THEME_COLORS: {
   { code: 'sapphire',   labelKey: 'theme.color.sapphire',   swatch: '#12172c', ring: '#96a3e5', daySwatch: '#f1f3f9', dayRing: '#253584' },
   { code: 'orchid',     labelKey: 'theme.color.orchid',     swatch: '#29112a', ring: '#d5a1d7', daySwatch: '#f7f2f8', dayRing: '#753078' },
 
-  { code: 'obsidian',   labelKey: 'theme.color.obsidian',   swatch: '#0b0b0c', ring: '#a8a8ad', daySwatch: '#f7f7f8', dayRing: '#5f6164' },
+  { code: 'obsidian',   labelKey: 'theme.color.obsidian',   swatch: '#0b0b0c', ring: '#a8a8ad', daySwatch: '#ffffff', dayRing: '#5f6164' },
   { code: 'slate',      labelKey: 'theme.color.slate',      swatch: '#130f11', ring: '#ad7480', daySwatch: '#efe9ea', dayRing: '#65343f' },
   { code: 'dark',       labelKey: 'theme.color.dark',       swatch: '#15110e', ring: '#a97d5c', daySwatch: '#f0ebe8', dayRing: '#6b482e' },
   { code: 'moss',       labelKey: 'theme.color.moss',       swatch: '#101812', ring: '#6d9d82', daySwatch: '#e9eeec', dayRing: '#39604a' },

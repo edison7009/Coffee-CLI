@@ -442,9 +442,11 @@ function GambitImpl({
   const insertPaths = useCallback(async (paths: string[]) => {
     const textarea = textareaRef.current;
     const start = textarea?.selectionStart, end = textarea?.selectionEnd;
-    // A folder becomes a folder card: one that lists is a folder, kept with a trailing separator.
-    const marked = await Promise.all(paths.map(path => /[\\/]$/.test(path) ? path
-      : commands.listDirectory(path).then(() => path + (path.includes('\\') && !path.includes('/') ? '\\' : '/'), () => path)));
+    // A folder becomes a folder card, kept with a trailing separator. One cheap check for all of them (a stat each,
+    // never a listing), so a huge folder or a slow network share doesn't hold the attachment back.
+    const folders = new Set(await commands.checkProjectDirectories(paths.filter(path => !/[\\/]$/.test(path)))
+      .then(checks => checks.filter(check => check.status === 'available').map(check => check.path), () => [] as string[]));
+    const marked = paths.map(path => folders.has(path) ? path + (path.includes('\\') && !path.includes('/') ? '\\' : '/') : path);
     onDraftChangeRef.current(attachToDraft(draftRef.current, marked));
     requestAnimationFrame(() => {
       if (!textarea) return;
