@@ -27,7 +27,14 @@
 
 /* Compact (the composer line): a ring for the window closest to running out and its percent; hover for all. */
 .usage-meter--compact { position: relative; gap: 5px; }
+/* As tall and padded as the other controls on its line, so its hover ground matches theirs. */
+.usage-meter.usage-meter--compact, .claude-composer-controls .usage-meter.usage-meter--compact { height: 22px; padding: 0 5px; border-radius: 5px; overflow: visible; transition: background-color .15s; }
+.usage-meter.usage-meter--compact:hover:not(:disabled), .claude-composer-controls .usage-meter.usage-meter--compact:hover:not(:disabled) { background: var(--bg-hover); }
+/* Every reading, above the compact meter: the same bars as Code's line, in a card. */
+.usage-meter-tip { position: fixed; z-index: 10000; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-panel); box-shadow: var(--shadow-panel); pointer-events: none; }
+.usage-meter-tip-title { color: var(--text-2); font-size: 12px; }
+.usage-meter.usage-meter-tip-items { gap: 16px; overflow: visible; cursor: default; }
+.usage-meter-tip-items .usage-meter-item { min-width: 92px; }
 .usage-ring-track { stroke: color-mix(in srgb, var(--text-3) 28%, transparent); }
 .usage-ring-fill { stroke: var(--text-2); }
 .usage-meter--compact .usage-meter-percent { color: var(--text-2); }
-.usage-meter--compact[data-tip]:hover::after { content: attr(data-tip); position: absolute; z-index: 100; bottom: calc(100% + 8px); right: 0; width: max-content; max-width: 280px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-panel); color: var(--text-1); font-size: var(--type-caption); font-weight: 500; line-height: 1.4; white-space: normal; pointer-events: none; box-shadow: 0 1px 2px #0003, 0 6px 20px #0004; }
