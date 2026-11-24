@@ -1,7 +1,7 @@
-/* Remote control, under the 协作 panel and in its shapes (ToolControlPanel.css): a header card with its mark, headings
+/* 远程协作, its own tab, in the 本机协作 panel's shapes (ToolControlPanel.css): a header card with its mark, headings
    inset to the cards' own text (.orchestration-roles-head), the agent apps as the same grid of switch cards, the two
    kinds of access as two cards with the blue check, and each open window as a card row of its own. */
-.remote-control-page { display: flex; flex-direction: column; margin-top: 30px; }
+.remote-control-page { display: flex; flex-direction: column; }
 .remote-control-page > .remote-control-head { margin-bottom: 0; }
 .remote-control-page > .orchestration-roles-head + * { margin-top: 12px; }
 

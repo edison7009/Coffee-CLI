@@ -65,7 +65,8 @@ export function ToolRemoteControlPanel({ active, tools }: { active: boolean; too
         <button type="button" className="remote-control-button" onClick={() => void commands.remoteWindowFocus(win.label).catch(() => {})}>{t('ai_remote.focus')}</button>
         <button type="button" className="remote-control-button" aria-label={t('sidebar.devices.close_remote', { name: win.name })} onClick={() => void commands.remoteWindowClose(win.label).catch(() => {})}>{t('ai_remote.close')}</button>
       </div>)}
-      {!windows.length && <p className="remote-control-empty">{t('ai_remote.pick.none')}</p>}
+      {/* The add card already says there is none yet; the line stays only where there is no card to add one. */}
+      {!windows.length && !canRequestControl() && <p className="remote-control-empty">{t('ai_remote.pick.none')}</p>}
       {canRequestControl() && <button type="button" className="remote-control-add" onClick={() => requestControl()}><span className="remote-control-plus" aria-hidden="true">+</span><span>{t('sidebar.devices.control')}</span></button>}
     </div>
 
