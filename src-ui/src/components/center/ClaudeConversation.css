@@ -193,7 +193,23 @@ body.gambit-docked .claude-reconnect { bottom:calc(var(--gambit-dock-h,200px) + 
 .claude-approval legend { margin-bottom:8px; }
 .claude-approval label { display:flex; gap:8px; align-items:flex-start; padding:7px; border-radius:var(--shape-radius-btn,6px); cursor:pointer; }
 .claude-approval label:hover { background:var(--bg-hover); }
-.claude-approval input[type=radio],.claude-approval input[type=checkbox] { accent-color:var(--accent); margin-top:5px; }
+/* Drawn, not native: the engine's own boxes were faint on the dark card and changed size once checked. One 16px
+   box in both states, a clear outline when empty, the switches' blue with a white check (or dot) when chosen. */
+.claude-approval input:is([type=radio],[type=checkbox]) {
+  appearance:none; -webkit-appearance:none; display:grid; place-content:center; flex:none; box-sizing:border-box;
+  width:16px; height:16px; margin:3px 0 0; border:1.5px solid color-mix(in srgb,var(--text-1) 50%,transparent); border-radius:4px;
+  background:transparent; cursor:pointer; transition:background-color .12s, border-color .12s;
+}
+.claude-approval input[type=radio] { border-radius:50%; }
+.claude-approval label:hover input:not(:checked) { border-color:color-mix(in srgb,var(--text-1) 75%,transparent); }
+.claude-approval input:checked { border-color:var(--switch-on); background:var(--switch-on); }
+.claude-approval input[type=checkbox]:checked::after {
+  content:''; width:10px; height:10px; background:#fff;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5l3.25 3.25L13 5'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5l3.25 3.25L13 5'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.claude-approval input[type=radio]:checked::after { content:''; width:6px; height:6px; border-radius:50%; background:#fff; }
+.claude-approval input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 .claude-approval small { display:block; color:var(--text-3); font-size:12px; }
 .claude-custom-answer { width:100%; box-sizing:border-box; color:var(--text-2); background:var(--bg-hover); border:1px solid var(--border); padding:8px; border-radius:var(--shape-radius-btn,6px); }
 .claude-approval-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
