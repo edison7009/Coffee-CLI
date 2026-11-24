@@ -23,16 +23,16 @@ const ICONS: Record<SwarmTool, { svg: string; color: string | null }> = {
 // DeepSeek and Pi keep their own colours from the SVG; Codex and OpenCode follow the theme text colour.
 const OWN_COLOURS = new Set<SwarmTool>(['dsh', 'pi']);
 
-const SIZE = 168; // CSS px, square canvas
-const ICON = 84; // icon box inside it
-const NEBULA_R = 60;
+const SIZE = 260; // CSS px, square canvas
+const ICON = 132; // icon box inside it
+const NEBULA_R = 96;
 const SEGMENT = 4200; // ms: nebula → icon → next nebula
 const FORMS = 4;
-const COUNT = 1500; // most stars any icon gets
-const MIN_STARS = 700; // thin marks repeat pixels up to this many
+const COUNT = 1800; // as many stars as the README demo
+const MIN_STARS = 1800; // thin marks repeat pixels until every icon has the full count
 const TAU = Math.PI * 2;
 
-interface Star { tx: number; ty: number; color: string | null; s: [number, number, number]; rand: number; shimmer: number; size: number }
+interface Star { tx: number; ty: number; color: string | null; s: [number, number, number]; rand: number; shimmer: number; size: number; lift: number }
 
 const smooth = (x: number) => { const v = Math.min(1, Math.max(0, x)); return v * v * (3 - 2 * v); };
 /** 0 in the nebula, 1 in the icon; zero at both ends of a segment so segments chain seamlessly. */
@@ -72,7 +72,7 @@ function sample(tool: SwarmTool): Promise<Star[]> {
   const hit = cache.get(tool);
   if (hit) return hit;
   const job = new Promise<Star[]>((resolve, reject) => {
-    const res = 64;
+    const res = 96;
     const svg = ICONS[tool].svg.replace(/<\?xml[^>]*>|<!--[\s\S]*?-->/g, '')
       .replace(/<svg\b([^>]*)>/, (_m, attrs: string) => `<svg${attrs.replace(/\s(width|height)="[^"]*"/g, '')} width="${res}" height="${res}" color="#000">`);
     const img = new Image();
@@ -96,7 +96,7 @@ function sample(tool: SwarmTool): Promise<Star[]> {
         const extra = n >= picks.length;
         stars.push({
           tx: ((x + 0.5 + (extra ? rnd() - 0.5 : 0)) / res - 0.5) * ICON, ty: ((y + 0.5 + (extra ? rnd() - 0.5 : 0)) / res - 0.5) * ICON,
-          color: own ? color : ICONS[tool].color, s: [rnd(), rnd(), rnd()], rand: rnd(), shimmer: rnd() * TAU, size: 1.1 + rnd() * 0.5,
+          color: own ? color : ICONS[tool].color, s: [rnd(), rnd(), rnd()], rand: rnd(), shimmer: rnd() * TAU, size: [0.8, 1.05, 1.35][Math.floor(rnd() * 3)], lift: rnd(),
         });
       }
       resolve(stars);
@@ -133,32 +133,55 @@ export function ToolSwarm({ tool, isActive }: { tool: SwarmTool; isActive: boole
     canvas.width = canvas.height = Math.round(SIZE * dpr);
     // Start part-way into a segment so the first frame is already a nebula, not an empty canvas.
     const origin = performance.now() - SEGMENT * 0.05;
+    // Stars are drawn sharp on a layer, then the layer is laid back blurred underneath as a glow (the demo's
+    // bloom). The glow keeps each colour's hue: blurring spreads a colour instead of adding stars up to white.
+    const layer = document.createElement('canvas');
+    layer.width = layer.height = canvas.width;
+    const lctx = layer.getContext('2d');
     const draw = (now: number) => {
+      if (!lctx) return;
       const text = getComputedStyle(canvas).color;
       const light = document.documentElement.getAttribute('data-mode') === 'light' || canvas.closest('[data-mode="light"]') !== null;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, SIZE, SIZE);
-      ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
+      lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      lctx.clearRect(0, 0, SIZE, SIZE);
       const t = running ? now - origin : SEGMENT * 0.55; // paused: the icon, fully formed
       const segment = Math.floor(t / SEGMENT);
       const u = (t % SEGMENT) / SEGMENT;
       const roll = TAU * 0.6 * t / SEGMENT;
+      const form = (segment + (u < 0.62 ? 0 : 1)) % FORMS;
       for (const p of stars) {
-        const form = (segment + (u < 0.62 ? 0 : 1)) % FORMS;
         const star = rotate(nebula(form, p.s), AXIS, roll);
         const depth = Math.max(-1, Math.min(1, star[2] / NEBULA_R));
         const w = assembled(u, p.rand * 0.12);
         // A gentle swirl on the way in (the demo's vortex), so stars curve into place instead of sliding straight.
         const kx = star[0] * Math.cos(1.9) - star[1] * Math.sin(1.9); const ky = star[0] * Math.sin(1.9) + star[1] * Math.cos(1.9);
-        const gx = p.tx + Math.cos(TAU * t / 3000 + p.shimmer) * 0.5; const gy = p.ty + Math.sin(TAU * t / 3000 + p.shimmer) * 0.5;
+        const gx = p.tx + Math.cos(TAU * t / 3000 + p.shimmer) * 0.6; const gy = p.ty + Math.sin(TAU * t / 3000 + p.shimmer) * 0.6;
         const m = 1 - w;
         const x = star[0] * m * m + kx * 0.5 * 2 * m * w + gx * w * w;
         const y = star[1] * m * m + ky * 0.5 * 2 * m * w + gy * w * w;
-        const size = p.size * ((0.7 + 0.3 * depth) * (1 - w) + w);
-        ctx.globalAlpha = (0.45 + 0.3 * depth) * (1 - w) + 0.92 * w;
-        ctx.fillStyle = p.color ?? text;
-        ctx.fillRect(SIZE / 2 + x - size / 2, SIZE / 2 + y - size / 2, size, size);
+        // Near stars look bigger in the nebula; all settle to one size in the icon.
+        const r = p.size * ((0.75 + 0.45 * depth) * (1 - w) + 1.1 * w);
+        lctx.globalAlpha = (0.7 + 0.3 * depth) * (1 - w) + w;
+        // On the dark theme each star is lifted towards white a little, like the demo's over-bright palette.
+        const base = p.color ?? text;
+        lctx.fillStyle = light ? base : `color-mix(in srgb, ${base} ${Math.round(100 - 12 - p.lift * 22)}%, #fff)`;
+        lctx.beginPath();
+        lctx.arc(SIZE / 2 + x, SIZE / 2 + y, r, 0, TAU);
+        lctx.fill();
       }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
+      ctx.filter = `blur(${Math.round(7 * dpr)}px)`;
+      ctx.globalAlpha = light ? 0.22 : 0.85;
+      ctx.drawImage(layer, 0, 0);
+      ctx.filter = `blur(${Math.round(2 * dpr)}px)`;
+      ctx.globalAlpha = light ? 0.2 : 0.6;
+      ctx.drawImage(layer, 0, 0);
+      ctx.filter = 'none';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.drawImage(layer, 0, 0);
       if (running) raf = requestAnimationFrame(draw);
     };
     sample(tool).then(list => { if (cancelled) return; stars = list; raf = requestAnimationFrame(draw); }).catch(() => undefined);

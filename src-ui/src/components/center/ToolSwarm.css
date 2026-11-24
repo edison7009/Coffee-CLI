@@ -1,2 +1,3 @@
-/* Shared welcome animation: a star nebula that gathers into the tool's icon. */
-.tool-swarm { display:block; width:168px; height:168px; margin:-24px auto -4px; color:var(--text-1); pointer-events:none; }
+/* Shared welcome animation: a star nebula that gathers into the tool's icon. The canvas is larger than
+   the icon so the nebula and its glow have room; the negative margins keep the welcome text close. */
+.tool-swarm { display:block; width:260px; height:260px; margin:-56px auto -36px; color:var(--text-1); pointer-events:none; }
