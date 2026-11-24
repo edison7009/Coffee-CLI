@@ -531,12 +531,13 @@ export function CenterPanel() {
 
   // Built-in AI CLI catalog. Fully local — no remote fetch. Display
   // names are sourced from the Rust registry (see lib/tool-info.ts);
-  // the order here is the launchpad's preferred presentation order.
+  // the order here is the launchpad's and the tool settings list's order:
+  // first the tools with a desktop conversation (工作式 and IDE desktop),
+  // then the terminal-only ones, each group with the best-known tools first.
   const BUILTIN_AI_CLI_FALLBACK: { key: ToolType; label: string }[] = [
-    'claude', 'codex', 'dsh', 'cursor', 'copilot', 'antigravity',
-    'openclaw', 'hermes', 'opencode', 'pi', 'cline', 'goose', 'aider',
-    'omp', 'crush', 'qwen', 'kilo', 'kiro', 'kimicode',
-    'codebuddy', 'grok', 'mimocode', 'minimax', 'muse',
+    'claude', 'codex', 'cursor', 'copilot', 'antigravity', 'qwen', 'kimicode', 'dsh', 'opencode',
+    'cline', 'grok', 'kiro', 'kilo', 'goose', 'codebuddy', 'pi', 'muse',
+    'openclaw', 'hermes', 'aider', 'crush', 'omp', 'mimocode', 'minimax',
   ].map((key) => ({ key: key as ToolType, label: getToolDisplayName(key) }));
 
   // Unified agent catalog — fully local. The remote catalog fetch
