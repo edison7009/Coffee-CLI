@@ -1,0 +1,9 @@
+/target/
+/gen/schemas/
+/gen/android/app/build/
+/gen/android/.gradle/
+/gen/android/build/
+/gen/android/local.properties
+/gen/android/keystore.properties
+/gen/android/app/src/main/jniLibs/
+/gen/android/app/src/main/assets/

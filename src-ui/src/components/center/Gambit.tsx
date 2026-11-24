@@ -170,7 +170,7 @@ const DOCK_AUTO_HEIGHT_RATIO = 0.5; // a long draft stops lifting the dock here 
 const LS_DOCK_H = 'cc-gambit-dock-h';
 /** The strip a phone keeps clear at the bottom (the iPhone home indicator); 0 where there is none. The
  *  composer sits above it, and everything that makes room for the composer makes room for it too. */
-const SAFE_BOTTOM = 'env(safe-area-inset-bottom, 0px)';
+const SAFE_BOTTOM = 'var(--safe-bottom)';
 
 /** A phone or tablet: focusing a field there raises the on-screen keyboard. */
 const isTouchScreen = () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;

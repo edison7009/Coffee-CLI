@@ -4,6 +4,7 @@
 
 - 桌面端：`src/mobile_rpc/`（Rust），前端桥接是 `src-ui/src/components/agent/MobileRpcBridge.tsx`。
 - 浏览器端：`src-ui/src/remote/`。`protocol.ts` 实现握手、加密和请求，`bridge.ts` 把桌面界面里的 Tauri 调用换成远程请求。
+- 手机 App：`mobile/`（独立的 Tauri 工程，不参与桌面构建）。它就是一个 control 窗口（`index.html?remote&control`），连接走桌面同一份 `src/remote_link.rs` 中转，配对密钥存在 App 自己的数据目录。
 - 默认关闭，在「设置 → 设备连接」里打开。
 
 ## 1. 传输

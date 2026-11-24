@@ -56,7 +56,7 @@
 /* Phones: a picker (model, effort, permissions, the / commands…) has no room beside its button,
    so it opens from the bottom at full width, above the controls sheet, with finger-sized rows. */
 :root[data-width="xs"] .claude-control-menu {
-  left: 8px !important; right: 8px !important; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  left: 8px !important; right: 8px !important; top: auto !important; bottom: calc(8px + var(--safe-bottom)) !important;
   width: auto !important; min-width: 0 !important; max-width: none !important; max-height: 65vh !important;
   padding: 8px; font-size: var(--type-body); box-shadow: 0 -8px 40px rgba(0, 0, 0, .45);
   animation: claude-menu-sheet-in .2s cubic-bezier(.2, .8, .2, 1);

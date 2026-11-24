@@ -15,3 +15,6 @@ src-ui/
 target/
 Web-Home/
 docs/
+
+# The phone app is its own build (mobile/); the desktop app never compiles it.
+mobile/

@@ -75,6 +75,34 @@ export function controlPairLink() { return controlLink; }
 export function setControlName(name: string) {
   if (CONTROL && name) void local('remote_window_set_name', { name }).catch(() => {});
 }
+/** The phone app's QR scanner (mobile/…/Scanner.kt), when this page runs in it. */
+const SCANNER = CONTROL ? (window as unknown as { CoffeeScanner?: { scan(): void } }).CoffeeScanner ?? null : null;
+/** The phone app (mobile/), which can scan the computer's pairing QR code with its camera. */
+export const CAN_SCAN = !!SCANNER;
+
+/** The pairing link inside what was scanned or pasted: the link itself, or the QR code's page address that carries it after `#pair=`. */
+export function pairingLinkIn(text: string): string {
+  const match = text.trim().match(/#pair=(.+)$/);
+  if (!match) return text.trim();
+  try { return decodeURIComponent(match[1]); } catch { return text.trim(); }
+}
+
+/** Scan a QR code with the phone's camera: its text, or null when cancelled. Fails with `camera_denied` when the camera is not allowed. */
+let scanning: Promise<string | null> | null = null;
+export function scanQrCode(): Promise<string | null> {
+  if (!SCANNER) return Promise.reject(new Error('no scanner'));
+  // One scan at a time: a second tap while the camera is up gets the same result, not a second scanner.
+  scanning ??= new Promise<string | null>((resolve, reject) => {
+    window.addEventListener('coffee-scan', event => {
+      const detail = (event as CustomEvent<{ content?: string | null; denied?: boolean }>).detail ?? {};
+      if (detail.denied) reject(new Error('camera_denied'));
+      else resolve(typeof detail.content === 'string' ? detail.content : null);
+    }, { once: true });
+    SCANNER.scan();
+  }).finally(() => { scanning = null; });
+  return scanning;
+}
+
 /** This computer's own app version, to compare with the controlled one's. */
 export function localVersion(): Promise<string> { return local<string>('plugin:app|version'); }
 

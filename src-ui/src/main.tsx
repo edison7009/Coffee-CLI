@@ -13,6 +13,7 @@ import { IS_MACOS, IS_WINDOWS } from './lib/platform';
 import { initializeUiScale } from './lib/ui-scale';
 import { initViewport, IS_WEB } from './lib/viewport';
 import { shareDesktopStorage } from './lib/storage-mirror';
+import { followSystemBars } from './lib/system-bars';
 
 // macOS uses native window decorations + traffic lights (titleBarStyle:
 // "Overlay" in tauri.macos.conf.json). Tag <html> before first paint so the
@@ -40,6 +41,8 @@ if (REMOTE) {
   // computer): its own shell, none of the window plumbing below.
   document.documentElement.classList.add('is-remote');
   if (CONTROL) document.documentElement.classList.add('is-control');
+  // In the phone app: keep clear of the status bar, navigation bar and keyboard.
+  followSystemBars();
   // A control window first takes back the key it saved for its computer and the link it was opened with.
   void prepareControl().catch(error => console.error('[control window]', error))
     .then(() => import('./remote/RemoteApp'))
