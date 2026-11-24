@@ -1,4 +1,4 @@
-// The composer's remote control chip against a scripted native boundary: hidden for a tab without the
+// The composer's collaboration chip, for a tab that operates remote windows (not a coordinator) against a scripted native boundary: hidden for a tab without the
 // window tools, "Auto" by default, tying a tab to one window, a stale pick and windows coming and going.
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile } from 'node:fs/promises';
@@ -12,10 +12,10 @@ const project = fileURLToPath(new URL('..', import.meta.url));
 const directory = await mkdtemp(join(tmpdir(), 'coffee-remote-picker-'));
 await build({ stdin: { resolveDir: project, loader: 'tsx', contents: `
 import React from 'react';import{createRoot}from'react-dom/client';
-import{RemoteControlPicker}from'./src/components/center/RemoteControlPicker';
+import{CollaborationPicker}from'./src/components/center/OrchestrationPicker';
 import{useRemoteControlState}from'./src/lib/remote-control-state';
 import './src/styles/global.css';import './src/components/center/Gambit.css';
-function Chip({session}){const[state,set]=useRemoteControlState(session,true);return state?.attached?<RemoteControlPicker sessionId={session} state={state} onState={set}/>:<span id="hidden">none</span>}
+function Chip({session}){const[state,set]=useRemoteControlState(session,true);return state?.attached?<CollaborationPicker sessionId={session} coordinator={false} remote={state} onRemote={set}/>:<span id="hidden">none</span>}
 const root=createRoot(document.getElementById('root'));
 window.show=session=>root.render(<div className="gambit-capabilities" role="status" style={{position:'absolute',left:20,bottom:20}}><Chip session={session}/></div>);
 window.show('tab-a');
@@ -51,33 +51,33 @@ try {
 
   // A tab with the window tools starts on Auto, and its menu lists every open window.
   await chip.waitFor();
-  assert.equal(await chip.getAttribute('aria-label'), '远程操控：自动');
-  assert.equal(await chip.textContent(), '自动', 'the chip shows the name alone');
+  assert.equal(await chip.getAttribute('aria-label'), '协作：自动');
+  assert.equal(await chip.textContent(), '协作：自动', 'the chip reads as one collaboration setting');
   await chip.click();
   assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('[role=menuitemradio]')].map(item => item.getAttribute('aria-label') + (item.getAttribute('aria-checked') === 'true' ? '✓' : ''))), ['自动✓', 'EB', 'Studio']);
   await page.screenshot({ path: join(directory, 'remote-picker-menu.png') });
 
   // Choosing a window ties this tab to it.
   await option('EB').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：EB');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：EB');
   assert.deepEqual(await page.evaluate(() => window.calls.filter(call => call[0] === 'pick')), [['pick', 'tab-a', 'eb']]);
   assert.equal(await page.getByRole('menuitemradio').count(), 0, 'the menu closes after a choice');
   await chip.click();
   assert.equal(await option('EB').getAttribute('aria-checked'), 'true');
   await option('自动').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：自动');
 
   // The tied window closing drops the pick: the chip reads Auto again once the windows change.
   await chip.click(); await option('Studio').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：Studio');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：Studio');
   await page.evaluate(() => { window.windows = window.windows.filter(w => w.window !== 'studio'); window.listeners['remote-windows-changed']({ payload: null }); });
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：自动');
 
   // A window that closed while the menu was open is refused, and the chip shows what is true.
   await chip.click();
   await page.evaluate(() => { window.windows = []; });
   await option('EB').click();
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：自动');
   await chip.click();
   await page.getByText('还没有打开远程电脑窗口', { exact: true }).waitFor();
   assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('[role=menuitemradio]')].map(item => item.getAttribute('aria-label') + (item.getAttribute('aria-checked') === 'true' ? '✓' : ''))), ['自动✓']);
@@ -92,16 +92,16 @@ try {
   // Another tab keeps its own choice, and a tab started without the window tools shows no chip.
   await page.evaluate(() => { window.windows = [{ window: 'eb', title: 'EB' }]; window.picks['tab-a'] = 'eb'; window.attached['tab-b'] = true; window.show('tab-b'); });
   await page.waitForFunction(() => window.calls.some(call => call[0] === 'state' && call[1] === 'tab-b'));
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：自动');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：自动');
   await page.evaluate(() => window.show('tab-a'));
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '远程操控：EB');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.getAttribute('aria-label') === '协作：EB');
   await page.evaluate(() => window.show('tab-c'));
   await page.locator('#hidden').waitFor();
   assert.equal(await chip.count(), 0);
   // A window's title carries the prefix it was opened with (「远程：」); the chip and menu show the computer's name once.
   await page.evaluate(() => { window.windows = [{ window: 'studio', title: '远程：Studio' }]; window.picks['tab-a'] = 'studio'; window.show('tab-a'); });
-  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === 'Studio');
-  assert.equal(await page.locator('.gambit-capability.is-remote').getAttribute('aria-label'), '远程操控：Studio');
+  await page.waitForFunction(() => document.querySelector('.gambit-capability.is-remote')?.textContent === '协作：Studio');
+  assert.equal(await page.locator('.gambit-capability.is-remote').getAttribute('aria-label'), '协作：Studio');
   assert.deepEqual(errors, []);
   console.log(`remote control picker browser test passed (screenshot: ${join(directory, 'remote-picker-menu.png')})`);
 

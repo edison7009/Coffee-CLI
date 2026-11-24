@@ -40,9 +40,9 @@ try{
 const page=await browser.newPage({viewport:{width:1080,height:780}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(`http://127.0.0.1:${server.address().port}`);
 const panel=page.locator('.tool-settings-panel:not([hidden])');
-const tab=name=>page.getByRole('tab',{name,exact:true}),agent=name=>page.getByRole('switch',{name,exact:true});
-assert.equal(await page.getByRole('tab').count(),7);assert.deepEqual(await page.evaluate(()=>window.calls),[]);
-assert.deepEqual(await page.getByRole('tab').allTextContents(),['常用 6/6','主记忆','多智能体编排','技能','电脑控制','浏览器控制','远程操控']);
+const tab=name=>page.getByRole('tab',{name,exact:true}),agent=name=>page.locator('.tool-settings-panel:not([hidden]) .tool-control:not(.remote-control-page)').getByRole('switch',{name,exact:true});
+assert.equal(await page.getByRole('tab').count(),6);assert.deepEqual(await page.evaluate(()=>window.calls),[]);
+assert.deepEqual(await page.getByRole('tab').allTextContents(),['常用 6/6','主记忆','协作','技能','电脑控制','浏览器控制']);
 assert.deepEqual(await page.evaluate(()=>window.teamCalls),[],'orchestration reads only when opened');
 await page.evaluate(()=>{window.delayRead='browser';window.resolveRead=null});
 await tab('浏览器控制').click();await page.waitForFunction(()=>!!window.resolveRead);
@@ -59,7 +59,7 @@ assert.equal(await page.getByRole('button',{name:'安装',exact:true}).count(),1
 assert.ok(Math.abs((await page.locator('.control-demo').boundingBox()).y-browserDemoTop)<1,'browser status arrival does not move the demonstration');
 await page.evaluate(()=>{window.delayRead=null;window.resolveRead()});await tab('常用 6/6').click();
 await page.evaluate(()=>window.calls=[]);
-await tab('多智能体编排').click();await agent('Claude Code').waitFor();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
+await tab('协作').click();await agent('Claude Code').waitFor();await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Claude Code').getAttribute('aria-checked'),'false');assert.equal(await page.locator('.orchestration-config .tool-control-agent:not(.orchestration-role)').count(),6);
 assert.equal(await agent('Cursor').isDisabled(),true);assert.equal(await agent('Antigravity CLI').isDisabled(),true);assert.equal(await agent('Kiro').count(),0);
 await panel.getByText('未安装',{exact:true}).waitFor();assert.equal(await panel.getByText('暂不支持',{exact:true}).count(),2,'Pi joined the supported workers');
@@ -104,7 +104,7 @@ for (const enabled of [false, true]) {
   assert.ok(frames.every(frame=>frame.opacity===1),'no dim/bright flash in any sampled animation frame');
   assert.ok(frames.slice(1).every((frame,index)=>enabled?frame.x>=frames[index].x-.1:frame.x<=frames[index].x+.1),'thumb moves in one direction without bouncing back');
 }
-await tab('常用 6/6').click();await page.evaluate(()=>{window.delayTeamRead=true;window.resolveTeamRead=null});await tab('多智能体编排').click();await page.waitForFunction(()=>!!window.resolveTeamRead);
+await tab('常用 6/6').click();await page.evaluate(()=>{window.delayTeamRead=true;window.resolveTeamRead=null});await tab('协作').click();await page.waitForFunction(()=>!!window.resolveTeamRead);
 assert.equal(await agent('Codex CLI').isDisabled(),false,'orchestration keeps the confirmed configuration usable during a background refresh');
 await page.evaluate(()=>{window.delayTeamRead=false;window.resolveTeamRead()});await page.waitForFunction(()=>!document.querySelector('.orchestration-config [role="switch"]').disabled);
 assert.equal(await agent('Codex CLI').getAttribute('aria-checked'),'true','saved choice survives page changes');
@@ -214,7 +214,7 @@ assert.equal(await demo.evaluate(el=>el.getAnimations({subtree:true}).length),0,
 assert.equal(await demo.locator('.control-demo-result').isVisible(),true);
 assert.equal(await page.evaluate(()=>window.calls.filter(call=>call.type==='set'||call.type==='install').length),await page.evaluate(count=>window.calls.slice(0,count).filter(call=>call.type==='set'||call.type==='install').length,callsBeforeDemo),'demo playback does not install or operate tools');
 await page.emulateMedia({reducedMotion:'no-preference'});
-await page.setViewportSize({width:1080,height:950});await tab('多智能体编排').click();await demo.scrollIntoViewIfNeeded();
+await page.setViewportSize({width:1080,height:950});await tab('协作').click();await demo.scrollIntoViewIfNeeded();
 assert.equal(await page.locator('.control-demo').count(),1,'only the active orchestration demonstration is mounted');
 assert.equal(await demo.getAttribute('data-kind'),'orchestration');
 const teamWrites=await page.evaluate(()=>window.teamCalls.filter(call=>typeof call==='object').length);
@@ -255,9 +255,9 @@ await page.setViewportSize({width:1080,height:1000});await tab('技能').click()
 const emptyGeometry=await page.locator('.skills-empty').evaluate(element=>{const rect=element.getBoundingClientRect(),panel=document.querySelector('.tool-settings-page').getBoundingClientRect(),range=document.createRange();range.selectNodeContents(element);const text=range.getBoundingClientRect();return {bottom:rect.bottom,expected:panel.bottom-32,center:(rect.top+rect.bottom)/2,textCenter:(text.top+text.bottom)/2}});
 assert.ok(Math.abs(emptyGeometry.bottom-emptyGeometry.expected)<2,'empty skills fill the available page height');assert.ok(Math.abs(emptyGeometry.center-emptyGeometry.textCenter)<2,'empty text is vertically centered');
 // Remote Control: a switch per assistant that can take the window tools, read when the tab opens.
-await page.evaluate(()=>window.calls=[]);await tab('远程操控').click();
-await page.waitForFunction(()=>!document.querySelector('[aria-labelledby$="-tab-remote"] [role="switch"][aria-label="Claude Code"]').disabled);
-const remotePanel=page.locator('[aria-labelledby$="-tab-remote"]'),remoteSwitch=name=>remotePanel.getByRole('switch',{name,exact:true});
+await page.evaluate(()=>window.calls=[]);await tab('协作').click();
+await page.waitForFunction(()=>!document.querySelector('.remote-control-page [role="switch"][aria-label="Claude Code"]').disabled);
+const remotePanel=page.locator('.remote-control-page'),remoteSwitch=name=>remotePanel.getByRole('switch',{name,exact:true});
 assert.equal(await remoteSwitch('Claude Code').getAttribute('aria-checked'),'false');
 assert.equal(await remoteSwitch('Codex CLI').isDisabled(),false,'Codex takes the window tools too');
 assert.equal(await remoteSwitch('Cursor').count(),0,'tools without them get no switch that can never turn on');
@@ -265,12 +265,12 @@ assert.equal(await remoteSwitch('Pi').count(),0);
 assert.equal(await remotePanel.getByText(/暂不支持$/).count(),0,'only the supported agent apps are listed, no line naming the rest');
 await remotePanel.getByText('支持的 Agent 应用',{exact:true}).waitFor();
 await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>window.remoteControl.includes('claude'));
-await page.waitForFunction(()=>document.querySelector('[aria-labelledby$="-tab-remote"] [role="switch"][aria-label="Claude Code"]').getAttribute('aria-checked')==='true');
+await page.waitForFunction(()=>document.querySelector('.remote-control-page [role="switch"][aria-label="Claude Code"]').getAttribute('aria-checked')==='true');
 await remoteSwitch('Codex CLI').click();await page.waitForFunction(()=>window.remoteControl.includes('codex'));
 assert.equal(await remoteSwitch('Claude Code').getAttribute('aria-checked'),'true','each assistant has its own switch');
 await remoteSwitch('Claude Code').click();await page.waitForFunction(()=>!window.remoteControl.includes('claude'));
 assert.deepEqual(await page.evaluate(()=>window.calls),[{type:'remote-read'},{type:'remote',tool:'claude',enabled:true},{type:'remote',tool:'codex',enabled:true},{type:'remote',tool:'claude',enabled:false}]);
 await page.screenshot({path:join(directory,'remote-control.png')});
 assert.deepEqual(errors,[]);
-console.log('OK: seven themed tabs, retained control state, stable first-load geometry, hidden-page completion, background refresh failures, explicit installation, per-agent switches, serialization, late-read protection, themes, isolated SVG masks and demo motion');console.log('Screenshots: '+directory);
+console.log('OK: six themed tabs (helpers here and on other computers share one 协作 page), retained control state, stable first-load geometry, hidden-page completion, background refresh failures, explicit installation, per-agent switches, serialization, late-read protection, themes, isolated SVG masks and demo motion');console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(r=>server.close(r))}

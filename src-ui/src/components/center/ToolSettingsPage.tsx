@@ -11,7 +11,7 @@ export function ToolSettingsPage({ active, tools, count, limit, children }: {
   active: boolean; tools: { value: string; label: string; icon: ReactNode; installed?: boolean }[]; count: number; limit: number; children: ReactNode;
 }) {
   const t = useT(), id = useId();
-  const [tab, setTab] = useState<'selection' | 'memory' | 'orchestration' | 'skills' | 'computer' | 'browser' | 'remote'>('selection');
+  const [tab, setTab] = useState<'selection' | 'memory' | 'orchestration' | 'skills' | 'computer' | 'browser'>('selection');
   const tabList = useRef<HTMLSpanElement>(null), indicator = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const list = tabList.current, marker = indicator.current;
@@ -30,7 +30,8 @@ export function ToolSettingsPage({ active, tools, count, limit, children }: {
     list.querySelectorAll('button').forEach(button => observer.observe(button));
     return () => { observer.disconnect(); if (frame !== undefined) cancelAnimationFrame(frame); };
   }, [active, tab, count, limit, t]);
-  const tabs = ['selection', 'memory', 'orchestration', 'skills', 'computer', 'browser', 'remote'] as const;
+  // 协作: helpers on this computer and on others (Remote Control) are one setting, the way the composer shows them.
+  const tabs = ['selection', 'memory', 'orchestration', 'skills', 'computer', 'browser'] as const;
   return <section className={`tool-settings-page${tab === 'memory' ? ' tool-settings-page--memory' : tab === 'skills' ? ' tool-settings-page--skills' : ''}`} aria-label={t('tools.title')} style={active ? undefined : { display: 'none' }}>
     <div className="tool-settings-inner">
       <span ref={tabList} className="tool-settings-tabs" role="tablist" aria-label={t('tools.title')}>
@@ -43,7 +44,7 @@ export function ToolSettingsPage({ active, tools, count, limit, children }: {
         }}>{t(`tools.tab.${key}`)}{key === 'selection' && <span className="tool-settings-tab-count"> {count}/{limit}</span>}</button>)}
       </span>
       {tabs.map(key => <div key={key} id={`${id}-panel-${key}`} role="tabpanel" aria-labelledby={`${id}-tab-${key}`} className="tool-settings-panel" hidden={tab !== key}>
-        {key === 'selection' ? (active && tab === 'selection' ? children : null) : key === 'memory' ? <ToolMemoryPanel active={active && tab === 'memory'} tools={tools} /> : key === 'orchestration' ? <ToolOrchestrationPanel active={active && tab === key} tools={tools} /> : key === 'skills' ? <ToolSkillsPanel active={active && tab === 'skills'} tools={tools} /> : key === 'remote' ? <ToolRemoteControlPanel active={active && tab === key} tools={tools} /> : <ToolControlPanel kind={key} active={active && tab === key} tools={tools} />}
+        {key === 'selection' ? (active && tab === 'selection' ? children : null) : key === 'memory' ? <ToolMemoryPanel active={active && tab === 'memory'} tools={tools} /> : key === 'orchestration' ? <><ToolOrchestrationPanel active={active && tab === key} tools={tools} /><ToolRemoteControlPanel active={active && tab === key} tools={tools} /></> : key === 'skills' ? <ToolSkillsPanel active={active && tab === 'skills'} tools={tools} /> : <ToolControlPanel kind={key} active={active && tab === key} tools={tools} />}
       </div>)}
     </div>
   </section>;

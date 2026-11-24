@@ -411,8 +411,6 @@
 .gambit-capabilities { display:flex; align-items:center; gap:5px; min-width:0; margin-right:auto; overflow:hidden; }
 .gambit-capability { min-width:0; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); background:color-mix(in srgb,var(--capability-color) 12%,transparent); color:var(--capability-color); font:var(--type-caption) var(--font); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .gambit-capability.is-orchestration { --capability-color:var(--green); }
-.orchestration-pick-menu button { align-items:center; }
-.orchestration-pick-check { flex:0 0 1em; text-align:center; }
 .gambit-capability.is-picker { border:0; cursor:pointer; transition:background .15s; }
 .gambit-capability.is-picker:hover,.gambit-capability.is-picker[aria-expanded="true"] { background:color-mix(in srgb,var(--capability-color) 22%,transparent); }
 .gambit-capability.is-computer { --capability-color:var(--blue); }

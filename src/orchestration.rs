@@ -8,7 +8,9 @@ use tauri::{AppHandle, Emitter};
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, #[serde(default = "default_mode")] pub mode: String, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String>,
     /// Per-conversation choice of assistants, keyed by the coordinator's tab id. Absent = automatic (every enabled one).
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")] pub picks: HashMap<String, Vec<String>> }
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")] pub picks: HashMap<String, Vec<String>>,
+    /// Helpers on other computers right now (from their windows), for the composer's choice. Never saved.
+    #[serde(default, skip_deserializing, skip_serializing_if = "Vec::is_empty")] pub remote: Vec<Value> }
 /// The coordinator's role: `auto` decides for itself, `manager` only plans, delegates and audits, `lead` does the core
 /// work itself and delegates only peripheral tasks.
 const MODES: [&str; 3] = ["auto", "manager", "lead"];
@@ -32,7 +34,20 @@ pub struct Task {
     #[serde(default, skip_serializing_if = "Option::is_none")] worktree: Option<crate::worker_worktree::Worktree>,
     /// A restart cut this work short, or kept its result from the coordinator, which has not been told yet.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")] restart_note: bool,
+    /// Work handed to a helper on another computer: the window that controls it and the task's id over there.
+    #[serde(default, skip_serializing_if = "Option::is_none")] remote: Option<RemoteRef>,
 }
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteRef { window: String, computer: String, task_id: Option<String>,
+    /// The worker's tab over there, so its card can open it in that computer's window.
+    #[serde(default, skip_serializing_if = "Option::is_none")] session_id: Option<String> }
+/// What a window controlling another computer reports: that computer's name and the helpers it offers.
+#[derive(Clone)]
+struct RemoteHelpers { computer: String, agents: Vec<String>, projects: Vec<Value> }
+/// A paired device delegating work to this computer. It has no tab here, so it is known by a token of its own.
+const DEVICE: &str = "device:";
+fn device_token(device: &str) -> String { format!("{DEVICE}{}", &device[..device.len().min(32)]) }
 #[derive(Clone, Serialize, Deserialize)]
 struct Dispatch { ids: Vec<String>, source_turn: String, fingerprint: String }
 /// A finished turn waiting for the worker's background work. Jobs and sub-agents outlive their turn and wake the
@@ -88,6 +103,10 @@ struct State {
     workers: HashMap<String, String>, pending: HashMap<String, Pending>, runs: HashMap<String, WorkerRun>, app: Option<AppHandle>, port: Option<u16>,
     /// Conversations the user stopped. A stop can replace the process, which drops its `Parent`.
     stopped: HashSet<String>,
+    /// Helpers on other computers, by the label of the window that controls each one.
+    helpers: HashMap<String, RemoteHelpers>,
+    /// Paired devices that delegated work here (their tokens).
+    devices: HashSet<String>,
 }
 struct Hub { state: Mutex<State>, changed: Condvar }
 static HUB: OnceLock<Hub> = OnceLock::new();
@@ -110,7 +129,7 @@ fn hub() -> &'static Hub {
         if !snapshot.enabled { snapshot.agents.clear(); }
         if snapshot.mode.is_empty() { snapshot.mode = default_mode(); }
         recover(&mut snapshot);
-        Hub { state: Mutex::new(State { snapshot, live: HashMap::new(), parents: HashMap::new(), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }), changed: Condvar::new() }
+        Hub { state: Mutex::new(State { snapshot, live: HashMap::new(), parents: HashMap::new(), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new(), helpers: HashMap::new(), devices: HashSet::new() }), changed: Condvar::new() }
     })
 }
 /// After a restart no worker tab survives: running work stopped mid-task, and results not yet delivered would be lost.
@@ -172,7 +191,10 @@ fn refuse_worker(snapshot: &Snapshot, parent_id: &str, tool: &str) -> Result<(),
 fn current_snapshot(state: &State) -> Snapshot {
     let mut snapshot = state.snapshot.clone();
     snapshot.coordinators = state.parents.iter().filter(|(token, owner)| owner.connected && owner.agents.len() == state.snapshot.agents.len() && owner.agents.iter().all(|agent| state.snapshot.agents.contains(agent)) && parent(state, token).is_ok()).map(|(_, owner)| owner.id.clone()).collect();
-    snapshot.coordinators.sort(); snapshot.coordinators.dedup(); snapshot
+    snapshot.coordinators.sort(); snapshot.coordinators.dedup();
+    let mut remote: Vec<Value> = state.helpers.iter().map(|(window, helpers)| json!({"window":window,"computer":helpers.computer,"agents":helpers.agents,"projects":helpers.projects})).collect();
+    remote.sort_by(|a, b| a["computer"].as_str().cmp(&b["computer"].as_str()));
+    snapshot.remote = remote; snapshot
 }
 fn publish(state: &mut State) {
     state.snapshot.revision += 1;
@@ -269,7 +291,7 @@ fn orchestration_close_group_blocking(id: String, keep_children: bool) -> Result
 fn revoke_group(state: &mut State, id: &str, keep_children: bool) {
     state.parents.retain(|_, parent| parent.id != id);
     let tokens: Vec<_> = state.parents.keys().cloned().collect();
-    state.pending.retain(|_, pending| tokens.contains(&pending.token));
+    state.pending.retain(|_, pending| pending.token.starts_with(DEVICE) || tokens.contains(&pending.token));
     if !keep_children {
         let children: Vec<_> = state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == id).map(|task| task.session_id.clone()).collect();
         state.runs.retain(|child, _| !children.contains(child));
@@ -316,7 +338,8 @@ pub async fn orchestration_set_pick(session_id: String, tools: Vec<String>) -> R
 fn orchestration_set_pick_blocking(session_id: String, mut tools: Vec<String>) -> Result<Snapshot, String> {
     if session_id.is_empty() || session_id.len() > 128 { return Err("Invalid session".into()); }
     let supported = supported_agents();
-    if tools.iter().any(|tool| !supported.contains(tool)) { return Err("Agent does not support orchestration yet".into()); }
+    // `tool@computer` names a helper on another computer; its tool must be one coordination supports.
+    if tools.iter().any(|tool| !supported.contains(&tool.split('@').next().unwrap_or("").to_string()) || tool.len() > 160) { return Err("Agent does not support orchestration yet".into()); }
     tools.sort(); tools.dedup();
     let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
     let mut next = state.snapshot.clone();
@@ -355,10 +378,12 @@ fn sync_live(state: &mut State, sessions: Vec<LiveSession>) -> bool {
         } else { !parent.seen }
     });
     let tokens = state.parents.keys().cloned().collect::<Vec<_>>();
-    state.pending.retain(|_, pending| state_enabled && tokens.contains(&pending.token) && pending.deadline > Instant::now() && pending.worker.as_ref().is_none_or(|tool| agents.contains(tool)));
+    state.pending.retain(|_, pending| pending.deadline > Instant::now() && (pending.token.starts_with(DEVICE) || state_enabled && tokens.contains(&pending.token) && pending.worker.as_ref().is_none_or(|tool| agents.contains(tool))));
     let pending_children: Vec<String> = state.pending.values().map(|pending| pending.parent.clone()).collect();
     let mut changed = false;
     for task in &mut state.snapshot.tasks {
+        // Work on another computer is followed through its window (`orchestration_remote_update`), not this computer's tabs.
+        if task.remote.is_some() { continue; }
         if !task.hidden && !active(task) && !live.contains_key(&task.session_id) {
             if let Some(session) = live.values().find(|session| session.tool == task.tool && session.native_id.is_some() && session.native_id == task.native_id) {
                 task.session_id = session.id.clone(); task.generation = session.generation.clone(); changed = true;
@@ -434,7 +459,8 @@ fn orchestration_pending_blocking(request_id: String) -> bool {
     state.pending.get(&request_id).is_some_and(|pending| pending_allowed(&state, pending))
 }
 fn pending_allowed(state: &State, pending: &Pending) -> bool {
-    pending.deadline > Instant::now() && parent(state, &pending.token).is_ok() && pending.worker.as_ref().is_none_or(|tool| state.snapshot.agents.contains(tool))
+    let device = pending.token.starts_with(DEVICE);
+    pending.deadline > Instant::now() && owner_id(state, &pending.token).is_ok() && (device || pending.worker.as_ref().is_none_or(|tool| state.snapshot.agents.contains(tool)))
         && pending.session_id.as_ref().is_none_or(|id| state.snapshot.tasks.iter().any(|task| task.session_id == *id && task.parent_id == pending.parent && !task.hidden && !task.detached))
 }
 #[tauri::command]
@@ -512,7 +538,7 @@ fn coordinator_prompt(agents: &[String], desktop: bool, mode: &str) -> String {
     };
     let collect = if desktop { "Worker replies and questions arrive by themselves as a message once you are idle: when nothing else needs you, end your turn instead of waiting, and answer questions using worker_reply. Use worker_list only to inspect state." }
         else { "Worker replies are not delivered to this session: use worker_wait/worker_list to collect replies and questions, and answer using worker_reply." };
-    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. {role} The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. Give clear goals and file ownership to avoid overlapping edits. In a git repository, pass isolation \"worktree\" when workers would edit the same files or a change should stay reviewable on its own: the worker then commits on its own branch in its own worktree, cut from the current HEAD commit, so it does not see uncommitted changes. Review that branch and merge it into the main checkout yourself; removing the worker later deletes its worktree and branch only when git finds nothing unmerged or uncommitted. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
+    format!("Coffee multi-agent orchestration is enabled. Available assistants: {}. {role} The user does not need to choose an executor or explicitly request delegation. Use coffee-team worker_start for useful, bounded tasks within the authorized project; each worker opens a visible child tab. A helper named tool@computer runs on that other computer (for example another operating system, or tools and sign-ins this computer lacks): it starts there as a visible tab and reports back here like any worker. Without remoteFolder it works in the project with this conversation's repository over there (worker_list shows each computer's projects). Give clear goals and file ownership to avoid overlapping edits. In a git repository, pass isolation \"worktree\" when workers would edit the same files or a change should stay reviewable on its own: the worker then commits on its own branch in its own worktree, cut from the current HEAD commit, so it does not see uncommitted changes. Review that branch and merge it into the main checkout yourself; removing the worker later deletes its worktree and branch only when git finds nothing unmerged or uncommitted. Workers must not delegate further. {collect} Reuse a stable operationId when retrying worker_start. Idle output is not task completion. Independently check worker results and summarize the overall outcome for the user; a worker report alone is not verification. Do not bypass user permission prompts or expand the user's authorized scope. On uncertain start/send, inspect worker_list rather than retrying automatically. Keep completed tabs available for the user. worker_list also returns the currently allowed assistants.", agents.join(", "))
 }
 
 fn worker_session(snapshot: &Snapshot, id: &str) -> bool { snapshot.tasks.iter().any(|task| task.session_id == id && !task.detached) }
@@ -522,6 +548,37 @@ fn parent(state: &State, token: &str) -> Result<Parent, String> {
     let live = state.live.get(&parent.id).filter(|session| session.tool == parent.tool && session.ready && same_directory(&session.cwd, &parent.cwd) && (parent.native_id.is_none() || session.native_id == parent.native_id)).ok_or("Coordinator session is not ready or has closed")?;
     if parent.generation.is_some() && parent.generation != live.generation { return Err("Coordinator session restarted".into()); }
     Ok(parent.clone())
+}
+/// The coordinator a token belongs to: a conversation here, or a paired device that delegated work to this computer.
+fn owner_id(state: &State, token: &str) -> Result<String, String> {
+    if token.starts_with(DEVICE) { return if state.devices.contains(token) { Ok(token.into()) } else { Err("Device not connected".into()) }; }
+    parent(state, token).map(|parent| parent.id)
+}
+/// Helpers on other computers this coordinator may use: `tool@computer`, offered only to an Agent app the user lets
+/// operate remote windows.
+fn remote_helpers(state: &State, parent_id: &str) -> Vec<String> {
+    let Some(owner) = state.parents.values().find(|owner| owner.id == parent_id) else { return vec![] };
+    if !crate::window_control::enabled_for(&owner.tool) { return vec![]; }
+    let mut names: Vec<String> = state.helpers.values().flat_map(|helpers| helpers.agents.iter().map(move |tool| format!("{tool}@{}", helpers.computer))).collect();
+    names.sort(); names.dedup(); names
+}
+/// The other computers this coordinator may hand work to, with their helpers and the project folders seen there,
+/// so it can name `remoteFolder`.
+fn computers(state: &State, parent_id: &str) -> Vec<Value> {
+    if remote_helpers(state, parent_id).is_empty() { return vec![]; }
+    state.helpers.values().map(|helpers| json!({"computer":helpers.computer,"helpers":helpers.agents,"projects":helpers.projects})).collect()
+}
+/// Every helper this coordinator may start, here and on other computers, narrowed to the conversation's pick when it
+/// still names one.
+fn available(state: &State, parent_id: &str) -> Vec<String> {
+    let remote = remote_helpers(state, parent_id);
+    let pick = state.snapshot.picks.get(parent_id);
+    let picked: Vec<String> = remote.iter().filter(|name| pick.is_some_and(|pick| pick.contains(name))).cloned().collect();
+    let local = allowed_agents(&state.snapshot, parent_id);
+    // A pick naming only remote helpers narrows to them; otherwise the local pick (or every local helper) stays.
+    let local_picked = pick.is_some_and(|pick| state.snapshot.agents.iter().any(|agent| pick.contains(agent)));
+    if !picked.is_empty() && !local_picked { return picked; }
+    local.into_iter().chain(if picked.is_empty() { remote } else { picked }).collect()
 }
 fn task_for(state: &State, parent_id: &str, task_id: &str) -> Result<Task, String> {
     state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden && task.parent_id == parent_id).cloned().ok_or("Task does not belong to this coordinator".into())
@@ -821,13 +878,13 @@ fn request_gui(token: &str, name: &str, arguments: Value, child_id: Option<&str>
     let id = uuid::Uuid::new_v4().to_string(); let (sender, receiver) = mpsc::channel();
     {
         let mut state = hub().state.lock().unwrap();
-        let owner = parent(&state, token)?;
+        let parent_id = &owner_id(&state, token)?;
+        let device = token.starts_with(DEVICE);
         let worker = if name == "team_worker_start" { Some(text(&arguments, "tool", 32)?) } else { None };
-        if let Some(tool) = &worker { refuse_worker(&state.snapshot, &owner.id, tool)?; }
-        let parent_id = &owner.id;
+        if let (Some(tool), false) = (&worker, device) { refuse_worker(&state.snapshot, parent_id, tool)?; }
         let app = state.app.clone().ok_or("Coffee window unavailable")?;
         state.pending.insert(id.clone(), Pending { parent: parent_id.into(), token: token.into(), worker, session_id: child_id.map(str::to_owned), deadline: Instant::now() + Duration::from_secs(80), sender });
-        if app.emit_to("main", "orchestration-request", json!({"requestId":id,"name":name,"arguments":arguments,"parentId":parent_id,"sessionId":child_id,"background":true})).is_err() {
+        if app.emit_to("main", "orchestration-request", json!({"requestId":id,"name":name,"arguments":arguments,"parentId":parent_id,"sessionId":child_id,"background":true,"device":device})).is_err() {
             state.pending.remove(&id); return Err("Coffee window unavailable".into());
         }
     }
@@ -854,7 +911,9 @@ fn worker_instructions(task: &Task, prompt: &str, command: &str) -> String {
 
 fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
     parent(&hub().state.lock().unwrap(), token)?;
-    let tool = text(args, "tool", 32)?;
+    let tool = text(args, "tool", 160)?;
+    if tool.contains('@') { return start_remote_worker(token, &tool, args); }
+    if tool.len() > 32 { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
     if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
     if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err("The requested tool is not installed".into()); }
     let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
@@ -893,6 +952,159 @@ fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
     save(&state.snapshot)?; publish(&mut state);
     Ok(json!({"task":task_for(&state, &task.parent_id, &task.id)?,"delivery":result.ok(),"note":"A created tab is not proof of task success. Read its state; do not repeat a start after uncertain delivery."}))
 }
+/// A helper on another computer (`tool@computer`): the task is recorded here and started over there by that computer's
+/// own coordination, through the window that controls it; its progress comes back as `orchestration_remote_update`.
+fn start_remote_worker(token: &str, helper: &str, args: &Value) -> Result<Value, String> {
+    let (tool, computer) = helper.split_once('@').ok_or("Name a helper as tool@computer")?;
+    let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
+    let operation = args.get("operationId").map(|value| value.as_str().filter(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))).ok_or("Invalid operationId")).transpose()?;
+    if args.get("isolation").and_then(Value::as_str) == Some("worktree") { return Err("A helper on another computer works in that computer's folder; isolation is not available there yet".into()); }
+    let cwd = args.get("remoteFolder").and_then(Value::as_str).filter(|cwd| !cwd.trim().is_empty() && cwd.len() <= 4096).map(str::to_owned);
+    let (task, app, window, parent_cwd) = {
+        let mut state = hub().state.lock().unwrap(); let parent = parent(&state, token)?;
+        let parent_cwd = parent.cwd.clone();
+        if parent.paused { return Err("Coordinator was stopped; wait for new user input".into()); }
+        if !available(&state, &parent.id).iter().any(|name| name == helper) {
+            return Err(format!("{helper} is not available. Helpers you may use: {}. A computer's helpers appear while its window is open and Remote Control is on for this Agent app.", available(&state, &parent.id).join(", ")));
+        }
+        if let Some(index) = duplicate_dispatch(&state.snapshot, &parent, helper, &prompt, operation)? {
+            return Ok(json!({"task":state.snapshot.tasks[index],"reused":true,"note":"Existing dispatch retained. Do not send the task again."}));
+        }
+        let window = state.helpers.iter().find(|(_, helpers)| helpers.computer == computer && helpers.agents.iter().any(|agent| agent == tool)).map(|(label, _)| label.clone()).ok_or("That computer's window is not open")?;
+        if state.snapshot.tasks.iter().filter(|task| !task.detached && task.parent_id == parent.id && active(task)).count() >= 6 { return Err("This coordinator already has six active workers".into()); }
+        if state.snapshot.tasks.len() >= 200 {
+            let index = state.snapshot.tasks.iter().position(|task| !active(task)).ok_or("Task history is full")?;
+            let removed = state.snapshot.tasks.remove(index); state.runs.remove(&removed.session_id);
+        }
+        let dispatch = Dispatch { ids: operation.into_iter().map(str::to_owned).collect(), source_turn: parent.turn.clone(), fingerprint: fingerprint(helper, &prompt) };
+        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: uuid::Uuid::new_v4().to_string(), native_id: None, tool: helper.into(), title: title.clone(), cwd: cwd.clone().unwrap_or_default(), phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false, remote: Some(RemoteRef { window: window.clone(), computer: computer.into(), task_id: None, session_id: None }) };
+        state.snapshot.tasks.push(task.clone()); save(&state.snapshot)?; publish(&mut state);
+        (task, state.app.clone().ok_or("Coffee window unavailable")?, window, parent_cwd)
+    };
+    // With no folder named, the other computer picks the project with the same repository as this conversation's.
+    let repo = if cwd.is_none() { crate::git_project_status::repo_key(&parent_cwd) } else { None };
+    let result = crate::window_control::ask_window(&app, &window, "team_delegate", json!({"tool":tool,"title":title,"prompt":prompt,"cwd":cwd,"repo":repo}));
+    let mut state = hub().state.lock().unwrap();
+    if let Some(record) = state.snapshot.tasks.iter_mut().find(|record| record.id == task.id) {
+        match &result {
+            Ok(value) => {
+                if let Some(remote) = record.remote.as_mut() { remote.task_id = value["task"]["id"].as_str().map(str::to_owned); remote.session_id = value["task"]["sessionId"].as_str().map(str::to_owned); }
+                if let Some(cwd) = value["task"]["cwd"].as_str() { record.cwd = cwd.into(); }
+                if record.phase == "starting" { record.phase = "running".into(); }
+            }
+            Err(error) => { record.phase = "uncertain".into(); record.summary = Some(error.clone()); }
+        }
+    }
+    save(&state.snapshot)?; publish(&mut state);
+    let task = task_for(&state, &task.parent_id, &task.id)?;
+    Ok(json!({"task":task,"computer":computer,"delivery":result.is_ok(),"note":"The task runs on the other computer; its reply arrives here like any worker's. A created tab is not proof of task success; do not repeat a start after uncertain delivery."}))
+}
+
+/// Work a paired device delegates to this computer: it opens as a visible worker tab here, reports to this computer's
+/// coordination, and the device follows it through `device_call`. Called by the pairing connection (src/mobile_rpc)
+/// with the device it authenticated.
+pub fn device_delegate(device: &str, args: &Value) -> Result<Value, String> {
+    let token = device_token(device);
+    let tool = text(args, "tool", 32)?;
+    if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
+    if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err(format!("{tool} is not installed on this computer")); }
+    let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
+    let cwd = text(args, "cwd", 4096).map_err(|_| "Say which folder on this computer to work in".to_string())?;
+    crate::session_directory::validate(Path::new(&cwd))?;
+    let worker_token = uuid::Uuid::new_v4().to_string();
+    let (task, port) = {
+        let mut state = hub().state.lock().unwrap();
+        state.devices.insert(token.clone());
+        if state.snapshot.tasks.iter().filter(|task| task.parent_id == token && active(task)).count() >= 6 { return Err("This device already has six active tasks here".into()); }
+        if state.snapshot.tasks.len() >= 200 {
+            let index = state.snapshot.tasks.iter().position(|task| !active(task)).ok_or("Task history is full")?;
+            let removed = state.snapshot.tasks.remove(index); state.workers.retain(|_, id| *id != removed.id); state.runs.remove(&removed.session_id);
+        }
+        let port = state.port.ok_or("Coordinator not running")?;
+        let dispatch = Dispatch { ids: vec![], source_turn: String::new(), fingerprint: fingerprint(&tool, &prompt) };
+        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: token.clone(), parent_native_id: None, parent_tool: "device".into(), session_id: uuid::Uuid::new_v4().to_string(), native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false, remote: None };
+        state.snapshot.tasks.push(task.clone()); save(&state.snapshot)?;
+        state.workers.insert(worker_token.clone(), task.id.clone()); publish(&mut state);
+        (task, port)
+    };
+    let command = worker_command(port, &worker_token)?;
+    let instructions = worker_instructions(&task, &prompt, &command);
+    hub().state.lock().unwrap().runs.insert(task.session_id.clone(), WorkerRun::new(&instructions));
+    let result = request_gui(&token, "team_worker_start", json!({"tool":task.tool,"cwd":task.cwd,"text":instructions,"title":task.title}), Some(&task.session_id));
+    let mut state = hub().state.lock().unwrap();
+    if let Some(record) = state.snapshot.tasks.iter_mut().find(|record| record.id == task.id) {
+        if record.phase == "starting" {
+            match &result { Ok(_) => record.phase = "running".into(), Err(error) => { record.phase = "uncertain".into(); record.summary = Some(error.clone()); } }
+        }
+    }
+    save(&state.snapshot)?; publish(&mut state);
+    Ok(json!({"task":task_for(&state, &token, &task.id)?,"parentId":token}))
+}
+
+/// A paired device reading, steering, answering or stopping the work it delegated here, and listing it.
+pub fn device_call(device: &str, action: &str, args: &Value) -> Result<Value, String> {
+    let token = device_token(device);
+    hub().state.lock().unwrap().devices.insert(token.clone());
+    let action = match action { "list" => "worker_list", "read" => "worker_read", "send" => "worker_send", "reply" => "worker_reply", "interrupt" => "worker_interrupt", _ => return Err("Unknown operation".into()) };
+    parent_call(&token, action, args)
+}
+
+/// A window controlling another computer reports that computer's helpers and the work this computer delegated there.
+#[tauri::command]
+pub async fn orchestration_remote_update(window: tauri::WebviewWindow, computer: String, agents: Vec<String>, tasks: Vec<Value>, projects: Option<Vec<Value>>) -> Result<(), String> {
+    let label = window.label().to_string();
+    if !label.starts_with(crate::remote_window::LABEL_PREFIX) { return Err("only a window controlling another computer reports remote work".into()); }
+    tauri::async_runtime::spawn_blocking(move || remote_update(&label, &computer, agents, &tasks, projects.unwrap_or_default())).await.map_err(|e| e.to_string())?
+}
+fn remote_update(label: &str, computer: &str, agents: Vec<String>, tasks: &[Value], projects: Vec<Value>) -> Result<(), String> {
+    let computer: String = computer.chars().filter(|c| *c != '@' && !c.is_control()).take(80).collect();
+    let agents: Vec<String> = agents.into_iter().filter(|agent| supported_agents().contains(agent)).collect();
+    let mut state = hub().state.lock().unwrap();
+    // Only a folder path and its repository key, at most 40 of them.
+    let projects: Vec<Value> = projects.into_iter().filter_map(|project| Some(json!({"path":project["path"].as_str().filter(|path| path.len() <= 4096)?,"repo":project["repo"].as_str()}))).take(40).collect();
+    let mut changed = state.helpers.get(label).is_none_or(|known| known.computer != computer || known.agents != agents || known.projects != projects);
+    // A computer's window may come back under a new label: the work over there is the same.
+    state.helpers.retain(|other, helpers| other == label || helpers.computer != computer);
+    state.helpers.insert(label.into(), RemoteHelpers { computer: computer.clone(), agents, projects });
+    changed |= apply_remote(&mut state.snapshot, label, &computer, tasks);
+    if changed { save(&state.snapshot)?; publish(&mut state); }
+    Ok(())
+}
+/// Brings this computer's records of remote work up to date with what the other computer reports.
+fn apply_remote(snapshot: &mut Snapshot, label: &str, computer: &str, tasks: &[Value]) -> bool {
+    let mut changed = false;
+    for task in snapshot.tasks.iter_mut().filter(|task| task.remote.as_ref().is_some_and(|remote| remote.computer == computer)) {
+        let Some(id) = task.remote.as_ref().and_then(|remote| remote.task_id.clone()) else { continue };
+        let Some(report) = tasks.iter().find(|report| report["id"].as_str() == Some(id.as_str())) else { continue };
+        if let Some(remote) = task.remote.as_mut() {
+            let session = report["sessionId"].as_str().map(str::to_owned);
+            if remote.window != label || session.is_some() && remote.session_id != session { remote.window = label.into(); remote.session_id = session.or(remote.session_id.take()); changed = true; }
+        }
+        let was_active = active(task);
+        if let Some(phase) = report["phase"].as_str().filter(|phase| *phase != task.phase && (was_active || *phase == "running")) {
+            task.phase = phase.into(); changed = true;
+            if was_active && !active(task) {
+                task.summary = report["summary"].as_str().map(str::to_owned); task.question = None; task.result_delivery = Some("pending".into());
+            }
+        }
+        let activity = report["activity"].as_str().map(str::to_owned);
+        if activity != task.activity { task.activity = activity; changed = true; }
+        let question = report["question"].as_object().and_then(|question| Some(Question { id: question.get("id")?.as_str()?.into(), text: question.get("text")?.as_str()?.into(), answer: question.get("answer").and_then(Value::as_str).map(str::to_owned) }));
+        let asked = question.as_ref().is_some_and(|question| question.answer.is_none() && task.question.as_ref().is_none_or(|known| known.id != question.id));
+        if asked { task.question = question; task.result_delivery = Some("pending".into()); changed = true; }
+    }
+    changed
+}
+/// The window controlling another computer closed: its helpers go, and work over there shows as out of reach.
+pub fn remote_window_gone(label: &str) {
+    let mut state = hub().state.lock().unwrap();
+    let mut changed = state.helpers.remove(label).is_some();
+    for task in state.snapshot.tasks.iter_mut().filter(|task| active(task) && task.remote.as_ref().is_some_and(|remote| remote.window == label)) {
+        if task.activity.as_deref() != Some("disconnected") { task.activity = Some("disconnected".into()); changed = true; }
+    }
+    if changed { let _ = save(&state.snapshot); publish(&mut state); }
+}
+
 enum Admission { Reused(Value), Worktree(String), Started(Box<Task>, u16) }
 /// Admits a new worker, or returns the dispatch it repeats. An isolated start first asks for its worktree.
 #[allow(clippy::too_many_arguments)]
@@ -927,7 +1139,7 @@ fn admit_worker(token: &str, tool: &str, title: &str, prompt: &str, operation: O
         if state.snapshot.tasks.len() >= 200 && !state.snapshot.tasks.iter().any(|task| !active(task)) { return Err("Task history is full".into()); }
         let (worktree, cwd) = match created.take() { Some((worktree, cwd)) => (Some(worktree), cwd), None => (None, parent.cwd) };
         let dispatch = Dispatch { ids: operation.into_iter().map(str::to_owned).collect(), source_turn: parent.turn, fingerprint: fingerprint(&tool, &prompt) };
-        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree, restart_note: false };
+        let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: parent.id, parent_native_id: parent.native_id, parent_tool: parent.tool, session_id: child_id, native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree, restart_note: false, remote: None };
         if state.snapshot.tasks.len() >= 200 {
             let index = state.snapshot.tasks.iter().position(|task| !active(task)).expect("checked above");
             let removed = state.snapshot.tasks.remove(index);
@@ -948,10 +1160,10 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
         let owner = state.parents.get_mut(token).ok_or("Coordinator session expired")?;
         let changed = !owner.connected; owner.connected = true; let owner_id = owner.id.clone();
         if changed { publish(&mut state); }
-        return Ok(json!({"agents":allowed_agents(&state.snapshot, &owner_id)}));
+        return Ok(json!({"agents":available(&state, &owner_id)}));
     }
     if action == "worker_start" { return start_worker(token, args); }
-    let mut state = hub().state.lock().unwrap(); let owner = parent(&state, token)?;
+    let mut state = hub().state.lock().unwrap(); let owner = owner_id(&state, token)?;
     if matches!(action, "worker_list" | "worker_wait") {
         if action == "worker_wait" {
             let revision = args["revision"].as_u64().unwrap_or(state.snapshot.revision);
@@ -960,17 +1172,40 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
             while state.snapshot.revision <= revision && Instant::now() < deadline {
                 let remaining = deadline.saturating_duration_since(Instant::now());
                 state = hub().changed.wait_timeout(state, remaining).map_err(|_| "Coordinator unavailable")?.0;
-                parent(&state, token)?;
+                owner_id(&state, token)?;
             }
         }
         let mut read = false;
-        for task in state.snapshot.tasks.iter_mut().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id && task.result_delivery.as_deref() == Some("pending")) {
+        for task in state.snapshot.tasks.iter_mut().filter(|task| !task.detached && !task.hidden && task.parent_id == owner && task.result_delivery.as_deref() == Some("pending")) {
             task.result_delivery = Some("read".into()); read = true;
         }
         if read { save(&state.snapshot)?; publish(&mut state); }
-        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":allowed_agents(&state.snapshot, &owner.id),"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner.id).collect::<Vec<_>>()}));
+        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":available(&state, &owner),"parentId":owner,"computers":computers(&state, &owner),"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner).collect::<Vec<_>>()}));
     }
-    let task_id = text(args, "taskId", 80)?; let task = task_for(&state, &owner.id, &task_id)?;
+    let task_id = text(args, "taskId", 80)?; let task = task_for(&state, &owner, &task_id)?;
+    // Work on another computer: the same operations, carried out over there through its window.
+    if let Some(remote) = task.remote.clone() {
+        if !matches!(action, "worker_read" | "worker_interrupt" | "worker_send" | "worker_reply") { return Err("Unknown coordination tool".into()); }
+        if action == "worker_reply" {
+            let mut next = state.snapshot.clone();
+            answer_question(&mut next, &task_id, args)?;
+            save(&next)?; state.snapshot = next; publish(&mut state);
+        }
+        let app = state.app.clone().ok_or("Coffee window unavailable")?;
+        drop(state);
+        let remote_id = remote.task_id.ok_or("The other computer has not confirmed this task yet; read it again shortly")?;
+        let mut forwarded = json!({"action":action,"taskId":remote_id});
+        for key in ["text", "questionId", "answer"] { if let Some(value) = args.get(key) { forwarded[key] = value.clone(); } }
+        let result = crate::window_control::ask_window(&app, &remote.window, "team_call", forwarded)?;
+        if matches!(action, "worker_interrupt" | "worker_send") {
+            let mut state = hub().state.lock().unwrap();
+            if let Some(task) = state.snapshot.tasks.iter_mut().find(|task| task.id == task_id && active(task)) {
+                task.phase = if action == "worker_interrupt" { "interrupted" } else { "running" }.into(); task.summary = None;
+            }
+            save(&state.snapshot)?; publish(&mut state);
+        }
+        return Ok(json!({"computer":remote.computer,"result":result}));
+    }
     if action == "worker_reply" {
         let mut next = state.snapshot.clone();
         answer_question(&mut next, &task_id, args)?;
@@ -1046,7 +1281,9 @@ fn worker_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
     }
     if task.detached { return Err("The coordinator has closed. Continue in this independent session.".into()); }
     if !matches!(action, "ask" | "answer") { return Err("Unknown worker operation".into()); }
-    if !state.snapshot.enabled { return Err("Coordination has been disabled".into()); }
+    // Work a paired device delegated runs whether or not this computer's own coordination is on.
+    let device = task.parent_id.starts_with(DEVICE);
+    if !device && !state.snapshot.enabled { return Err("Coordination has been disabled".into()); }
     let question_id = if action == "ask" {
         let question = text(args, "question", 8000)?;
         let task = state.snapshot.tasks.iter_mut().find(|task| task.id == id).unwrap();
@@ -1059,7 +1296,7 @@ fn worker_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         let task = state.snapshot.tasks.iter().find(|task| task.id == id).ok_or("Task not found")?;
-        if !active(task) || task.detached || !state.snapshot.enabled { return Err("Task or coordinator has stopped".into()); }
+        if !active(task) || task.detached || !device && !state.snapshot.enabled { return Err("Task or coordinator has stopped".into()); }
         let question = task.question.as_ref().filter(|question| question.id == question_id).ok_or("Question no longer exists")?;
         if let Some(answer) = &question.answer { return Ok(json!({"questionId":question_id,"answer":answer})); }
         if Instant::now() >= deadline { return Ok(json!({"questionId":question_id,"pending":true,"note":"Use the answer command with this question ID; do not create a duplicate question."})); }
@@ -1091,7 +1328,7 @@ fn client(port: u16, token: &str, action: &str, arguments: Value, worker: bool) 
 fn definitions(agents: &Value) -> Value {
     let string = json!({"type":"string"});
     let tools = [
-        ("worker_start", "Delegate bounded authorized work in a visible child tab. Supply a stable operationId and reuse it on retry; repeated identical active work in the same turn reuses its existing task. Changed input needs a new ID. Inspect worker_list after uncertain delivery.", json!({"tool":{"type":"string","enum":agents},"title":string,"prompt":string,"operationId":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9._-]+$"},"isolation":{"type":"string","enum":["shared","worktree"],"description":"shared (default): the coordinator's checkout. worktree: the worker's own git worktree and branch from HEAD; merge it yourself after review."}}), vec!["tool","title","prompt"]),
+        ("worker_start", "Delegate bounded authorized work in a visible child tab. Supply a stable operationId and reuse it on retry; repeated identical active work in the same turn reuses its existing task. Changed input needs a new ID. Inspect worker_list after uncertain delivery.", json!({"tool":{"type":"string","enum":agents},"title":string,"prompt":string,"operationId":{"type":"string","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9._-]+$"},"isolation":{"type":"string","enum":["shared","worktree"],"description":"shared (default): the coordinator's checkout. worktree: the worker's own git worktree and branch from HEAD; merge it yourself after review."},"remoteFolder":{"type":"string","description":"Only for a helper on another computer (tool@computer): the folder over there. Omit it to use the folder of that computer's current tab. Local workers always use your own folder."}}), vec!["tool","title","prompt"]),
         ("worker_list", "Read only this coordinator's tasks, reports and questions. A completed phase is the worker's report; inspect results before claiming success.", json!({}), vec![]),
         ("worker_wait", "Wait for task or question changes. Use the revision from worker_list or the last wait. No polling loop is needed inside workers.", json!({"revision":{"type":"integer"},"timeoutMs":{"type":"integer","maximum":30000}}), vec![]),
         ("worker_read", "Read the existing worker session. Does not resume or replace closed sessions.", json!({"taskId":string}), vec!["taskId"]),
@@ -1625,8 +1862,8 @@ mod tests {
         assert!(MANAGER_DISALLOWED.starts_with("--disallowedTools=") && !MANAGER_DISALLOWED.contains(' '), "one argument, so the variadic flag cannot swallow later ones");
     }
     fn fixture() -> State {
-        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false };
-        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![], picks: HashMap::new() }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new() }
+        let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false, remote: None };
+        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![], picks: HashMap::new(), remote: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new(), helpers: HashMap::new(), devices: HashSet::new() }
     }
     #[test]
     fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
@@ -1900,4 +2137,50 @@ mod tests {
         assert!(refuse_worker(&snapshot, "parent", "codex").unwrap_err().contains("disabled"));
     }
 
+
+    #[test]
+    fn remote_helpers_follow_their_window_and_the_pick() {
+        let mut state = fixture();
+        state.helpers.insert("remote-a".into(), RemoteHelpers { computer: "Studio".into(), agents: vec!["codex".into()], projects: vec![] });
+        // Only an Agent app allowed to operate remote windows sees them; the fixture coordinator is Claude.
+        let remote = crate::window_control::enabled_for("claude");
+        assert_eq!(available(&state, "parent").contains(&"codex@Studio".to_string()), remote);
+        state.snapshot.picks.insert("parent".into(), vec!["codex@Studio".into()]);
+        if remote { assert_eq!(available(&state, "parent"), vec!["codex@Studio".to_string()]); }
+        // A device is known only once it has delegated work here.
+        assert!(owner_id(&state, &device_token("abc")).is_err());
+        state.devices.insert(device_token("abc"));
+        assert_eq!(owner_id(&state, &device_token("abc")).unwrap(), device_token("abc"));
+    }
+
+    #[test]
+    fn remote_reports_settle_the_local_record_and_deliver_once() {
+        let mut state = fixture();
+        let task = &mut state.snapshot.tasks[0];
+        task.tool = "codex@Studio".into(); task.remote = Some(RemoteRef { window: "remote-a".into(), computer: "Studio".into(), task_id: Some("far".into()), session_id: None });
+        let report = |phase: &str| vec![json!({"id":"far","phase":phase,"summary":"done there","activity":"idle"})];
+        assert!(apply_remote(&mut state.snapshot, "remote-b", "Elsewhere", &report("completed")) == false, "another computer's report is ignored");
+        // The same computer back under a new window label still reaches its work.
+        assert!(apply_remote(&mut state.snapshot, "remote-c", "Studio", &json!([{"id":"far","phase":"running","sessionId":"tab-far"}]).as_array().unwrap().clone()));
+        assert_eq!(state.snapshot.tasks[0].remote.as_ref().unwrap().window, "remote-c");
+        assert_eq!(state.snapshot.tasks[0].remote.as_ref().unwrap().session_id.as_deref(), Some("tab-far"));
+        assert!(apply_remote(&mut state.snapshot, "remote-a", "Studio", &json!([{"id":"far","phase":"running","sessionId":"tab-far","question":{"id":"q1","text":"Which branch?"}}]).as_array().unwrap().clone()));
+        assert_eq!(state.snapshot.tasks[0].question.as_ref().unwrap().text, "Which branch?");
+        assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("pending"), "a question reaches the coordinator");
+        state.snapshot.tasks[0].result_delivery = Some("read".into());
+        assert!(apply_remote(&mut state.snapshot, "remote-a", "Studio", &report("completed")));
+        assert_eq!(state.snapshot.tasks[0].phase, "completed");
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("done there"));
+        assert_eq!(state.snapshot.tasks[0].result_delivery.as_deref(), Some("pending"));
+        state.snapshot.tasks[0].result_delivery = Some("claimed".into());
+        assert!(!apply_remote(&mut state.snapshot, "remote-a", "Studio", &report("completed")), "a settled task is not delivered twice");
+    }
+
+    #[test]
+    fn remote_work_is_not_closed_for_lacking_a_tab_here() {
+        let mut state = fixture();
+        state.snapshot.tasks[0].remote = Some(RemoteRef { window: "remote-a".into(), computer: "Studio".into(), task_id: Some("far".into()), session_id: None });
+        sync_live(&mut state, vec![]);
+        assert_eq!(state.snapshot.tasks[0].phase, "running");
+    }
 }

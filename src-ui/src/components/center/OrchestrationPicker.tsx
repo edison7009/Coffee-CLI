@@ -1,27 +1,50 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { commands } from '../../tauri';
+import { commands, type WindowControlState } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { receiveOrchestration, useOrchestration } from '../../lib/orchestration';
+import { canRequestControl, remoteHost, remoteWindowName, requestControl, type RemoteWindow } from '../../lib/remote-control';
 import './ClaudeComposerControls.css';
 
 const NAMES: Record<string, string> = { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', dsh: 'DeepSeek Harness', pi: 'Pi' };
 const name = (tool: string) => NAMES[tool] ?? tool;
+/** `codex` here, `codex@Studio` on another computer: the tool's name, and the computer for the second. */
+const helperName = (helper: string) => { const [tool, computer] = helper.split('@'); return computer ? `${name(tool)} · ${computer}` : name(tool); };
 
-/** The composer's orchestration chip: lets one conversation leave the choice of worker to the AI or narrow it to some assistants. */
-export function OrchestrationPicker({ sessionId }: { sessionId: string }) {
+const MONITOR = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="13" height="9" rx="2" /><rect x="9" y="11" width="13" height="9" rx="2" /></svg>;
+const AUTO = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg>;
+const LAPTOP = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="2" /><path d="M2 19h20" /></svg>;
+const CHECK = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>;
+
+/**
+ * The composer's one collaboration chip. A conversation hands work to helpers: a tool on this computer, or one on
+ * another computer whose window is open (`tool@computer`). Helpers come from coordination (src/orchestration.rs);
+ * the computer this conversation operates directly, when it may, from Remote Control (src/window_control.rs).
+ */
+export function CollaborationPicker({ sessionId, coordinator, remote, onRemote }: { sessionId: string; coordinator: boolean; remote?: WindowControlState; onRemote?: (state: WindowControlState) => void }) {
   const t = useT();
-  const { agents = [], picks = {} } = useOrchestration();
-  // A pick naming only assistants turned off since counts as automatic, the same as the backend.
-  const pick = (picks[sessionId] ?? []).filter(tool => agents.includes(tool));
+  const { agents = [], picks = {}, remote: computers = [] } = useOrchestration();
+  const remoteHelpers = computers.flatMap(computer => computer.agents.map(tool => `${tool}@${computer.computer}`));
+  const helpers = [...agents, ...remoteHelpers];
+  // A pick naming only helpers that are gone counts as automatic, the same as the backend.
+  const pick = (picks[sessionId] ?? []).filter(tool => helpers.includes(tool));
   const [open, setOpen] = useState(false), [pending, setPending] = useState(false);
   const [position, setPosition] = useState<CSSProperties>({});
+  // The open windows' addresses, for the line under each computer's name (src/remote_window.rs).
+  const [known, setKnown] = useState<RemoteWindow[]>([]);
   const anchor = useRef<HTMLButtonElement>(null), popup = useRef<HTMLDivElement>(null);
+  useEffect(() => { setOpen(false); }, [sessionId]);
+  useEffect(() => {
+    if (!open || !remote) return;
+    let current = true;
+    void Promise.resolve().then(() => commands.remoteWindowList()).then(list => { if (current) setKnown(list ?? []); }, () => {});
+    return () => { current = false; };
+  }, [open, remote]);
   useLayoutEffect(() => {
     if (!open) return;
     const update = () => {
       const rect = anchor.current?.getBoundingClientRect(); if (!rect) return;
-      const width = Math.min(220, window.innerWidth - 16);
+      const width = Math.min(272, window.innerWidth - 16);
       setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)), bottom: window.innerHeight - rect.top + 6, width, maxHeight: Math.max(0, rect.top - 14) });
     };
     update(); window.addEventListener('resize', update);
@@ -34,28 +57,58 @@ export function OrchestrationPicker({ sessionId }: { sessionId: string }) {
     document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', escape); };
   }, [open]);
-  useEffect(() => { setOpen(false); }, [sessionId]);
-  const save = async (tools: string[]) => {
+  const saveHelper = async (tools: string[]) => {
     setPending(true);
     try { receiveOrchestration(await commands.orchestrationSetPick(sessionId, tools)); }
-    catch (error) { console.warn('[orchestration] pick not saved:', error); }
+    catch (error) { console.warn('[collaboration] helper not saved:', error); }
     finally { setPending(false); }
   };
-  // One preferred assistant, or the AI's own choice among the enabled ones.
-  const current = pick.length === 1 ? pick[0] : null;
-  // A pick of several (saved by an earlier build) still limits the backend, so the label names them all.
-  const label = pick.length ? pick.map(name).join('、') : t('orchestration.role.auto');
-  const options: { tool: string | null; text: string }[] = [{ tool: null, text: t('orchestration.role.auto') }, ...agents.map(tool => ({ tool, text: name(tool) }))];
+  const saveWindow = async (window: string | null) => {
+    if (!onRemote) return;
+    setPending(true);
+    try { onRemote(await commands.windowControlSetPick(sessionId, window)); }
+    catch (error) {
+      console.warn('[collaboration] window not saved:', error);
+      void commands.windowControlState(sessionId).then(onRemote, () => {});
+    } finally { setPending(false); }
+  };
+
+  const helper = pick.length === 1 ? pick[0] : null;
+  const prefix = t('remote_control.window_prefix');
+  const nameOf = (window: { window: string; title: string }) => known.find(w => w.label === window.window)?.name || remoteWindowName(window.title, prefix);
+  const tied = remote?.windows.find(window => window.window === remote.pick);
+  const parts = [coordinator ? (pick.length ? pick.map(helperName).join('、') : t('ai_remote.pick.auto')) : null, tied ? nameOf(tied) : null].filter(Boolean);
+  const label = t('collab.prefix', { name: parts.join(' · ') || t('ai_remote.pick.auto') });
+  const row = (key: string, selected: boolean, icon: React.ReactNode, text: string, hint: string, onClick: () => void, online = false) =>
+    <button key={key} type="button" role="menuitemradio" aria-label={text} aria-checked={selected} disabled={pending} className={selected ? 'is-selected' : ''} onClick={() => { onClick(); setOpen(false); }}>
+      <span className="remote-pick-icon" aria-hidden="true">{icon}{online && <i />}</span>
+      <span className="remote-pick-text"><strong>{text}</strong>{hint && <small>{hint}</small>}</span>
+      {selected && <span className="remote-pick-check">{CHECK}</span>}
+    </button>;
+
   return <>
-    <button ref={anchor} type="button" className="gambit-capability is-orchestration is-picker" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(value => !value)}>
-      {t('orchestration.pick.prefix', { name: label })}
+    <button ref={anchor} type="button" className={`gambit-capability is-orchestration is-picker${remote ? ' is-remote' : ''}${tied || pick.length ? ' is-tied' : ''}`} aria-haspopup="dialog" aria-expanded={open}
+      aria-label={label} onClick={() => setOpen(value => !value)}>
+      <span className="remote-pick-name">{label}</span>
     </button>
-    {open && createPortal(<div className="claude-control-menu orchestration-pick-menu" ref={popup} role="dialog" aria-label={t('tools.tab.orchestration')} style={position} onMouseDown={e => e.stopPropagation()}>
-      {options.map(option => <button key={option.tool ?? 'auto'} type="button" role="menuitemradio" aria-checked={current === option.tool} disabled={pending} className={current === option.tool ? 'is-selected' : ''} onClick={() => { void save(option.tool ? [option.tool] : []); setOpen(false); }}>
-        <span>{option.text}</span>
-        {/* A fixed slot, so the mark appearing never shifts the row. */}
-        <span className="orchestration-pick-check" aria-hidden="true">{current === option.tool ? '✓' : ''}</span>
-      </button>)}
+    {open && createPortal(<div className="claude-control-menu remote-pick-menu" ref={popup} role="dialog" aria-label={t('collab.helpers')} style={position} onMouseDown={e => e.stopPropagation()}>
+      {coordinator && <>
+        <p className="remote-pick-title">{t('collab.helpers')}</p>
+        {row('auto', !helper, AUTO, t('ai_remote.pick.auto'), t('collab.auto_hint'), () => { void saveHelper([]); })}
+        {agents.map(tool => row(tool, helper === tool, LAPTOP, name(tool), t('collab.this_computer'), () => { void saveHelper([tool]); }))}
+        {remoteHelpers.map(tool => row(tool, helper === tool, MONITOR, name(tool.split('@')[0]), tool.split('@')[1] ?? '', () => { void saveHelper([tool]); }, true))}
+      </>}
+      {remote && <>
+        {coordinator && <div className="remote-pick-divider" aria-hidden="true" />}
+        <p className="remote-pick-title">{t('ai_remote.pick.title')}</p>
+        {row('window-auto', !tied, AUTO, t('ai_remote.pick.auto'), t('ai_remote.pick.auto_hint'), () => { void saveWindow(null); })}
+        {remote.windows.map(window => row(`window-${window.window}`, tied?.window === window.window, MONITOR, nameOf(window), remoteHost(known.find(w => w.label === window.window)?.origin ?? ''), () => { void saveWindow(window.window); }, true))}
+        {!remote.windows.length && <p className="remote-pick-empty">{t('ai_remote.pick.none')}</p>}
+      </>}
+      {canRequestControl() && <>
+        <div className="remote-pick-divider" aria-hidden="true" />
+        <button type="button" className="remote-pick-control" onClick={() => { setOpen(false); requestControl(); }}><span className="remote-pick-plus" aria-hidden="true">+</span><span>{t('sidebar.devices.control')}</span></button>
+      </>}
     </div>, document.body)}
   </>;
 }
