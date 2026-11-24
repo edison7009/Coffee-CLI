@@ -3229,7 +3229,7 @@ html.is-windows[data-frost="frost"] #root {
    texture, not dirt. */
 [data-mode="light"][data-background="basalt"] #root {
     background:
-        linear-gradient(color-mix(in srgb, var(--bg-app) 62%, transparent), color-mix(in srgb, var(--bg-app) 62%, transparent)),
+        linear-gradient(color-mix(in srgb, var(--bg-app) 40%, transparent), color-mix(in srgb, var(--bg-app) 40%, transparent)),
         url('/backgrounds/basalt-light.png') center / cover no-repeat,
         var(--bg-app);
 }
@@ -3248,7 +3248,7 @@ html.is-windows[data-frost="frost"] #root {
 }
 [data-mode="light"][data-background="basalt"] #root::before {
     filter: none;
-    opacity: var(--basalt-grain, .14);
+    opacity: var(--basalt-grain, .24);
 }
 /* Graphite on stone (the default): black basalt as on the EchoBird site, large
    stones at raised contrast under a faint diagonal sheen, no pale grain. */
@@ -3273,8 +3273,8 @@ html.is-windows[data-frost="frost"] #root {
 [data-background="basalt"][data-theme="obsidian"]:not([data-mode="light"]) #root::after {
     display: block;
     background: url('/backgrounds/basalt-dark.png') center / max(2400px, 190vw) auto no-repeat;
-    filter: invert(1) contrast(1.6);
-    opacity: var(--basalt-lift, .6);
+    filter: invert(1) contrast(1.45);
+    opacity: var(--basalt-lift, .38);
 }
 
 .character-background,
