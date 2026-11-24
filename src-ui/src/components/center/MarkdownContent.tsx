@@ -65,6 +65,9 @@ function InlineCode({ children, ...props }: ComponentProps<'code'>) {
 function MarkdownLink({ children, href, ...props }: ComponentProps<'a'>) {
   const cwd = useContext(ConversationDirectory);
   const link = conversationLink(href ?? '', cwd);
+  // A link that leads nowhere here (another app's own address, such as `#local_…` for one of its sessions) reads as
+  // its words: blue text that does nothing on a click looked broken.
+  if (!link) return <span className="md-link-inert">{children}</span>;
   return (
     <a
       href={link?.target}
@@ -75,7 +78,6 @@ function MarkdownLink({ children, href, ...props }: ComponentProps<'a'>) {
       {...props}
       onClick={(event) => {
         event.preventDefault();
-        if (!link) return;
         event.stopPropagation();
         void commands.openUrl(link.target).catch(error => {
           console.warn('[Markdown] failed to open link', link.target, error);

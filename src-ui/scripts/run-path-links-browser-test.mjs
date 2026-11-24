@@ -11,7 +11,7 @@ const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playw
 const project = fileURLToPath(new URL('..', import.meta.url));
 const directory = await mkdtemp(join(tmpdir(), 'coffee-path-links-'));
 const content = ['Built it:', '', '```', 'D:\\Coffee-CLI\\target\\nsis\\Coffee CLI_3.8.1_x64-setup.exe', '```', '', '- **File**: 17 MiB', '- Plain words here', '- Inline `src/app.ts` and `npm run build`',
-'- Home `~/.rustup` folder', '', 'Details are in D:\\Repo\\notes.md today.'].join('\n');
+'- Home `~/.rustup` folder', '- Sent to [Coffee CLI redesign](#local_abc123) already', '', 'Details are in D:\\Repo\\notes.md today.'].join('\n');
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
     import React,{useRef} from 'react';import {createRoot} from 'react-dom/client';
@@ -73,6 +73,9 @@ const rightClick = async word => { const { x, y } = await at(word); await page.m
 const hover = async word => { const { x, y } = await at(word); await page.mouse.move(x, y); };
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
+  // Another app's own link (a Claude Desktop session, `#local_…`) leads nowhere here: it reads as plain words, not a dead blue link.
+  await page.getByText('Coffee CLI redesign').waitFor();
+  assert.deepEqual(await page.getByText('Coffee CLI redesign').evaluate(el => [el.tagName, el.closest('a') === null, getComputedStyle(el).color === getComputedStyle(el.parentElement).color]), ['SPAN', true, true]);
   await page.locator('.md-code').waitFor();
 
   // A path inside a code block has no link, yet offers the file actions, spaces included.
