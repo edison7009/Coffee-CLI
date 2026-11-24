@@ -122,6 +122,7 @@ try {
   const commandMenu=page.getByRole('dialog',{name:'Command',exact:true});
   assert.equal(await commandMenu.getByRole('button').count(),12);
   assert.equal(await commandMenu.getByRole('button',{name:/^\/plan/}).count(),1);
+  assert.equal(await commandMenu.locator('button.is-selected').evaluate(el=>getComputedStyle(el).animationName),'none','a command list\'s keyboard cursor is not a setting: no stripes');
   if(process.env.COFFEE_CODEX_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-slash.png')});
   await commandMenu.getByRole('button',{name:/^\/status/}).click();
   await page.getByRole('dialog',{name:'Context window',exact:true}).waitFor();await page.keyboard.press('Escape');
@@ -216,6 +217,7 @@ try {
   assert.equal(await page.evaluate(()=>document.activeElement?.tagName),'TEXTAREA','clicking a footer control leaves the caret in the draft');
   assert.equal(await permissions.locator('pre').count(),0,'permission menu does not expose protocol JSON');
   assert.equal(await permissions.locator('.codex-permission-option').count(),3);
+  assert.equal(await permissions.locator('button.is-selected').first().evaluate(el=>getComputedStyle(el).animationName),'menu-selected-stripes','the setting in force wears the moving stripes');
   if(process.env.COFFEE_CODEX_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-permissions.png')});
   await permissions.getByRole('button',{name:/^Workspace/}).click();
   assert.equal(await page.evaluate(()=>document.activeElement?.tagName),'TEXTAREA','choosing from a footer menu leaves the caret in the draft');
