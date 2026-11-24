@@ -832,6 +832,7 @@ export const zhCN = {
   'turn.steps': '{count} 步',
   'turn.fixed_after': '{count} 次失败后已修正',
   'turn.last_failed': '最后一步失败',
+  'turn.errors': '{count} 个错误',
   'turn.steps_done': '已完成 {count} 步',
   'turn.more_files': '还有 {count} 个文件',
   'turn.tool_failed': '有工具调用失败',

@@ -34,7 +34,7 @@ await build({
     builder.onResolve({ filter: /\.svg\?raw$/ }, args => ({ path: resolve(args.resolveDir, args.path.replace('?raw', '')), namespace: 'svg' }));
     builder.onLoad({ filter: /.*/, namespace: 'svg' }, async args => ({ contents: `export default ${JSON.stringify(await readFile(args.path, 'utf8'))}`, loader: 'js' }));
     builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ resolveDir: project, loader: 'js', contents: args.path === 'store' ? `
-      export function useAppLanguage(){return 'en'};export function useAppState(){return {dispatch(action){(window.actions??=[]).push(action)}}};
+      export function useAppLanguage(){return window.fixtureLang??'en'};export function useAppState(){return {dispatch(action){(window.actions??=[]).push(action)}}};
     ` : args.path === 'syntax' ? `
       export async function tokenizeFile(){return null};export async function tokenizeByLang(){return null};export function getShikiTheme(){return 'light'};
     ` : args.path === 'clipboard' ? `
@@ -110,6 +110,11 @@ try {
   const row = await page.locator('.claude-working').boundingBox(), long = await page.locator('.claude-morph').boundingBox();
   assert.ok(long.width <= 561 && row.height < 40, `long titles truncate on one line: ${JSON.stringify({ row, long })}`);
 
+  // Claude writes those descriptions in English: another language keeps its rotating words instead.
+  await page.evaluate(t => { window.fixtureLang = 'zh-CN'; window.setSession({ messages: [...window.currentMessages(), t] }); }, tool('t6', 'Run the browser tests again'));
+  await page.waitForFunction(() => !document.querySelector('.claude-working .claude-morph-face:not(.is-leaving)')?.textContent.startsWith('R'));
+  assert.ok(!(await word()).includes('browser tests'), 'no English step description in a Chinese window');
+  await page.evaluate(() => { window.fixtureLang = undefined; });
   // Stopping always says so, whatever the title.
   await page.evaluate(() => window.setSession({ interruptRequested: true }));
   await page.waitForFunction(() => document.querySelector('.claude-working .claude-morph-face:not(.is-leaving)')?.textContent?.startsWith('Stopping'));

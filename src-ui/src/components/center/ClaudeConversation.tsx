@@ -69,7 +69,9 @@ function Working({ status, startedAt, title }: { status: string; startedAt?: num
   const age = now - (startedAt ?? now);
   const wordIndex = age < 2000 ? 0 : age < 5000 ? 1 : 2 + Math.floor((age - 5000) / 5000);
   // Claude Code's own description of the current step titles the turn; the rotating words fill in until it gives one.
-  const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'starting' ? t('claude.status.connecting') : title ?? (status === 'tool' ? t('claude.status.working') : words[wordIndex % words.length]);
+  // It writes that description in English, so another language keeps the rotating words throughout.
+  const english = useAppLanguage().startsWith('en');
+  const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'starting' ? t('claude.status.connecting') : (english ? title : undefined) ?? words[wordIndex % words.length];
   return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><MorphText faceClassName="claude-working-word" text={`${word}…`} />
     {startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
 }

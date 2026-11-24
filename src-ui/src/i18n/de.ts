@@ -827,6 +827,7 @@ export const de = {
   'turn.steps': '{count} Schritte',
   'turn.fixed_after': 'Nach {count} Fehlschlägen behoben',
   'turn.last_failed': 'Letzter Schritt fehlgeschlagen',
+  'turn.errors': '{count} Fehler',
   'turn.steps_done': '{count} Schritte erledigt',
   'turn.more_files': '{count} weitere Dateien',
   'turn.tool_failed': 'Ein Werkzeugaufruf ist fehlgeschlagen',

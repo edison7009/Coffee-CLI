@@ -831,6 +831,7 @@ export const zhTW = {
   'turn.steps': '{count} 步',
   'turn.fixed_after': '{count} 次失敗後已修正',
   'turn.last_failed': '最後一步失敗',
+  'turn.errors': '{count} 個錯誤',
   'turn.steps_done': '已完成 {count} 步',
   'turn.more_files': '還有 {count} 個檔案',
   'turn.tool_failed': '有工具呼叫失敗',

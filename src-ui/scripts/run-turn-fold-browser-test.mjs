@@ -138,6 +138,7 @@ try {
   await page.waitForFunction(() => (window.actions ?? []).filter(action => action.type === 'SET_DIFF_SELECTION').length === 2);
   assert.equal(await page.locator('.claude-step-detail').count(), 0, 'opening the file does not toggle the row');
   assert.equal(await page.locator('.claude-step--failed .claude-step-error').innerText(), 'error', 'a failed call shows its first error line without opening');
+  assert.equal(await page.locator('.claude-step--failed .claude-step-result.is-failed').innerText(), 'Failed', 'and a short red note after it when the output gives no exit code or count');
   if (process.env.COFFEE_TURN_SHOT) await page.screenshot({ path: `${process.env.COFFEE_TURN_SHOT}-open.png` });
   await page.locator('.turn-fold').click();
   await page.waitForFunction(() => !document.body.textContent.includes('Reading the script.'));

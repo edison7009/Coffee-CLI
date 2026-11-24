@@ -830,6 +830,7 @@ export const ko = {
   'turn.steps': '{count}단계',
   'turn.fixed_after': '{count}번 실패 후 수정됨',
   'turn.last_failed': '마지막 단계 실패',
+  'turn.errors': '오류 {count}개',
   'turn.steps_done': '{count}단계 완료',
   'turn.more_files': '파일 {count}개 더 보기',
   'turn.tool_failed': '도구 호출이 실패했습니다',

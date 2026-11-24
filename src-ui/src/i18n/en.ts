@@ -833,6 +833,7 @@ export const en = {
   'turn.steps': 'Steps: {count}',
   'turn.fixed_after': 'Fixed after {count} failed',
   'turn.last_failed': 'Last step failed',
+  'turn.errors': '{count} errors',
   'turn.steps_done': '{count} steps done',
   'turn.more_files': '{count} more files',
   'turn.tool_failed': 'A tool call failed',

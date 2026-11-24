@@ -53,6 +53,8 @@
 .claude-step--failed .claude-step-verb { color:var(--text-3); }
 .claude-step-error { margin:0 0 4px 34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:'JetBrainsMono',var(--font-mono,ui-monospace),monospace; font-size:12px; color:color-mix(in srgb,var(--red) 85%,var(--text-2)); }
 
+.claude-step-result.is-failed { color:var(--red); }
+
 /* ⑤ The step under way: a solid dot with a breathing ring, its words under a slow light; not a toggle yet. */
 .claude-step.is-now .claude-step-line { cursor:default; }
 .claude-step.is-now .claude-step-line:hover { background:transparent; }

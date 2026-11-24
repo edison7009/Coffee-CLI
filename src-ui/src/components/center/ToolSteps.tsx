@@ -4,7 +4,7 @@ import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffec
 import { diffLines } from 'diff';
 import { useT } from '../../i18n/useT';
 import { formatElapsed, formatTokens } from '../../lib/claude-i18n';
-import { toolKind, toolResult, toolTarget, toolVerbKey } from '../../lib/tool-runs';
+import { toolFailure, toolKind, toolResult, toolTarget, toolVerbKey } from '../../lib/tool-runs';
 import { changedFiles } from '../../lib/turn-work';
 import { useOpenChangedFile } from '../../lib/use-turn-work';
 import { orchestrationSearchLabel, orchestrationToolLabel } from '../../lib/orchestration-label';
@@ -247,6 +247,8 @@ function ToolStep({ message }: { message: ClaudeMessage }) {
   const failed = message.toolStatus === 'failed' && !message.interrupted;
   const now = !message.toolStatus || message.toolStatus === 'running';
   const result = failed || now ? '' : toolResult(name, message.output);
+  const failure = failed ? toolFailure(message.output) : {};
+  const failureNote = !failed ? '' : failure.exit !== undefined ? `exit ${failure.exit}` : failure.errors !== undefined ? t('turn.errors', { count: failure.errors }) : t('codex.failed');
   const error = failed ? firstLine(message.output ?? '') : '';
   const toggle = () => { if (!now) stepToggle(`step:${message.id}`, setOpen); };
   return <div className={`claude-step claude-step-kind-${kind} claude-step--${message.interrupted ? 'interrupted' : message.toolStatus ?? 'running'}${now ? ' is-now' : ''}`}>
@@ -256,6 +258,7 @@ function ToolStep({ message }: { message: ClaudeMessage }) {
       </button>
       {target && (changedPath ? <button type="button" className="claude-step-target claude-step-file" onClick={() => openFile(changedPath)}>{target}</button> : <span className="claude-step-target">{target}</span>)}
       {(added > 0 || removed > 0) && <span className="claude-step-diff"><i className="is-add">+{added}</i> <i className="is-del">−{removed}</i></span>}
+      {failureNote && <span className="claude-step-result is-failed">{failureNote}</span>}
       {result && <span className="claude-step-result">{name === 'Grep' || name === 'Glob' ? t('tools.result.found', { count: result }) : result}</span>}
       {!now && <Chevron open={open} />}
     </div>

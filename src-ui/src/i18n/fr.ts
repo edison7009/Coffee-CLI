@@ -827,6 +827,7 @@ export const fr = {
   'turn.steps': '{count} étapes',
   'turn.fixed_after': 'Corrigé après {count} échecs',
   'turn.last_failed': 'La dernière étape a échoué',
+  'turn.errors': '{count} erreurs',
   'turn.steps_done': '{count} étapes faites',
   'turn.more_files': '{count} fichiers de plus',
   'turn.tool_failed': 'Un appel d’outil a échoué',

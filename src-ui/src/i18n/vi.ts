@@ -831,6 +831,7 @@ export const vi = {
   'turn.steps': '{count} bước',
   'turn.fixed_after': 'Đã sửa sau {count} lần lỗi',
   'turn.last_failed': 'Bước cuối bị lỗi',
+  'turn.errors': '{count} lỗi',
   'turn.steps_done': 'Đã xong {count} bước',
   'turn.more_files': 'Thêm {count} tệp',
   'turn.tool_failed': 'Một lệnh gọi công cụ bị lỗi',
