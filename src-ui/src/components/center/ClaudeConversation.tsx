@@ -12,6 +12,7 @@ import { TurnSummary } from './TurnSummary';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
+import { takeLaunchPermission } from '../../lib/launch-permission';
 import { continueClaudeInNewConversation, controlClaude, loadClaudeHistory, respondClaude, retainClaudeSession, settleClaudeColdReturn, useClaudeSession } from '../../lib/claude-session';
 import { object, list, text, resultText, type ClaudeMessage, type ClaudeRequest } from '../../lib/claude-protocol';
 import { useConversationVirtualizer } from './conversation-virtualizer';
@@ -133,6 +134,12 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   const language = useAppLanguage();
   const { dispatch } = useAppState();
   const s = useClaudeSession(sessionId);
+  // The permission the start page's card chose for this tab, applied once its session is ready.
+  useEffect(() => {
+    if (!s.ready) return;
+    const mode = takeLaunchPermission(sessionId);
+    if (mode && mode !== s.permissionMode) void controlClaude(sessionId, { subtype: 'set_permission_mode', mode }).catch(() => {});
+  }, [s.ready, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
   const initialToken = useRef(resumeToken);
   // Captured at mount like initialToken; state, not a ref, because the welcome screen renders from it.
   const [resumed] = useState(() => !!resumeToken);

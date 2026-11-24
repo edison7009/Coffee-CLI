@@ -285,7 +285,7 @@ const selectTool = evaluate(pinDeclarations.get('selectTool').initializer.getTex
   activeTerminalId: 'launchpad', dispatch: action => manualLaunches.push(action),
   activeIdRef: { current: 'launchpad' },
   commands: { async checkProjectDirectories(paths) { checkedLaunchFolders.push(...paths); return paths.map(path => ({ path, status: 'available' })); } },
-  rememberFolder(tool, folder) { rememberedFolders.push([tool, folder]); }, claudeLaunchMode: 'conversation', isAcpTool, acpLaunchModes: { antigravity: 'conversation' },
+  rememberFolder(tool, folder) { rememberedFolders.push([tool, folder]); }, claudeLaunchMode: 'conversation', isLaunchTool: tool => tool === 'claude' || tool === 'codex', launchToolData: () => undefined, markLaunchPermission() {}, isAcpTool, acpLaunchModes: { antigravity: 'conversation' },
   state: { layoutMode: 'code' },
 });
 await selectTool('claude', undefined, 'E:\\tmp');
@@ -303,7 +303,7 @@ assert.deepEqual(rememberedFolders, [['claude', 'E:\\tmp']], 'the launch is reme
     activeTerminalId: 'launchpad', dispatch: action => workLaunches.push(action), activeIdRef: { current: 'launchpad' },
     commands: { async checkProjectDirectories(paths) { return paths.map(path => ({ path, status: 'available' })); } },
     rememberFolder() {}, claudeLaunchMode: 'terminal', codexLaunchMode: 'terminal', opencodeLaunchMode: 'terminal', piLaunchMode: 'terminal',
-    isAcpTool, acpLaunchModes: { qwen: 'terminal' },
+    isLaunchTool: tool => tool === 'claude' || tool === 'codex', launchToolData: () => undefined, markLaunchPermission() {}, isAcpTool, acpLaunchModes: { qwen: 'terminal' },
     state: { layoutMode: 'work' },
   });
   await workSelect('claude', undefined, 'E:\\tmp');

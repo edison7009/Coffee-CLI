@@ -6,7 +6,8 @@ import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
 import { arr, obj, str, num, pretty, codexSubTasks, type CodexRequest, type Json } from '../../lib/codex-protocol';
-import { approveCodexPlan, continueCodexInNewThread, interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, settleCodexColdReturn, useCodexSession } from '../../lib/codex-session';
+import { codexApproval, takeLaunchPermission } from '../../lib/launch-permission';
+import { approveCodexPlan, configureCodex, continueCodexInNewThread, interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, settleCodexColdReturn, useCodexSession } from '../../lib/codex-session';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -92,6 +93,12 @@ function CodexActivityMark({ kind = 'working', paused = false }: {
 
 export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useCodexSession(sessionId), t = useT(), { state, dispatch } = useAppState();
+  // The permission the start page's card chose for this tab, applied once its session is ready.
+  useEffect(() => {
+    if (!s.ready) return;
+    const sandbox = takeLaunchPermission(sessionId);
+    if (sandbox && sandbox !== s.sandbox.type) configureCodex(sessionId, { sandbox: { type: sandbox } as typeof s.sandbox, approvalPolicy: codexApproval(sandbox) });
+  }, [s.ready, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
   const directoryIssue = !s.ready ? directoryFailure(s.error) : undefined;
   const directoryError = directoryFailureMessage(s.error, t);

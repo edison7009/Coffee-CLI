@@ -39,6 +39,34 @@ pub fn resolve(tool: &str, cx: &Context) -> Route {
     }
 }
 
+/// The model a tool is configured to start with, read from its own settings; `None` when it leaves it to the vendor's
+/// default. Read-only, like the rest of this file.
+pub fn model(tool: &str, cx: &Context) -> Option<String> {
+    match tool {
+        "claude" => {
+            let user = cx.var("CLAUDE_CONFIG_DIR").map(PathBuf::from).unwrap_or_else(|| cx.home.join(".claude"));
+            let mut files = vec![user.join("settings.json")];
+            if let Some(cwd) = &cx.cwd { files.extend([cwd.join(".claude/settings.json"), cwd.join(".claude/settings.local.json")]); }
+            files.extend(cx.claude_managed.clone());
+            let configured = files.iter().filter_map(|file| read_json(file).and_then(|settings| str_at(&settings, "/model"))).last();
+            cx.var("ANTHROPIC_MODEL").or(configured)
+        }
+        "codex" => {
+            let config: toml::Table = read_text(&cx.dir("CODEX_HOME", ".codex").join("config.toml")).and_then(|text| text.parse().ok()).unwrap_or_default();
+            let profile = config.get("profile").and_then(|v| v.as_str()).and_then(|name| config.get("profiles")?.get(name)?.as_table());
+            profile.and_then(|p| p.get("model")).or_else(|| config.get("model")).and_then(|v| v.as_str()).map(String::from)
+        }
+        "opencode" | "kilo" | "mimocode" => { let (config, _, _) = opencode_config(tool, cx); opencode_model(tool, &config, cx) }
+        "pi" => {
+            let dir = cx.dir("PI_CODING_AGENT_DIR", ".pi/agent");
+            let mut settings = read_json(&dir.join("settings.json")).unwrap_or(Value::Object(Map::new()));
+            if let Some(project) = cx.cwd.as_ref().and_then(|cwd| read_json(&cwd.join(".pi/settings.json"))) { merge(&mut settings, project); }
+            str_at(&settings, "/defaultModel")
+        }
+        _ => None,
+    }.map(|model| model.trim().to_string()).filter(|model| !model.is_empty())
+}
+
 /// Providers the tools ship built in, limited to those whose usage we can read.
 fn builtin(provider: &str) -> Option<(&'static str, &'static str)> {
     Some(match provider {
@@ -172,7 +200,9 @@ fn stored_key(tool: &str, provider: &str, cx: &Context) -> Option<String> {
     (value["type"] == "key").then(|| str_at(&value, "/key")).flatten()
 }
 
-fn opencode_family(tool: &str, cx: &Context) -> Route {
+/// The OpenCode-family tool's merged configuration: global files, then the project's from the repository root inward.
+/// Also each file's folder and value (for `{file:…}` paths) and the global folder.
+fn opencode_config(tool: &str, cx: &Context) -> (Value, Vec<(PathBuf, Value)>, PathBuf) {
     let name = tool;
     let config_root = cx.dir("XDG_CONFIG_HOME", ".config");
     let global = if tool == "opencode" { cx.var("OPENCODE_CONFIG_DIR").map(PathBuf::from).unwrap_or_else(|| config_root.join(name)) } else { config_root.join(name) };
@@ -196,11 +226,22 @@ fn opencode_family(tool: &str, cx: &Context) -> Route {
     for file in files {
         if let Some(value) = read_json(&file) { sources.push((file.parent().map(Path::to_path_buf).unwrap_or_default(), value.clone())); merge(&mut config, value); }
     }
-    let selected = str_at(&config, "/model").or_else(|| {
-        let state = read_json(&cx.dir("XDG_STATE_HOME", ".local/state").join(name).join("model.json"))?;
+    (config, sources, global)
+}
+
+/// `provider/model` the tool will use: its configured model, else the one it used last.
+fn opencode_model(tool: &str, config: &Value, cx: &Context) -> Option<String> {
+    str_at(config, "/model").or_else(|| {
+        let state = read_json(&cx.dir("XDG_STATE_HOME", ".local/state").join(tool).join("model.json"))?;
         let recent = state.pointer("/recent/0")?;
         Some(format!("{}/{}", str_at(recent, "/providerID")?, str_at(recent, "/modelID")?))
-    });
+    })
+}
+
+fn opencode_family(tool: &str, cx: &Context) -> Route {
+    let name = tool;
+    let (config, sources, global) = opencode_config(tool, cx);
+    let selected = opencode_model(tool, &config, cx);
     let Some((provider, _)) = selected.as_deref().and_then(|s| s.split_once('/')) else { return Route::Unknown };
     let options = config.pointer(&format!("/provider/{}/options", pointer_escape(provider))).cloned().unwrap_or(Value::Null);
     // {file:...} paths are relative to the file that declared them; the last one wins.
@@ -315,10 +356,31 @@ mod tests {
             let lookup = move |key: &str| vars.get(key).cloned();
             resolve(tool, &Context { home: self.root.join("home"), cwd: Some(self.root.join("repo/app")), var: &lookup, claude_managed: Some(self.root.join("managed.json")) })
         }
+        fn model(&self, tool: &str, vars: &[(&str, &str)]) -> Option<String> {
+            let vars: HashMap<String, String> = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+            let lookup = move |key: &str| vars.get(key).cloned();
+            model(tool, &Context { home: self.root.join("home"), cwd: Some(self.root.join("repo/app")), var: &lookup, claude_managed: Some(self.root.join("managed.json")) })
+        }
     }
     impl Drop for Fixture { fn drop(&mut self) { let _ = std::fs::remove_dir_all(&self.root); } }
 
     fn at(base: &str, key: &str) -> Route { Route::Endpoint { base_url: base.into(), api_key: key.into() } }
+
+    #[test]
+    fn each_tool_reports_the_model_its_own_settings_name() {
+        let f = Fixture::new();
+        assert_eq!(f.model("claude", &[]), None, "no setting: the vendor's default, nothing to show");
+        f.write("home/.claude/settings.json", r#"{"model":"opus"}"#).write("repo/app/.claude/settings.local.json", r#"{"model":"sonnet[1m]"}"#);
+        assert_eq!(f.model("claude", &[]).as_deref(), Some("sonnet[1m]"), "the project's local settings win");
+        assert_eq!(f.model("claude", &[("ANTHROPIC_MODEL", "haiku")]).as_deref(), Some("haiku"));
+        f.write("home/.codex/config.toml", "model = \"gpt-5.5\"\nprofile = \"fast\"\n[profiles.fast]\nmodel = \"gpt-5.5-mini\"\n");
+        assert_eq!(f.model("codex", &[]).as_deref(), Some("gpt-5.5-mini"), "the active profile's model");
+        f.write("repo/app/opencode.json", r#"{"model":"deepseek/deepseek-chat"}"#);
+        assert_eq!(f.model("opencode", &[]).as_deref(), Some("deepseek/deepseek-chat"));
+        f.write("home/.pi/agent/settings.json", r#"{"defaultProvider":"anthropic","defaultModel":"claude-sonnet-5-5"}"#);
+        assert_eq!(f.model("pi", &[]).as_deref(), Some("claude-sonnet-5-5"));
+        assert_eq!(f.model("aider", &[]), None);
+    }
 
     #[test]
     fn claude_follows_settings_precedence_and_official_sign_in() {

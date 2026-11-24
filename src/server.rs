@@ -571,6 +571,22 @@ fn expand_home(path: String) -> String {
     }
 }
 
+/// Launch flags for the permission a start-page card chose, from the tab's tool data `{"permission": …}`. Only the
+/// values the card offers are accepted; anything else starts the tool with its own default.
+fn launch_permission_args(tool: &str, tool_data: Option<&str>) -> Vec<String> {
+    let permission = tool_data.and_then(|data| serde_json::from_str::<serde_json::Value>(data).ok())
+        .and_then(|data| data.get("permission").and_then(|p| p.as_str()).map(str::to_owned));
+    let Some(permission) = permission else { return vec![] };
+    let flags: &[&str] = match (tool, permission.as_str()) {
+        ("claude", mode @ ("default" | "plan" | "acceptEdits" | "bypassPermissions")) => return vec!["--permission-mode".into(), mode.into()],
+        ("codex", "readOnly") => &["--sandbox", "read-only", "--ask-for-approval", "on-request"],
+        ("codex", "workspaceWrite") => &["--sandbox", "workspace-write", "--ask-for-approval", "on-request"],
+        ("codex", "dangerFullAccess") => &["--sandbox", "danger-full-access", "--ask-for-approval", "never"],
+        _ => &[],
+    };
+    flags.iter().map(|flag| flag.to_string()).collect()
+}
+
 /// Open the native file explorer and highlight / reveal the given path.
 #[tauri::command]
 fn show_in_folder(path: String) -> Result<(), String> {
@@ -824,12 +840,14 @@ fn tier_terminal_start_blocking(
     // tool_data at runtime, the shell is platform-derived.
     let registry_descriptor = tool.as_deref().and_then(crate::tools::find);
     let (cmd, args): (String, Vec<String>) = match (tool.as_deref(), registry_descriptor) {
-        (Some(_id), Some(descriptor)) => {
-            let a: Vec<String> = descriptor
+        (Some(id), Some(descriptor)) => {
+            let mut a: Vec<String> = descriptor
                 .default_args
                 .iter()
                 .map(|s| s.to_string())
                 .collect();
+            // The start page's card can pick the permission a fresh tab starts with (src-ui/src/lib/launch-permission.ts).
+            a.extend(launch_permission_args(id, tool_data.as_deref()));
             (descriptor.binary_name.to_string(), a)
         }
         (Some("remote"), _) => {
@@ -1596,6 +1614,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::window_control::window_control_resolve,
             crate::orchestration::orchestration_remote_update,
             crate::git_project_status::git_repo_key,
+            crate::usage_quota::tool_configured_model,
             crate::remote_window::remote_window_show_tab,
             crate::window_control::window_control_state,
             crate::window_control::window_control_set_pick,
@@ -2889,3 +2908,19 @@ mod opencode_tests;
 #[cfg(test)]
 #[path = "server/pty_resize_tests.rs"]
 mod pty_resize_tests;
+
+#[cfg(test)]
+mod launch_permission_tests {
+    use super::launch_permission_args;
+    #[test]
+    fn a_cards_permission_becomes_the_tools_own_launch_flags_and_nothing_else_passes() {
+        assert_eq!(launch_permission_args("claude", Some(r#"{"permission":"plan"}"#)), ["--permission-mode", "plan"]);
+        assert_eq!(launch_permission_args("codex", Some(r#"{"permission":"dangerFullAccess"}"#)), ["--sandbox", "danger-full-access", "--ask-for-approval", "never"]);
+        assert_eq!(launch_permission_args("codex", Some(r#"{"permission":"readOnly"}"#)), ["--sandbox", "read-only", "--ask-for-approval", "on-request"]);
+        assert!(launch_permission_args("claude", Some(r#"{"permission":"--dangerously; rm"}"#)).is_empty(), "only the card's own values");
+        assert!(launch_permission_args("claude", Some(r#"{"permission":"readOnly"}"#)).is_empty(), "another tool's value");
+        assert!(launch_permission_args("opencode", Some(r#"{"permission":"plan"}"#)).is_empty());
+        assert!(launch_permission_args("claude", None).is_empty());
+        assert!(launch_permission_args("claude", Some("not json")).is_empty());
+    }
+}
