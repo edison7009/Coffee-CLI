@@ -21,21 +21,20 @@
 .claude-control-menu { position:fixed; z-index:10020; display:flex; flex-direction:column; overflow:auto; padding:5px; background:var(--bg-panel,var(--bg-terminal)); border:1px solid var(--border); border-radius:var(--shape-radius-panel,8px); box-shadow:0 8px 30px #0005; color:var(--text-1); font:var(--type-label) var(--font); }
 .claude-control-menu button { display:flex; align-items:baseline; justify-content:space-between; flex-shrink:0; text-align:left; gap:12px; padding:7px 9px; background:transparent; color:var(--text-1); border:0; border-radius:var(--shape-radius-btn,5px); font:inherit; cursor:pointer; }
 .claude-control-menu button:hover,.claude-control-menu button.is-selected { background:var(--accent-bg,var(--bg-hover)); }
-/* The current setting in a switch menu (permissions, mode, model, effort, a picker): the selection blue in slow moving
-   diagonal stripes, so the choice in force reads at a glance. A slash-command list's keyboard cursor is not a setting
-   and keeps the plain fill. The doubled class outranks a picker's own selected fill. */
-.claude-control-menu.claude-control-menu:not([data-menu="commands"]) button.is-selected[class] {
+/* The selected row of a menu (the setting in force in permissions, mode, model, effort or a picker, and the
+   slash-command list's cursor): the selection blue in slow moving diagonal stripes, so it reads at a glance.
+   The doubled class outranks a picker's own selected fill. */
+.claude-control-menu.claude-control-menu button.is-selected[class] {
   --menu-stripe-a:color-mix(in srgb,var(--blue) 34%,transparent);
   --menu-stripe-b:color-mix(in srgb,var(--blue) 18%,transparent);
   background:linear-gradient(45deg,var(--menu-stripe-b) 25%,var(--menu-stripe-a) 25% 50%,var(--menu-stripe-b) 50% 75%,var(--menu-stripe-a) 75%) 0 0 / 20px 20px;
   color:var(--text-1);
   animation:menu-selected-stripes 1.6s linear infinite;
 }
-[data-mode="light"] .claude-control-menu.claude-control-menu:not([data-menu="commands"]) button.is-selected[class] {
+[data-mode="light"] .claude-control-menu.claude-control-menu button.is-selected[class] {
   --menu-stripe-a:color-mix(in srgb,var(--blue) 10%,transparent);
   --menu-stripe-b:color-mix(in srgb,var(--blue) 22%,transparent);
 }
-@keyframes menu-selected-stripes { to { background-position:20px 0; } }
 @media (prefers-reduced-motion:reduce) { .claude-control-menu.claude-control-menu button.is-selected[class] { animation:none; } }
 .claude-control-menu button:disabled { opacity:.4; }
 .claude-control-menu .claude-thinking-toggle { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 9px; }

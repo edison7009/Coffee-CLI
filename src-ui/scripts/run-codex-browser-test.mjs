@@ -124,7 +124,7 @@ try {
   const commandMenu=page.getByRole('dialog',{name:'Command',exact:true});
   assert.equal(await commandMenu.getByRole('button').count(),12);
   assert.equal(await commandMenu.getByRole('button',{name:/^\/plan/}).count(),1);
-  assert.equal(await commandMenu.locator('button.is-selected').evaluate(el=>getComputedStyle(el).animationName),'none','a command list\'s keyboard cursor is not a setting: no stripes');
+  assert.equal(await commandMenu.locator('button.is-selected').evaluate(el=>getComputedStyle(el).animationName),'menu-selected-stripes','a command list\'s cursor wears the same moving stripes as a setting');
   if(process.env.COFFEE_CODEX_SCREENSHOT)await page.screenshot({path:process.env.COFFEE_CODEX_SCREENSHOT.replace('.png','-slash.png')});
   await commandMenu.getByRole('button',{name:/^\/status/}).click();
   await page.getByRole('dialog',{name:'Context window',exact:true}).waitFor();await page.keyboard.press('Escape');

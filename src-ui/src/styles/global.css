@@ -3413,3 +3413,7 @@ html.is-windows[data-frost="frost"] #root {
 :root[data-width="xs"] :is(input:not([type="checkbox"], [type="radio"], [type="range"]), textarea, select, [contenteditable="true"]) { font-size: max(16px, 1em); }
 /* Big enough for a fingertip. */
 :root[data-width="xs"] .chrome-tab-add { width: 36px; height: 36px; }
+
+/* The moving blue stripes of a selected or hovered choice (composer menus, the Work start page). Here, not beside one
+   of them, so every user has the keyframes whichever stylesheet loads first. */
+@keyframes menu-selected-stripes { to { background-position: 20px 0; } }
