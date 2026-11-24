@@ -54,5 +54,7 @@
   --shadow-panel: 0 16px 48px rgba(0, 0, 0, 0.55), 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 /* The window paints the ground; no wallpaper behind the conversation in Clear. */
-:root[data-layout="work"] body, :root[data-layout="work"] #root { background: var(--clear-ground) !important; background-image: none !important; }
+/* On Windows and Linux the window is transparent and #root clips its 10px corners: body must stay clear, or it
+   fills the cut corners and the window turns square. macOS (native corners) and the web page paint body too. */
+:root[data-layout="work"]:is(.is-macos, .is-web) body, :root[data-layout="work"] #root { background: var(--clear-ground) !important; background-image: none !important; }
 :root[data-layout="work"] :is(.conversation-background, .launchpad-bg) { display: none !important; }
