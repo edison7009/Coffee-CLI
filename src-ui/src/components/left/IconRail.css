@@ -123,7 +123,8 @@
    it reads on any tile; it overhangs the corner, so the list leaves room above the first icon. */
 .icon-rail-session-item { position: relative; }
 .icon-rail-session-close { position: absolute; top: -5px; right: -5px; z-index: 2; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--text-1); color: var(--bg-app); box-shadow: 0 0 0 2px var(--bg-app); opacity: 0; pointer-events: none; cursor: pointer; transition: opacity .12s; }
-.icon-rail-session-close svg { width: 9px; height: 9px; }
+/* An even size in the even circle: centred on whole pixels (9px sat half a pixel down and right in WebKit). */
+.icon-rail-session-close svg { display: block; width: 10px; height: 10px; }
 .icon-rail-session-item:hover .icon-rail-session-close, .icon-rail-session-close:focus-visible { opacity: 1; pointer-events: auto; }
 .icon-rail-session-item:hover .icon-rail-state, .icon-rail-session-item:focus-within .icon-rail-state { opacity: 0; }
 .icon-rail-session-close:hover { background: color-mix(in srgb, var(--text-1) 80%, var(--bg-app)); }
