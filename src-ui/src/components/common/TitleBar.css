@@ -9,9 +9,12 @@
 .titlebar-work-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .titlebar-work-folder { flex: none; color: var(--text-2); font-weight: 500; }
 .titlebar-work-slash { flex: none; color: var(--text-3); font-weight: 400; }
-/* The conversation's menu, right after its title: a small chevron that reads as part of the title. */
-.titlebar-work-menu { display: grid; place-items: center; flex: none; width: 22px; height: 22px; margin-left: -4px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer; transition: background-color .15s, color .15s; }
-.titlebar-work-menu:hover, .titlebar-work-menu[aria-expanded="true"] { background: var(--bg-hover); color: var(--text-1); }
+/* The whole title is one button for the conversation's menu (rename, pin, copy, close), the chevron after it saying
+   so; hover and an open menu give it the same quiet fill. */
+.titlebar-work-menu { display: flex; align-items: center; gap: 8px; min-width: 0; height: 28px; margin-left: -8px; padding: 0 6px 0 8px; border: 0; border-radius: 7px; background: transparent; color: inherit; font: inherit; white-space: nowrap; cursor: pointer; transition: background-color .15s; }
+.titlebar-work-menu > svg { flex: none; color: var(--text-3); transition: color .15s; }
+.titlebar-work-menu:hover, .titlebar-work-menu[aria-expanded="true"] { background: var(--bg-hover); }
+.titlebar-work-menu:hover > svg, .titlebar-work-menu[aria-expanded="true"] > svg { color: var(--text-1); }
 .titlebar-work-menu:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 .titlebar-work-rename { min-width: 120px; max-width: 420px; height: 26px; padding: 0 8px; border: 1px solid var(--border-focus, var(--border)); border-radius: 6px; background: var(--bg-input); color: var(--text-1); font: inherit; outline: 0; }
 

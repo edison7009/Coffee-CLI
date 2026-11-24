@@ -45,23 +45,27 @@ export function WorkTitle({ tab }: { tab: TerminalSession }) {
     cancelled.current = false;
     setEditing(null);
   };
+  const toggleMenu = (event: React.MouseEvent<HTMLElement>) => { const r = event.currentTarget.getBoundingClientRect(); setMenu(menu ? null : { session: saved, x: r.left, y: r.bottom + 4 }); };
   return <div className="titlebar-work-title">
-    {folder && <span className="titlebar-work-folder">{folder}</span>}
-    {folder && name && <span className="titlebar-work-slash" aria-hidden="true">/</span>}
-    {editing !== null
-      ? <input ref={input} className="titlebar-work-rename" value={editing} aria-label={t('menu.rename')} onChange={event => setEditing(event.target.value)}
-          onCompositionEnd={() => { composedAt.current = performance.now(); }}
-          onKeyDown={event => {
-            // An input method's confirming Enter picks the candidate; it doesn't save (macOS WebKit sends it as keyCode 229 just after compositionend).
-            if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || performance.now() - composedAt.current < 50) return;
-            if (event.key === 'Enter') finish(true);
-            else if (event.key === 'Escape') { cancelled.current = true; finish(false); }
-          }} onBlur={() => finish(true)} />
-      : name && <span className="titlebar-work-name">{name}</span>}
-    {editing === null && <button type="button" className="titlebar-work-menu" aria-haspopup="menu" aria-expanded={!!menu} aria-label={t('titlebar.conversation_menu')}
-      // The open menu closes on any mousedown outside it; this button toggles it itself.
-      onMouseDown={event => event.nativeEvent.stopImmediatePropagation()}
-      onClick={event => { const r = event.currentTarget.getBoundingClientRect(); setMenu(menu ? null : { session: saved, x: r.left, y: r.bottom + 4 }); }}>
+    {editing !== null ? <>
+      {folder && <span className="titlebar-work-folder">{folder}</span>}
+      {folder && <span className="titlebar-work-slash" aria-hidden="true">/</span>}
+      <input ref={input} className="titlebar-work-rename" value={editing} aria-label={t('menu.rename')} onChange={event => setEditing(event.target.value)}
+        onCompositionEnd={() => { composedAt.current = performance.now(); }}
+        onKeyDown={event => {
+          // An input method's confirming Enter picks the candidate; it doesn't save (macOS WebKit sends it as keyCode 229 just after compositionend).
+          if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || performance.now() - composedAt.current < 50) return;
+          if (event.key === 'Enter') finish(true);
+          else if (event.key === 'Escape') { cancelled.current = true; finish(false); }
+        }} onBlur={() => finish(true)} />
+    </> : <button type="button" className="titlebar-work-menu" aria-haspopup="menu" aria-expanded={!!menu} aria-label={`${[folder, name].filter(Boolean).join(' / ')} · ${t('titlebar.conversation_menu')}`}
+      // The whole title opens the conversation's menu, not only its chevron. The open menu closes on any mousedown
+      // outside it, and a double-click here must not zoom the window: the title handles both itself.
+      onMouseDown={event => event.nativeEvent.stopImmediatePropagation()} onDoubleClick={event => event.stopPropagation()}
+      onClick={toggleMenu}>
+      {folder && <span className="titlebar-work-folder">{folder}</span>}
+      {folder && name && <span className="titlebar-work-slash" aria-hidden="true">/</span>}
+      {name && <span className="titlebar-work-name">{name}</span>}
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
     </button>}
     {menu && <SessionContextMenu menu={menu} onClose={() => setMenu(null)} unsaved={!record}

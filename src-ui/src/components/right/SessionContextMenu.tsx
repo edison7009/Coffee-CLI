@@ -110,7 +110,8 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
         {t('menu.rename')}
       </button></>}
 
-      {hasGroup2 && <div className="ctx-menu-divider" />}
+      {/* No divider above the copy items when nothing sits above them (a conversation not yet saved, no split). */}
+      {hasGroup2 && (!unsaved || !!onOpenSplit) && <div className="ctx-menu-divider" />}
 
       {hasToken && (
         <button className="ctx-menu-item" onClick={() => copy(token!)}>
