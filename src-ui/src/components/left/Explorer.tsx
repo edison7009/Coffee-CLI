@@ -8,12 +8,12 @@ import { createPortal } from 'react-dom';
 import { useAppState } from '../../store/app-state';
 import type { IconTheme, ToolType } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { isMaskTintTheme } from '../../lib/personalization';
 import { ScrollPanel } from '../common/ScrollPanel';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import { clipboardWrite } from '../../lib/clipboard';
 import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { getFileIconSrc } from '../../lib/file-icons';
+import { ThemedIcon } from '../common/ThemedIcon';
 import { useFileStats, useDirtyDirs } from '../../lib/git-status';
 import { refreshHistory } from '../../lib/history-cache';
 import { commands } from '../../tauri';
@@ -272,34 +272,6 @@ function getIconPath(theme: IconTheme, name: string): string {
   return `/icons/themes/${theme}/${name}`;
 }
 
-/** Renders a theme icon. For mask-tint themes, uses a <span> with mask-image
- *  so `background-color: var(--accent)` paints the silhouette. For color
- *  themes, falls back to a plain <img>. */
-export function ThemedIcon({ src, alt, onFallback }: {
-  src: string;
-  alt: string;
-  onFallback?: string;
-}) {
-  const { state: { iconTheme } } = useAppState();
-  if (isMaskTintTheme(iconTheme)) {
-    return (
-      <span
-        className="icon-svg icon-svg-mask"
-        role="img"
-        aria-label={alt}
-        style={{ WebkitMaskImage: `url("${src}")`, maskImage: `url("${src}")` }}
-      />
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className="icon-svg"
-      onError={onFallback ? (e) => (e.currentTarget.src = onFallback) : undefined}
-    />
-  );
-}
 
 
 

@@ -107,7 +107,7 @@ try {
  await page.waitForFunction(()=>!window.currentState.busy);
  await page.locator('.turn-fold').waitFor();
  assert.match(await page.locator('.turn-fold-label').innerText(),/^Steps: 2/,'the finished turn folds its steps');
- assert.deepEqual([await page.locator('.turn-file-badge').innerText(),await page.locator('.turn-file-name').innerText()],['A','b.txt'],'the new file is listed after the reply');
+ assert.deepEqual([await page.locator('.turn-file-icon .icon-svg').count(),await page.locator('.turn-file-name').innerText()],[1,'b.txt'],'the new file is listed after the reply, with its type icon');
  await page.locator('.turn-fold').click();
  assert.equal(await page.locator('.claude-step').filter({hasText:'b.txt'}).locator('.claude-step-file').innerText(),'b.txt','the written file is a link to its diff');
  if(process.env.COFFEE_SCREENSHOT) await page.screenshot({path:process.env.COFFEE_SCREENSHOT.replace('.png','-turn.png')});

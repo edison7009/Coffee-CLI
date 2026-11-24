@@ -85,9 +85,8 @@
 .turn-file { display:flex; align-items:center; gap:8px; width:100%; height:30px; padding:0 10px 0 8px; border:0; border-radius:6px; background:none; color:var(--text-2); font:inherit; font-size:13px; text-align:left; cursor:pointer; transition:background-color .15s; }
 .turn-file:hover { background:var(--bg-hover); }
 .turn-file:focus-visible, .turn-files-view:focus-visible { outline:1px solid var(--accent); outline-offset:-1px; }
-.turn-file-badge { display:inline-grid; place-items:center; flex:none; width:16px; height:16px; border-radius:4px; font-family:'JetBrainsMono',var(--font-mono,ui-monospace),monospace; font-size:10px; font-weight:600; }
-.turn-file-badge.is-M { color:var(--blue); background:color-mix(in srgb,var(--blue) 16%,transparent); }
-.turn-file-badge.is-A { color:var(--green); background:color-mix(in srgb,var(--green) 16%,transparent); }
+.turn-file-icon { display: flex; align-items: center; flex: none; width: 16px; height: 16px; }
+.turn-file-icon .icon-svg { display: block; width: 16px; height: 16px; }
 .turn-file-name { flex:none; max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--link); }
 .turn-file-dir { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-3); font-size:12px; }
 .turn-files-more { color:var(--text-3); font-size:12.5px; }

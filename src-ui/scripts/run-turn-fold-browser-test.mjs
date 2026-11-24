@@ -37,7 +37,7 @@ await build({
     builder.onResolve({ filter: /\.png\?inline$/ }, args => ({ path: resolve(args.resolveDir, args.path.replace('?inline', '')), namespace: 'png' }));
     builder.onLoad({ filter: /.*/, namespace: 'png' }, async args => ({ contents: `export default ${JSON.stringify(`data:image/png;base64,${(await readFile(args.path)).toString('base64')}`)}`, loader: 'js' }));
     builder.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ resolveDir: project, loader: 'js', contents: args.path === 'store' ? `
-      export function useAppLanguage(){return 'en'};export function useAppState(){return {dispatch(action){(window.actions??=[]).push(action)}}};
+      export function useAppLanguage(){return 'en'};export function useAppState(){return {state:{iconTheme:'devicon'},dispatch(action){(window.actions??=[]).push(action)}}};
     ` : args.path === 'syntax' ? `
       export async function tokenizeFile(){return null};export async function tokenizeByLang(){return null};export function getShikiTheme(){return 'light'};
     ` : args.path === 'clipboard' ? `
@@ -122,7 +122,7 @@ try {
   assert.equal(await page.getByText('Reading the script.').count(), 0, 'commentary folds with the work');
   assert.equal(await page.getByText('Fixed the build.').count(), 1, 'the reply stays');
   assert.equal(await page.locator('.turn-files-title').innerText(), 'Files changed: 1');
-  assert.deepEqual([await page.locator('.turn-file-badge').innerText(), await page.locator('.turn-file-name').innerText(), await page.locator('.turn-file-dir').innerText()], ['M', 'a.ts', 'src/'], 'an edited file: its badge, name, and folder relative to the conversation');
+  assert.deepEqual([await page.locator('.turn-file-icon .icon-svg').count(), await page.locator('.turn-file-name').innerText(), await page.locator('.turn-file-dir').innerText()], [1, 'a.ts', 'src/'], 'an edited file: its type icon, name, and folder relative to the conversation');
   if (process.env.COFFEE_TURN_SHOT) await page.screenshot({ path: `${process.env.COFFEE_TURN_SHOT}-folded.png` });
 
   // A changed file opens its uncommitted diff; the heading's button opens the first file.

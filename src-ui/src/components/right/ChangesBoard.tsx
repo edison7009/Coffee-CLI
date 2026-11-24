@@ -6,7 +6,8 @@ import { gitFolderKey, useProjectGitStatuses } from '../../lib/project-git-statu
 import { commands, type GitFileEntry } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { ScrollPanel } from '../common/ScrollPanel';
-import { ContextMenu, ThemedIcon, type CtxMenuState } from '../left/Explorer';
+import { ContextMenu, type CtxMenuState } from '../left/Explorer';
+import { ThemedIcon } from '../common/ThemedIcon';
 import { getFileIconSrc } from '../../lib/file-icons';
 import { beginExplorerDrag } from '../../lib/explorer-drag';
 import { HistoryGitMark } from './HistoryGitMark';

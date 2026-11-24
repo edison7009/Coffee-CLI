@@ -6,6 +6,9 @@ import { absoluteToolPath, type ChangedFile, type TurnFold } from '../../lib/tur
 import { useOpenChangedFile } from '../../lib/use-turn-work';
 import { useHoverTip } from '../common/HoverTip';
 import { Chevron } from './ConversationControls';
+import { ThemedIcon } from '../common/ThemedIcon';
+import { getFileIconSrc } from '../../lib/file-icons';
+import { useAppState } from '../../store/app-state';
 import './TurnWork.css';
 
 const elapsed = formatElapsed;
@@ -43,6 +46,7 @@ export function ChangedFilesCard({ files }: { files: ChangedFile[] }) {
   const t = useT();
   const cwd = useContext(ConversationDirectory);
   const openFile = useOpenChangedFile();
+  const { state: { iconTheme } } = useAppState();
   const [all, setAll] = useState(false);
   const { tipFor, tip } = useHoverTip('hover-tip--wide');
   const added = files.reduce((n, file) => n + file.added, 0), removed = files.reduce((n, file) => n + file.removed, 0);
@@ -57,7 +61,8 @@ export function ChangedFilesCard({ files }: { files: ChangedFile[] }) {
       const relative = relativeTo(file.path, cwd), cut = relative.lastIndexOf('/') + 1;
       return <li key={file.path}>
         <button type="button" className="turn-file" onClick={() => openFile(file.path)} {...tipFor(absoluteToolPath(file.path, cwd))}>
-          <span className={`turn-file-badge is-${file.written ? 'A' : 'M'}`} aria-hidden="true">{file.written ? 'A' : 'M'}</span>
+          {/* The file's type, drawn as in the file tree and the changes list (the +/− counts say added or edited). */}
+          <span className="turn-file-icon" aria-hidden="true"><ThemedIcon src={getFileIconSrc(relative.slice(cut).split('.').pop() || '', iconTheme)} alt="" /></span>
           <span className="turn-file-name">{relative.slice(cut)}</span><span className="turn-file-dir">{relative.slice(0, cut)}</span>{stat(file.added, file.removed)}
         </button>
       </li>;
