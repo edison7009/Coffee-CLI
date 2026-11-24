@@ -1455,22 +1455,38 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 [data-layout="code"] .launchpad-grid { gap: 12px; }
 /* EchoBird's brand cards: mostly the plain card colour, the tool's colour showing softly from the lower-right
    corner with its logo large and faded there; on hover the logo turns upright. */
+/* Each card wears its tool's colour across its body and its logo, large and faded, in the corner (as EchoBird's
+   provider cards): the colour from about a third of the way in, deepest in that corner. */
 [data-layout="code"] .launchpad-card-group {
-  --brand: #8a8a8a; --brand-tint: 22%; --brand-mark: .12; --brand-pill: rgb(0 0 0 / .2);
+  --brand: #8a8a8a; --brand-tint: 34%; --brand-mark: .2; --brand-pill: rgb(0 0 0 / .22);
   position: relative; isolation: isolate; border-color: transparent; border-radius: 12px; clip-path: inset(0 round 12px);
   background-color: var(--bg-card);
-  background-image: linear-gradient(135deg, var(--bg-card) 30%, color-mix(in srgb, var(--brand) var(--brand-tint), var(--bg-card)) 100%);
+  background-image: linear-gradient(135deg, color-mix(in srgb, var(--brand) calc(var(--brand-tint) * .25), var(--bg-card)) 0%, color-mix(in srgb, var(--brand) calc(var(--brand-tint) * .55), var(--bg-card)) 45%, color-mix(in srgb, var(--brand) var(--brand-tint), var(--bg-card)) 100%);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .04), inset 0 1px 0 rgb(255 255 255 / .05);
 }
 [data-mode="light"][data-layout="code"] .launchpad-card-group {
-  --brand-tint: 14%; --brand-pill: rgb(255 255 255 / .55);
+  --brand-tint: 20%; --brand-mark: .16; --brand-pill: rgb(255 255 255 / .6);
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / .06), inset 0 1px 0 rgb(255 255 255 / .6);
 }
 [data-layout="code"] .launchpad-card-group[data-tool="claude"] { --brand: #d97757; }
 [data-layout="code"] .launchpad-card-group[data-tool="dsh"] { --brand: #4d6bfe; }
 [data-layout="code"] .launchpad-card-group[data-tool="pi"] { --brand: #e0806b; }
+[data-layout="code"] .launchpad-card-group[data-tool="codex"] { --brand: #10a37f; }
+[data-layout="code"] .launchpad-card-group[data-tool="qwen"] { --brand: #615ced; }
+[data-layout="code"] .launchpad-card-group[data-tool="kimicode"] { --brand: #1783ff; }
+[data-layout="code"] .launchpad-card-group[data-tool="antigravity"] { --brand: #3186ff; }
+[data-layout="code"] .launchpad-card-group[data-tool="copilot"] { --brand: #8957e5; }
+[data-layout="code"] .launchpad-card-group[data-tool="kiro"] { --brand: #9046ff; }
+[data-layout="code"] .launchpad-card-group[data-tool="codebuddy"] { --brand: #6c4dff; }
+[data-layout="code"] .launchpad-card-group[data-tool="muse"] { --brand: #0082fb; }
+[data-layout="code"] .launchpad-card-group[data-tool="kilo"] { --brand: #d4c400; }
+[data-layout="code"] .launchpad-card-group[data-tool="openclaw"] { --brand: #ff4d4d; }
+[data-layout="code"] .launchpad-card-group[data-tool="minimax"] { --brand: #f23f5d; }
+[data-layout="code"] .launchpad-card-group[data-tool="mimocode"] { --brand: #ff6900; }
+[data-layout="code"] .launchpad-card-group[data-tool="aider"] { --brand: #14b014; }
+[data-layout="code"] .launchpad-card-group[data-tool="crush"] { --brand: #ff5fa2; }
 [data-layout="code"] .launchpad-card-mark {
-  position: absolute; right: -18px; bottom: -28px; z-index: -1; width: 116px; height: 116px;
+  position: absolute; right: -20px; bottom: -34px; z-index: -1; width: 132px; height: 132px;
   display: flex; align-items: center; justify-content: center; opacity: var(--brand-mark); pointer-events: none;
   transform: rotate(-10deg); transition: transform .45s cubic-bezier(.2, .8, .3, 1); will-change: transform; backface-visibility: hidden;
 }
