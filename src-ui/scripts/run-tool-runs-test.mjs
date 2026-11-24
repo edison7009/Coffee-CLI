@@ -18,6 +18,11 @@ assert.deepEqual(JSON.parse(JSON.stringify([...runs.lead])), [[1, 2], [7, 9]], '
 assert.deepEqual(JSON.parse(JSON.stringify([...runs.follower])), [2, 8, 9]);
 assert.ok(!runs.lead.has(4) && !runs.lead.has(6), 'a single call stays as it is');
 assert.equal(toolRuns([]).lead.size, 0);
+const think = { role: 'reasoning' };
+const mixed = toolRuns([text, think, tool('Read'), think, tool('Bash'), text, think, tool('Edit'), think]);
+assert.deepEqual(JSON.parse(JSON.stringify([...mixed.lead])), [[1, 4]], 'thinking joins the calls around it; one call with thinking is not yet a run of two');
+assert.deepEqual(JSON.parse(JSON.stringify([...toolRuns([think, tool('Read'), think], 1).lead])), [[0, 2]], 'with a minimum of one, a lone call takes its thinking along');
+assert.equal(toolRuns([think, think]).lead.size, 0, 'thinking alone is no run');
 
 const zh = { 'tools.group.read': '读取 {count} 个文件', 'tools.group.search': '搜索 {count} 次', 'tools.group.edit': '修改 {count} 个文件', 'tools.group.run': '运行 {count} 条命令', 'tools.group.remote': '操作远程窗口 {count} 次', 'tools.group.other': '调用 {count} 个工具', 'tools.group.join': '、' };
 const t = (key, vars = {}) => Object.entries(vars).reduce((s, [k, v]) => s.replace(`{${k}}`, String(v)), zh[key] ?? key);
@@ -31,4 +36,6 @@ assert.equal(toolRunStatus([tool('Read'), { role: 'tool', toolName: 'Bash' }]), 
 assert.equal(toolRunStatus([tool('Read'), tool('Bash', 'failed')]), 'failed');
 assert.equal(toolRunStatus([tool('Read'), tool('Grep')]), 'done');
 assert.equal(toolKind('Task'), 'team');
+assert.equal(toolRunStatus([{ role: 'reasoning' }, tool('Read')]), 'done', 'thinking in a run is not a call still running');
+assert.equal(toolRunSummary([{ role: 'reasoning' }, tool('Read')], t), '读取 1 个文件');
 console.log('tool runs: ok');

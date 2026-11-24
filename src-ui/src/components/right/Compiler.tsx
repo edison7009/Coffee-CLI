@@ -14,7 +14,8 @@ type RightView = 'tasks' | 'changes' | 'detail';
 // The panel unmounts while hidden; remember which save already switched tabs so reopening keeps the user's tab.
 let revealedPreInput = 0;
 
-export function RightPanel() {
+/** `revealSelection`: mounted to show the file just selected elsewhere, so it opens on that file's diff. */
+export function RightPanel({ revealSelection = false }: { revealSelection?: boolean } = {}) {
   const { state, dispatch } = useAppState();
   const t = useT();
   const tabId = useId();
@@ -27,7 +28,7 @@ export function RightPanel() {
       const saved = localStorage.getItem('cc-right-tab');
       if (saved === 'tasks' || (saved === null && localStorage.getItem('cc-left-tab') === 'tasks')) view = 'tasks';
     } catch { /* Storage unavailable. */ }
-    return { view, selection, mode: state.diffMode };
+    return { view, selection: revealSelection ? null : selection, mode: state.diffMode };
   });
   useEffect(() => {
     try { localStorage.setItem('cc-right-tab', resting.view === 'tasks' ? 'tasks' : 'changes'); } catch { /* Storage unavailable. */ }

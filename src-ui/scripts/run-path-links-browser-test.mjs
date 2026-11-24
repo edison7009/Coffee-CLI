@@ -131,11 +131,17 @@ try {
   assert.deepEqual(await native(), [['showInFolder', 'D:/Repo/src/app.ts']]);
   assert.equal(await page.getByRole('link', { name: 'npm run build' }).count(), 0);
 
+  // An inline path reads as a file link: icon and name in sight, the folder kept in the text so a selection copies it whole.
+  const shown = await page.evaluate(() => { const link = document.querySelector('.md-file-link'); return { svg: !!link.querySelector('svg'), name: link.querySelector('.md-file-name').textContent, dirWidth: link.querySelector('.md-file-dir').getBoundingClientRect().width, code: !!link.closest('code') }; });
+  assert.deepEqual(shown, { svg: true, name: 'app.ts', dirWidth: 0, code: false });
+  const selected = await page.evaluate(() => { const item = document.querySelector('.md-file-link').closest('li'); const range = document.createRange(); range.selectNodeContents(item); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); const text = selection.toString(); selection.removeAllRanges(); return text; });
+  assert.ok(selected.includes('src/app.ts'), `selection copies the whole path: ${selected}`);
+
   // The block keeps clear of the list under it.
   const gap = await page.evaluate(() => { const code = document.querySelector('.md-code').getBoundingClientRect(), list = document.querySelector('.md-body ul').getBoundingClientRect(); return list.top - code.bottom; });
   assert.ok(gap >= 12, `gap under the code block is ${gap}px`);
   assert.deepEqual(errors, []);
-  console.log('ok path links: code blocks, paragraphs, spaces, reveal on click, selection copy and block spacing');
+  console.log('ok path links: code blocks, paragraphs, spaces, reveal on click, file-link look, selection copy and block spacing');
 } catch (error) {
   console.error('Browser errors:', errors, 'Menu:', await items().catch(() => []), 'Native:', await native().catch(() => []));
   throw error;
