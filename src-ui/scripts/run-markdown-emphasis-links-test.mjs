@@ -13,4 +13,17 @@ assert.equal(wrap('plain https://a.dev/x stays'), 'plain https://a.dev/x stays')
 assert.equal(wrap('`**https://a.dev**` in code'), '`**https://a.dev**` in code', 'inline code is left as written');
 assert.equal(wrap('```\n**https://a.dev**\n```\n**https://b.dev**'), '```\n**https://a.dev**\n```\n**<https://b.dev>**', 'fenced code is left as written');
 assert.equal(wrap('**bold** and https://a.dev'), '**bold** and https://a.dev');
-console.log('OK: emphasis around a bare URL stays emphasis, code untouched');
+// A bare URL ends before CJK or Arabic punctuation, as it does before a space.
+assert.equal(wrap('设置的质感对比页做好了：http://127.0.0.1:5207/pages/settings-finish.html，总览页里也加了。'), '设置的质感对比页做好了：<http://127.0.0.1:5207/pages/settings-finish.html>，总览页里也加了。');
+assert.equal(wrap('打开 https://a.dev/x。然后'), '打开 <https://a.dev/x>。然后');
+assert.equal(wrap('（https://a.dev/x?q=1&b=2）'), '（<https://a.dev/x?q=1&b=2>）');
+assert.equal(wrap('看“https://a.dev”和 https://b.dev、https://c.dev'), '看“<https://a.dev>”和 <https://b.dev>、https://c.dev', 'a URL at the end of the line already ends there');
+assert.equal(wrap('رابط https://a.dev/x، ثم'), 'رابط <https://a.dev/x>، ثم', 'Arabic comma');
+assert.equal(wrap('https://zh.wikipedia.org/wiki/咖啡，好喝'), 'https://zh.wikipedia.org/wiki/咖啡，好喝', 'a URL with Chinese in it is left to GFM');
+assert.equal(wrap('[页面](https://a.dev/x)，再看'), '[页面](https://a.dev/x)，再看', 'a link destination is left as written');
+assert.equal(wrap('[https://a.dev/x](https://a.dev/x)，再看'), '[https://a.dev/x](https://a.dev/x)，再看', 'a link text is left as written');
+assert.equal(wrap('<https://a.dev/x>，再看'), '<https://a.dev/x>，再看', 'already bracketed');
+assert.equal(wrap('**https://a.dev/x**，再看'), '**<https://a.dev/x>**，再看', 'emphasis still handled once');
+assert.equal(wrap('`https://a.dev/x，再看`'), '`https://a.dev/x，再看`', 'inline code untouched');
+assert.equal(wrap('plain https://a.dev/x. stays'), 'plain https://a.dev/x. stays');
+console.log('OK: emphasis around a bare URL stays emphasis, a URL ends before CJK and Arabic punctuation, code untouched');
