@@ -10,6 +10,8 @@ import './ToolRemoteControlPanel.css';
 /** The assistants that can be given the window tools (src/window_control.rs `TOOLS`). */
 const SUPPORTED = new Set(['claude', 'codex', 'opencode', 'dsh']);
 const CHECK = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>;
+// Two windows, one controlling the other: the page's header mark, drawn like the 协作 panel's.
+const REMOTE_MARK = <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="17" height="12" rx="2" /><rect x="12" y="15" width="17" height="12" rx="2" /><path d="M7 21h3m0 0-2-2m2 2-2 2" /></svg>;
 const MONITOR = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="13" height="9" rx="2" /><rect x="9" y="11" width="13" height="9" rx="2" /></svg>;
 
 /**
@@ -46,13 +48,14 @@ export function ToolRemoteControlPanel({ active, tools }: { active: boolean; too
   const shown = tools.slice(0, 6);
   // Only the agent apps that take the window tools get a switch; the rest are left out.
   const listed = shown.filter(tool => SUPPORTED.has(tool.value));
+  // The same shapes as the 协作 panel above it: a header card, headings inset to the cards' text, and every choice a card.
   return <div className="tool-control remote-control-page" aria-busy={pending !== null || (!enabled && !failed)}>
-    <div className="remote-control-head">
-      <strong>{t('tools.tab.remote')}</strong>
-      <p>{t('ai_remote.summary')}</p>
+    <div className="tool-control-runtime remote-control-head">
+      <span className="tool-control-symbol" aria-hidden="true">{REMOTE_MARK}</span>
+      <div className="tool-control-summary"><strong>{t('tools.tab.remote')}</strong><p>{t('ai_remote.summary')}</p></div>
     </div>
 
-    <div className="remote-control-section">{t('ai_remote.windows')}</div>
+    <div className="orchestration-roles-head"><strong>{t('ai_remote.windows')}</strong></div>
     <div className="remote-control-list">
       {windows.map(win => <div className="remote-control-row tool-control-agent" key={win.label}>
         <span className="remote-control-icon" aria-hidden="true">{MONITOR}<i /></span>
@@ -63,18 +66,18 @@ export function ToolRemoteControlPanel({ active, tools }: { active: boolean; too
         <button type="button" className="remote-control-button" aria-label={t('sidebar.devices.close_remote', { name: win.name })} onClick={() => void commands.remoteWindowClose(win.label).catch(() => {})}>{t('ai_remote.close')}</button>
       </div>)}
       {!windows.length && <p className="remote-control-empty">{t('ai_remote.pick.none')}</p>}
-      {canRequestControl() && <button type="button" className="remote-control-row tool-control-agent remote-control-add" onClick={() => requestControl()}><span className="remote-control-icon" aria-hidden="true">+</span><span>{t('sidebar.devices.control')}</span></button>}
+      {canRequestControl() && <button type="button" className="remote-control-add" onClick={() => requestControl()}><span className="remote-control-plus" aria-hidden="true">+</span><span>{t('sidebar.devices.control')}</span></button>}
     </div>
 
-    <div className="remote-control-section">{t('ai_remote.assistants')}</div>
+    <div className="orchestration-roles-head"><strong>{t('ai_remote.assistants')}</strong><span>{t('ai_remote.risk')}</span></div>
     {failed && <p className="tool-memory-notice" role="alert">{t('control.write_error')}</p>}
-    <div className="remote-control-list tool-control-agents">
+    <div className="tool-control-agents remote-control-agents">
       {listed.map(tool => {
         const missing = tool.installed === false;
         const on = !!enabled?.includes(tool.value);
         // Turning it off stays possible even when the tool is no longer installed.
         const disabled = !enabled || (missing && !on);
-        return <div className="remote-control-row tool-control-agent" key={tool.value}>
+        return <div className="tool-control-agent" key={tool.value}>
           <span className="tool-control-agent-icon" aria-hidden="true">{tool.icon}</span>
           <span className="tool-control-agent-name"><span className="tool-control-agent-label">{tool.label}</span>
             {missing && <span className="tool-control-unavailable">{t('control.not_installed')}</span>}
@@ -85,14 +88,13 @@ export function ToolRemoteControlPanel({ active, tools }: { active: boolean; too
       })}
       {!tools.length && <span className="tool-control-no-agents">{t('control.no_agents')}</span>}
     </div>
-    <p className="remote-control-note">{t('ai_remote.risk')}</p>
 
     {/* What a paired computer may do with work it hands to this one: one choice of two, the selected one checked. */}
-    <div className="remote-control-section">{t('collab.access.title')}</div>
-    <div className="remote-control-list remote-access-list" role="radiogroup" aria-label={t('collab.access.title')}>
+    <div className="orchestration-roles-head"><strong>{t('collab.access.title')}</strong></div>
+    <div className="tool-control-agents remote-access-list" role="radiogroup" aria-label={t('collab.access.title')}>
       {(['restricted', 'full'] as const).map(level => {
         const selected = (deviceAccess ?? 'restricted') === level;
-        return <button type="button" role="radio" aria-checked={selected} key={level} disabled={accessPending} className={`remote-control-row tool-control-agent remote-access-option${selected ? ' is-selected' : ''}`} onClick={async () => {
+        return <button type="button" role="radio" aria-checked={selected} key={level} disabled={accessPending} className={`tool-control-agent remote-access-option${selected ? ' is-selected' : ''}`} onClick={async () => {
           if (selected) return;
           setAccessPending(true);
           try { receiveOrchestration(await commands.orchestrationSetDeviceAccess(level)); } catch { setFailed(true); } finally { setAccessPending(false); }

@@ -5,6 +5,24 @@ import { receiveOrchestration, refreshOrchestration, useOrchestration, type Orch
 import { ToolControlDemo } from './ToolControlDemo';
 import './ToolControlPanel.css';
 
+const GUIDE_KEY = 'coffee:collab-guide-open';
+/** How the 协作 page works: a card whose header folds it (its chevron on the right turns), the steps numbered in
+ *  small rounds. Open until folded; the choice is remembered. */
+function CollabGuide() {
+  const t = useT();
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem(GUIDE_KEY) !== '0'; } catch { return true; } });
+  const toggle = () => setOpen(was => { const next = !was; try { localStorage.setItem(GUIDE_KEY, next ? '1' : '0'); } catch { /* best effort */ } return next; });
+  return <section className={`collab-guide${open ? ' is-open' : ''}`}>
+    <button type="button" className="collab-guide-head" aria-expanded={open} onClick={toggle}>
+      {/* Lucide book-open; license in /icons/LICENSE-lucide.txt. */}
+      <svg className="collab-guide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 7v14" /><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" /></svg>
+      <span>{t('collab.guide.title')}</span>
+      <svg className="collab-guide-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+    </button>
+    {open && <ol className="collab-guide-steps">{(['collab.guide.1', 'collab.guide.2', 'collab.guide.3', 'collab.guide.4'] as const).map((step, index) => <li key={step}><i aria-hidden="true">{index + 1}</i><span>{t(step)}</span></li>)}</ol>}
+  </section>;
+}
+
 export function ToolOrchestrationPanel({ active, tools }: {
   active: boolean; tools: { value: string; label: string; icon: ReactNode; installed?: boolean }[];
 }) {
@@ -24,10 +42,7 @@ export function ToolOrchestrationPanel({ active, tools }: {
       <div className="tool-control-summary"><strong>{t('tools.tab.orchestration')}</strong><p>{t('orchestration.description')}</p></div>
     </div>
     {/* How the pieces fit: helpers here, other computers, and the composer's 协作 chip. The steps are a real order. */}
-    <details className="collab-guide" open>
-      <summary>{t('collab.guide.title')}</summary>
-      <ol>{(['collab.guide.1', 'collab.guide.2', 'collab.guide.3', 'collab.guide.4'] as const).map(step => <li key={step}>{t(step)}</li>)}</ol>
-    </details>
+    <CollabGuide />
     {error && <p className="tool-memory-notice" role="alert">{t(ready ? 'control.write_error' : 'control.read_error')}</p>}
     <div className="tool-control-agents">
       {tools.slice(0, 6).map(tool => {

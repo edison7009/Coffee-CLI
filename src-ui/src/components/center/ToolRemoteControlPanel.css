@@ -1,40 +1,37 @@
-/* Remote control page (remote-page 方案 B): the windows open now, then the assistants allowed to use them.
-   Quiet lists on one card each; switches are the app's blue switch; the risk note is one line. */
-.remote-control-page { display: flex; flex-direction: column; }
-.remote-control-head { margin: 0 2px 18px; }
-.remote-control-head strong { color: var(--text-1); font-size: 15px; font-weight: 600; }
-.remote-control-head p { margin: 4px 0 0; color: var(--text-3); font-size: var(--type-label); line-height: 1.6; }
-.remote-control-section { margin: 4px 2px 8px; color: var(--text-3); font-size: var(--type-caption); }
-.remote-control-page .remote-control-list { display: flex; flex-direction: column; gap: 4px; margin: 0 0 18px; }
-.remote-control-page .remote-control-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border: 0; border-radius: max(0px, calc(var(--shape-radius-panel, var(--radius-sm)) - 4px)); background: transparent; color: var(--text-1); font: inherit; text-align: left; transition: background-color .15s; }
-.remote-control-page .remote-control-row:hover { background: var(--bg-hover); }
-/* The whole row is the switch (ToolControlPanel.css .tool-control-card-toggle); keep room for its knob. */
-.remote-control-page .tool-control-agent { padding-right: 70px; }
-.remote-control-page .tool-control-agent-icon, .remote-control-page .tool-control-agent-icon svg { width: 20px; height: 20px; font-size: 20px; }
-.remote-control-icon { position: relative; display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: max(0px, calc(var(--shape-radius-panel, var(--radius-sm)) - 8px)); background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); }
-.remote-control-icon > svg { width: 14px; height: 14px; }
+/* Remote control, under the 协作 panel and in its shapes (ToolControlPanel.css): a header card with its mark, headings
+   inset to the cards' own text (.orchestration-roles-head), the agent apps as the same grid of switch cards, the two
+   kinds of access as two cards with the blue check, and each open window as a card row of its own. */
+.remote-control-page { display: flex; flex-direction: column; margin-top: 30px; }
+.remote-control-page > .remote-control-head { margin-bottom: 0; }
+.remote-control-page > .orchestration-roles-head + * { margin-top: 12px; }
+
+/* Open windows: one card row each, and 操控其他设备… a dashed card that adds one. */
+.remote-control-page .remote-control-list { display: flex; flex-direction: column; gap: 10px; }
+.remote-control-page .remote-control-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px 20px; color: var(--text-1); font: inherit; text-align: left; }
+.remote-control-icon { position: relative; display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: max(0px, calc(var(--shape-radius-panel, var(--radius-sm)) - 6px)); background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); }
+.remote-control-icon > svg { width: 16px; height: 16px; }
 .remote-control-icon > i { position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px var(--bg-panel); }
 .remote-control-name { font-weight: 500; }
 .remote-control-host { color: var(--text-3); font-size: var(--type-caption); }
 .remote-control-fill { flex: 1; }
-.remote-control-button { padding: 4px 10px; border: 0; border-radius: var(--shape-radius-btn, 5px); background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); font: inherit; font-size: var(--type-caption); cursor: pointer; transition: background-color .15s, color .15s; }
-.remote-control-button:hover { background: var(--bg-hover); color: var(--text-1); }
+.remote-control-button { height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: color-mix(in srgb, var(--text-1) 6%, transparent); color: var(--text-2); font: inherit; font-size: var(--type-label); cursor: pointer; transition: background-color .15s, color .15s; }
+.remote-control-button:hover { background: color-mix(in srgb, var(--text-1) 11%, transparent); color: var(--text-1); }
 .remote-control-button:focus-visible, .remote-control-add:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
-.remote-control-add { cursor: pointer; color: var(--text-2) !important; }
-.remote-control-empty { margin: 0; padding: 12px; color: var(--text-3); font-size: var(--type-label); }
-.remote-control-note { margin: -8px 4px 14px; color: var(--text-3); font-size: var(--type-caption); line-height: 1.6; }
-/* Every row is a quiet card (.tool-control-agent, kept on every shape by global.css): no outline. */
-.remote-control-page .remote-control-list > .tool-control-agent { border-color: transparent; }
-.remote-control-page .remote-control-list > .tool-control-agent:hover { background: var(--bg-hover); }
-.remote-control-page .remote-control-list > .remote-control-add { width: 100%; padding-right: 12px; }
-.remote-control-page .remote-control-list > .remote-control-row:not(.remote-control-add):not(:has(.tool-control-switch)) { padding-right: 12px; }
-/* Work from other computers: two options as one choice, the chosen one on a deeper ground with the blue check. */
-.remote-access-option { width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: max(0px, calc(var(--radius-md) - 6px)); border: 0; text-align: left; font: inherit; color: var(--text-1); background: transparent; cursor: pointer; transition: background-color .15s; }
-.remote-access-option:hover:not(.is-selected):not(:disabled) { background: var(--bg-hover); }
+.remote-control-empty { margin: 0; padding: 4px 21px 0; color: var(--text-3); font-size: var(--type-label); }
+.remote-control-add { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px 12px 20px; border: 1px dashed var(--border); border-radius: var(--shape-radius-panel, var(--radius-sm)); background: transparent; color: var(--text-2); font: inherit; font-size: var(--type-body); text-align: left; cursor: pointer; transition: background-color .15s, color .15s, border-color .15s; }
+.remote-control-add:hover { background: color-mix(in srgb, var(--text-1) 4%, transparent); color: var(--text-1); border-color: color-mix(in srgb, var(--text-1) 22%, transparent); }
+.remote-control-plus { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: max(0px, calc(var(--shape-radius-panel, var(--radius-sm)) - 6px)); background: color-mix(in srgb, var(--text-1) 6%, transparent); font-size: 17px; line-height: 1; }
+
+/* Work from other computers: two cards as one choice, the chosen one on a deeper ground with the blue round check. */
+.remote-access-list.tool-control-agents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.remote-access-option { width: 100%; box-sizing: border-box; padding: 16px 18px 16px 20px; text-align: left; font: inherit; color: var(--text-1); cursor: pointer; transition: background-color .15s; }
+.remote-access-option:hover:not(.is-selected):not(:disabled) { background: color-mix(in srgb, var(--text-1) 4%, var(--bg-panel)); }
 .remote-access-option.is-selected { background: var(--bg-active); }
 .remote-access-option:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
-.remote-access-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-.remote-access-text small { color: var(--text-3); font-size: var(--type-caption); line-height: 1.45; }
-.remote-access-check { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 50%; color: #fff; }
-.remote-access-option.is-selected .remote-access-check { background: var(--switch-on); }
-.remote-access-check > svg { width: 11px; height: 11px; }
+.remote-access-text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+.remote-access-text strong { font-weight: 500; }
+.remote-access-text small { color: var(--text-2); font-size: var(--type-label); line-height: 1.45; }
+.remote-access-check { display: inline-grid; place-items: center; width: 20px; height: 20px; flex: none; border-radius: 50%; color: #fff; box-shadow: inset 0 0 0 1.5px var(--border-input); }
+.remote-access-option.is-selected .remote-access-check { background: var(--switch-on); box-shadow: none; }
+.remote-access-check > svg { width: 12px; height: 12px; }
+@container (max-width: 540px) { .remote-access-list.tool-control-agents { grid-template-columns: 1fr; } }
