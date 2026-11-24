@@ -5,7 +5,7 @@
   "identifier": "com.coffeecli.desktop",
   "build": {
     "frontendDist": "./src-ui/dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeBuildCommand": "",
     "beforeDevCommand": { "script": "npm run dev", "cwd": "./src-ui" }
   },
