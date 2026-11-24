@@ -117,7 +117,16 @@
 
 /* Open conversations (Clear 方案 A): the title's first character on a quiet tile, the tool's mark in the
    lower corner, the state in the upper one. The open one sits on a deeper tile with a short bar at the edge. */
-.icon-rail-sessions { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 2px 0; }
+.icon-rail-sessions { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 6px 0 2px; }
+/* Close on the icon's corner (方案 A): shown while the pointer is on the conversation, filled with the text colour so
+   it reads on any tile; it overhangs the corner, so the list leaves room above the first icon. */
+.icon-rail-session-item { position: relative; }
+.icon-rail-session-close { position: absolute; top: -5px; left: -5px; z-index: 2; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--text-1); color: var(--bg-app); box-shadow: 0 0 0 2px var(--bg-app); opacity: 0; pointer-events: none; cursor: pointer; transition: opacity .12s; }
+.icon-rail-session-close svg { width: 9px; height: 9px; }
+.icon-rail-session-item:hover .icon-rail-session-close, .icon-rail-session-close:focus-visible { opacity: 1; pointer-events: auto; }
+.icon-rail-session-close:hover { background: color-mix(in srgb, var(--text-1) 80%, var(--bg-app)); }
+.icon-rail-session-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .icon-rail-session-close { transition: none; } }
 .icon-rail-sessions::-webkit-scrollbar { display: none; }
 .icon-rail-session { width: 34px; height: 34px; background: color-mix(in srgb, var(--text-1) 5%, transparent); }
 .icon-rail-session:hover { background: var(--bg-hover); }

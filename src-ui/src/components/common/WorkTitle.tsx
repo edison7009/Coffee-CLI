@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useT } from '../../i18n/useT';
 import { useAppState, type TerminalSession } from '../../store/app-state';
-import type { SavedSession } from '../../tauri';
 import { getHistorySnapshot, prefetchHistory, subscribeHistory } from '../../lib/history-cache';
 import { getRenamedSnapshot, setCustomName, subscribeRenamed } from '../../lib/renamed-sessions';
 import { SessionContextMenu, type SessionCtxMenuState } from '../right/SessionContextMenu';
+import { onTitleRename, openSessionRecord, takeTitleRename } from '../../lib/open-session-record';
 
 /** Work's title bar: 「project / conversation」, and a ⌄ after the title that opens the same menu as right-clicking
  *  the conversation in the list (rename, pin, copy its id or resume command, reveal), with close in place of delete. */
@@ -24,12 +24,16 @@ export function WorkTitle({ tab }: { tab: TerminalSession }) {
   useEffect(() => { if (editing !== null) { input.current?.focus(); input.current?.select(); } }, [editing !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The conversation as the list knows it (its saved record), or, until it has one, this open tab as a live one.
-  const record = history.sessions.find(item => item.tool === tab.tool && !!tab.resumeToken && item.session_token === tab.resumeToken);
-  const saved: SavedSession = record
-    ?? { id: `live:${tab.id}`, name: tab.toolTitle ?? '', tool: tab.tool ?? '', cwd: tab.folderPath ?? '', session_token: tab.resumeToken ?? null, saved_at: new Date().toISOString() };
+  const { saved, record } = openSessionRecord(tab, history.sessions);
   const key = `${saved.tool}:${saved.id}`;
   const folder = tab.folderPath?.split(/[\\/]/).filter(Boolean).pop();
   const name = (record ? renamed[key] : undefined) ?? tab.toolTitle ?? saved.name;
+  // A rename asked for from the rail's menu: this title edits it once this conversation is the one shown.
+  useEffect(() => {
+    const start = () => { cancelled.current = false; setEditing(name ?? ''); };
+    if (takeTitleRename(tab.id)) queueMicrotask(start);
+    return onTitleRename(id => { if (id === tab.id && takeTitleRename(id)) start(); });
+  }, [tab.id, name]);
   if (!folder && !name) return null;
   const finish = (save: boolean) => {
     if (save && !cancelled.current && editing !== null) {
