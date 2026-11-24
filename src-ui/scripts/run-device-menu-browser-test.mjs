@@ -135,7 +135,13 @@ try {
     const { page: withUpdate, errors } = await open({ connected: false, manifest: true });
     const update = withUpdate.locator('.update-check-btn.update-available');
     await update.waitFor({ timeout: 60_000 });
-    await update.hover();
+    // The tip is CSS-only (:hover::after). The button re-renders as the update check settles its label, and a
+    // freshly rendered button is not hovered until the pointer moves again: hover until the tip actually shows.
+    const tipShown = () => update.evaluate(button => button.matches(':hover') && getComputedStyle(button, '::after').content !== 'none');
+    for (const deadline = Date.now() + 10_000; ; await withUpdate.waitForTimeout(100)) {
+      await update.hover();
+      if (await tipShown() || Date.now() > deadline) break;
+    }
     const { tip, panel } = await update.evaluate(button => {
       const box = button.getBoundingClientRect(), after = getComputedStyle(button, '::after');
       const right = box.right - parseFloat(after.right), width = parseFloat(after.width);
