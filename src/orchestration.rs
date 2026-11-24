@@ -21,8 +21,8 @@ fn default_mode() -> String { "auto".into() }
 fn default_device_access() -> String { "restricted".into() }
 const DEVICE_ACCESS: [&str; 2] = ["restricted", "full"];
 fn default_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh"].into_iter().map(str::to_owned).collect() }
-/// Agents that can be workers. Pi is supported but stays off until the user turns it on.
-fn supported_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh", "pi"].into_iter().map(str::to_owned).collect() }
+/// Agents that can be workers. Pi and Antigravity are supported but stay off until the user turns them on.
+fn supported_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh", "pi", "antigravity"].into_iter().map(str::to_owned).collect() }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -932,8 +932,8 @@ fn start_worker(token: &str, args: &Value) -> Result<Value, String> {
     parent(&hub().state.lock().unwrap(), token)?;
     let tool = text(args, "tool", 160)?;
     if tool.contains('@') { return start_remote_worker(token, &tool, args); }
-    if tool.len() > 32 { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
-    if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
+    if tool.len() > 32 { return Err("Choose claude, codex, opencode, dsh, pi or antigravity".into()); }
+    if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh, pi or antigravity".into()); }
     if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err("The requested tool is not installed".into()); }
     let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
     let operation = args.get("operationId").map(|value| value.as_str().filter(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))).ok_or("Invalid operationId")).transpose()?;
@@ -1025,7 +1025,7 @@ fn start_remote_worker(token: &str, helper: &str, args: &Value) -> Result<Value,
 pub fn device_delegate(device: &str, args: &Value) -> Result<Value, String> {
     let token = device_token(device);
     let tool = text(args, "tool", 32)?;
-    if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh or pi".into()); }
+    if !supported_agents().contains(&tool) { return Err("Choose claude, codex, opencode, dsh, pi or antigravity".into()); }
     if !crate::tools::find(&tool).is_some_and(|tool| crate::server::binary_on_path(tool.binary_name)) { return Err(format!("{tool} is not installed on this computer")); }
     let title = text(args, "title", 160)?; let prompt = text(args, "prompt", 24_000)?;
     let cwd = text(args, "cwd", 4096).map_err(|_| "Say which folder on this computer to work in".to_string())?;

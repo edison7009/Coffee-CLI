@@ -6,7 +6,7 @@ import { receiveOrchestration, useOrchestration } from '../../lib/orchestration'
 import { canRequestControl, remoteHost, remoteWindowName, requestControl, type RemoteWindow } from '../../lib/remote-control';
 import './ClaudeComposerControls.css';
 
-const NAMES: Record<string, string> = { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', dsh: 'DeepSeek Harness', pi: 'Pi' };
+const NAMES: Record<string, string> = { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', dsh: 'DeepSeek Harness', pi: 'Pi', antigravity: 'Antigravity' };
 const name = (tool: string) => NAMES[tool] ?? tool;
 /** `codex` here, `codex@Studio` on another computer: the tool's name, and the computer for the second. */
 const helperName = (helper: string) => { const [tool, computer] = helper.split('@'); return computer ? `${name(tool)} · ${computer}` : name(tool); };
