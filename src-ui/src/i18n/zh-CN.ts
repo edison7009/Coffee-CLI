@@ -980,6 +980,8 @@ export const zhCN = {
   "gambit.folder": "文件夹",
   "theme.section.shape_hint": "影响圆角、面板和背景纹理",
   "launchpad.choose_folder": "选择目录",
+  "launchpad.permission_default": "默认权限",
+  "launchpad.left": "剩余",
   "worker.from": "子任务 · 由 {parent} 分派",
   "worker.from_device": "子任务 · 由另一台电脑分派",
   "worker.instructions": "查看给 AI 的完整指令",

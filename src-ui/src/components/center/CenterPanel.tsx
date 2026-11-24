@@ -1,5 +1,7 @@
 import { AcpConversation } from './AcpConversation';
 import { ACP_TOOLS, acpLaunchMode, isAcpTool } from '../../lib/acp-tools';
+import { LaunchCardStats, LaunchPermissionPicker } from './LaunchCardDetails';
+import { isLaunchTool, launchToolData, markLaunchPermission } from '../../lib/launch-permission';
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
 import { InstallChip } from './InstallChip';
 import { AutomationsPage } from './AutomationsPage';
@@ -1152,6 +1154,9 @@ export function CenterPanel() {
       }
       // 工作式 never starts a terminal: every tool opens as its desktop conversation.
       const work = state.layoutMode === 'work';
+      // The permission the start page's card chose: launch flags for a terminal, applied once a conversation is ready.
+      const desktop = tool === 'claude' ? work || claudeLaunchMode === 'conversation' : tool === 'codex' ? work || codexLaunchMode === 'conversation' : false;
+      if (isLaunchTool(tool)) { if (desktop) markLaunchPermission(activeTerminalId, tool); else toolData ??= launchToolData(tool); }
       dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? (work ? 'conversation' : claudeLaunchMode) : undefined, codexMode: tool === 'codex' ? (work ? 'conversation' : codexLaunchMode) : undefined, opencodeMode: tool === 'opencode' ? (work ? 'conversation' : opencodeLaunchMode) : undefined, piMode: tool === 'pi' ? (work ? 'conversation' : piLaunchMode) : undefined, acpMode: isAcpTool(tool) ? (work ? 'conversation' : acpLaunchModes[tool]) : undefined });
     }
   };
@@ -1165,9 +1170,9 @@ export function CenterPanel() {
 
   const openToolFolderMenu = (tool: ToolType, anchor: HTMLElement) => {
     if (recentFolders.length === 0) { void handlePickFolder(tool); return; }
-    // The list opens below the card, its left edge on the folder button's left edge.
+    // The list opens below the card, its left edge on the folder button's left edge (Code: the folder line itself).
     const card = anchor.closest('.launchpad-card');
-    const button = card?.querySelector('.launchpad-folder') ?? anchor;
+    const button = card?.querySelector('.launchpad-folder, .launchpad-card-path--button') ?? anchor;
     setFolderMenu({ x: button.getBoundingClientRect().left, y: (card ?? anchor).getBoundingClientRect().bottom + 4, tool });
     void commands.checkProjectDirectories(recentFolders).then(checks => {
       for (const check of checks) {
@@ -1669,9 +1674,17 @@ export function CenterPanel() {
                                       {!installed && !isTerminal && <InstallChip tool={tool.label} />}
                                       {isTerminal && <button type="button" className="launchpad-chip" onClick={(e) => { e.stopPropagation(); setShowRemoteForm(true); }}>{t('launchpad.remote')}</button>}
                                     </div>
-                                    {tool.requiresCwd && (tool.key && lastFolders[tool.key]
+                                    {tool.requiresCwd && (state.layoutMode !== 'work'
+                                      // Code: the folder itself opens the recent folders (its own button, as 选择目录 was).
+                                      ? <button type="button" className={`launchpad-card-path launchpad-card-path--button${tool.key && lastFolders[tool.key] ? ' is-path' : ''}`} disabled={disabled} aria-label={t('launchpad.choose_folder')} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
+                                          <bdi>{tool.key && lastFolders[tool.key] ? homeShortPath(lastFolders[tool.key], homeDir) : t('launchpad.pick_folder')}</bdi>
+                                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                                        </button>
+                                      : tool.key && lastFolders[tool.key]
                                       ? <span className="launchpad-card-path is-path"><bdi>{homeShortPath(lastFolders[tool.key], homeDir)}</bdi></span>
                                       : <span className="launchpad-card-path">{t('launchpad.pick_folder')}</span>)}
+                                    {/* Code: the model its own settings name and its usage, as the composer shows them. */}
+                                    {state.layoutMode !== 'work' && installed && !isTerminal && tool.key && <LaunchCardStats tool={tool.key} folder={lastFolders[tool.key] || undefined} />}
                                   </div>
                                   {/* Clean: the folder icon. Code: a right column level with the name and its path — "choose folder" (the recent-folders list) over how it opens. */}
                                   {state.layoutMode === 'work' ? <>
@@ -1679,7 +1692,7 @@ export function CenterPanel() {
                                       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
                                     </button>}
                                   </> : <div className="launchpad-card-side">
-                                    {tool.requiresCwd && <button type="button" className="launchpad-folder launchpad-folder--text" disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>{t('launchpad.choose_folder')}</button>}
+                                    {isLaunchTool(tool.key) && <LaunchPermissionPicker tool={tool.key} disabled={disabled} />}
                                     {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : isAcpTool(tool.key) ? acpLaunchModes[tool.key] : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : isAcpTool(tool.key) ? getToolDisplayName(tool.key) : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : isAcpTool(tool.key) ? (mode: ClaudeMode) => changeAcpLaunchMode(tool.key!, mode) : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                   </div>}
                                 </div>

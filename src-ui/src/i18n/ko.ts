@@ -978,6 +978,8 @@ export const ko = {
   "gambit.folder": "폴더",
   "theme.section.shape_hint": "모서리, 패널, 배경 질감",
   "launchpad.choose_folder": "폴더 선택",
+  "launchpad.permission_default": "기본 권한",
+  "launchpad.left": "남음",
   "worker.from": "하위 작업 · {parent}에서 배정",
   "worker.from_device": "하위 작업 · 다른 컴퓨터에서",
   "worker.instructions": "AI에게 보낸 전체 지시 보기",

@@ -975,6 +975,8 @@ export const de = {
   "gambit.folder": "Ordner",
   "theme.section.shape_hint": "Ecken, Flächen und Hintergrundstruktur",
   "launchpad.choose_folder": "Ordner wählen",
+  "launchpad.permission_default": "Standard",
+  "launchpad.left": "übrig",
   "worker.from": "Teilaufgabe · zugewiesen von {parent}",
   "worker.from_device": "Teilaufgabe · von einem anderen Computer",
   "worker.instructions": "Vollständige Anweisungen an die KI anzeigen",

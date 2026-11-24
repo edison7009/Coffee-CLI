@@ -975,6 +975,8 @@ export const pt = {
   "gambit.folder": "Pasta",
   "theme.section.shape_hint": "Cantos, painéis e textura do fundo",
   "launchpad.choose_folder": "Escolher pasta",
+  "launchpad.permission_default": "Padrão",
+  "launchpad.left": "restante",
   "worker.from": "Subtarefa · atribuída por {parent}",
   "worker.from_device": "Subtarefa · de outro computador",
   "worker.instructions": "Ver as instruções completas para a IA",

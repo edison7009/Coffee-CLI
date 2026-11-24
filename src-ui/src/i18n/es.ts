@@ -975,6 +975,8 @@ export const es = {
   "gambit.folder": "Carpeta",
   "theme.section.shape_hint": "Esquinas, paneles y textura de fondo",
   "launchpad.choose_folder": "Elegir carpeta",
+  "launchpad.permission_default": "Predeterminado",
+  "launchpad.left": "restante",
   "worker.from": "Subtarea · asignada por {parent}",
   "worker.from_device": "Subtarea · de otro equipo",
   "worker.instructions": "Ver las instrucciones completas para la IA",

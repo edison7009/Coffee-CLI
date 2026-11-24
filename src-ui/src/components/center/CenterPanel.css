@@ -1462,11 +1462,12 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
   position: relative; isolation: isolate; border-color: transparent; border-radius: 12px; clip-path: inset(0 round 12px);
   background-color: var(--bg-card);
   background-image: linear-gradient(135deg, color-mix(in srgb, var(--brand) calc(var(--brand-tint) * .25), var(--bg-card)) 0%, color-mix(in srgb, var(--brand) calc(var(--brand-tint) * .55), var(--bg-card)) 45%, color-mix(in srgb, var(--brand) var(--brand-tint), var(--bg-card)) 100%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .04), inset 0 1px 0 rgb(255 255 255 / .05);
+  /* Flat, as EchoBird's: no edge lines, the colour alone sets the card off. */
+  box-shadow: none;
 }
 [data-mode="light"][data-layout="code"] .launchpad-card-group {
   --brand-tint: 20%; --brand-mark: .16; --brand-pill: rgb(255 255 255 / .6);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / .06), inset 0 1px 0 rgb(255 255 255 / .6);
+  box-shadow: none;
 }
 [data-layout="code"] .launchpad-card-group[data-tool="claude"] { --brand: #d97757; }
 [data-layout="code"] .launchpad-card-group[data-tool="dsh"] { --brand: #4d6bfe; }
@@ -1495,13 +1496,48 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 @media (prefers-reduced-motion: reduce) { [data-layout="code"] .launchpad-card-mark { transition: none; } }
 /* The right column's controls sit on a small pill, readable on any brand colour. */
 [data-layout="code"] .launchpad-card-side .launchpad-mode-tabs, [data-layout="code"] .launchpad-folder.launchpad-folder--text { background: var(--brand-pill); }
-[data-layout="code"] .launchpad-card { position: relative; z-index: 1; isolation: isolate; height: 86px; padding: 0 14px 0 20px; gap: 14px; background: transparent; }
+/* EchoBird's model card: the name (with the permission it starts with) and the model (with how it opens) on two rows,
+   the folder under them in small type, and at the foot the headline usage as a large number; the info and side
+   columns lend their parts to one grid, and the usage window's bar runs along the card's bottom edge. */
+[data-layout="code"] .launchpad-card { position: relative; z-index: 1; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto 1fr; column-gap: 12px; row-gap: 2px; align-items: center; height: 152px; padding: 13px 14px 14px 18px; background: transparent; }
+[data-layout="code"] .launchpad-card > .launchpad-card-info, [data-layout="code"] .launchpad-card > .launchpad-card-side { display: contents; }
+[data-layout="code"] .launchpad-card .launchpad-card-title { grid-column: 1; grid-row: 1; min-width: 0; }
+[data-layout="code"] .launchpad-card .launchpad-permission { grid-column: 2; grid-row: 1; justify-self: end; }
+[data-layout="code"] .launchpad-card .launchpad-card-model { grid-column: 1; grid-row: 2; }
+[data-layout="code"] .launchpad-card .launchpad-mode-tabs { grid-column: 2; grid-row: 2; justify-self: end; }
+[data-layout="code"] .launchpad-card .launchpad-card-path { grid-column: 1 / -1; grid-row: 3; justify-self: start; min-width: 0; max-width: 100%; }
+[data-layout="code"] .launchpad-card .launchpad-card-usage { grid-column: 1 / -1; grid-row: 4; align-self: end; }
 [data-layout="code"] .launchpad-card:hover { background: color-mix(in srgb, var(--text-1) 3%, transparent); }
 [data-layout="code"] .launchpad-icon { width: 34px; height: 34px; }
 [data-layout="code"] .launchpad-card-info { gap: 6px; }
 [data-layout="code"] .launchpad-card .launchpad-card-name { color: var(--text-1); font-size: 15.5px; line-height: 22px; }
 [data-layout="code"] .launchpad-card-title { height: 22px; }
-[data-layout="code"] .launchpad-card .launchpad-card-path { height: 22px; line-height: 22px; font-size: 12.5px; color: var(--text-3); }
+[data-layout="code"] .launchpad-card .launchpad-card-path { height: 20px; line-height: 20px; font-size: 11.5px; color: var(--text-3); }
+/* The folder: its own button, opening the recent folders; a small chevron says so. */
+[data-layout="code"] .launchpad-card-path--button { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; width: fit-content; margin-left: -6px; padding: 0 6px; border: 0; border-radius: 7px; background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background-color .15s, color .15s; }
+[data-layout="code"] .launchpad-card-path--button bdi { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-layout="code"] .launchpad-card-path--button > svg { flex: none; opacity: .7; }
+[data-layout="code"] .launchpad-card-path--button:hover:not(:disabled) { background: var(--brand-pill); color: var(--text-1); }
+[data-layout="code"] .launchpad-card-path--button:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+/* The model, in EchoBird's mono semibold; the folder under it is the small line (EchoBird's host). */
+[data-layout="code"] .launchpad-card-model { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'JetBrainsMono', var(--font-mono, ui-monospace), monospace; font-size: 13px; font-weight: 600; line-height: 22px; color: var(--text-1); }
+/* The headline usage: what is left of the window that runs out first (or the balance), with its label beside it. */
+[data-layout="code"] .launchpad-card-usage { display: flex; align-items: flex-end; gap: 10px; min-width: 0; cursor: default; }
+[data-layout="code"] .launchpad-card-hero { flex: none; font-size: 29px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text-1); }
+[data-layout="code"] .launchpad-card-hero[data-tone="critical"] { color: rgb(224 109 109); }
+[data-layout="code"] .launchpad-card-hero-side { display: grid; gap: 2px; min-width: 0; padding-bottom: 2px; font-size: 11px; line-height: 1.15; color: var(--text-2); white-space: nowrap; }
+[data-layout="code"] .launchpad-card-hero-side b { font-weight: 700; color: var(--text-1); font-variant-numeric: tabular-nums; }
+/* That window's bar is the card's bottom edge (tones as the composer's meter). */
+[data-layout="code"] .launchpad-card-edge { position: absolute; right: 0; bottom: 0; left: 0; height: 3px; background: color-mix(in srgb, var(--text-1) 8%, transparent); pointer-events: none; }
+[data-layout="code"] .launchpad-card-edge > i { display: block; height: 100%; --edge: 34 197 94; background: linear-gradient(to right, rgb(var(--edge)), rgb(var(--edge) / .7)); transition: width 450ms cubic-bezier(0.22, 1, 0.36, 1); }
+[data-layout="code"] .launchpad-card-edge > i[data-tone="low"] { --edge: 250 204 21; }
+[data-layout="code"] .launchpad-card-edge > i[data-tone="critical"] { --edge: 224 109 109; }
+@media (prefers-reduced-motion: reduce) { [data-layout="code"] .launchpad-card-edge > i { transition: none; } }
+/* The permission the tool starts with, on the same pill as how it opens. */
+[data-layout="code"] .launchpad-permission { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border: 0; border-radius: 9px; background: var(--brand-pill); color: var(--text-2); font: 12px/22px var(--font); white-space: nowrap; cursor: pointer; transition: background-color .15s, color .15s; }
+[data-layout="code"] .launchpad-permission:hover:not(:disabled), [data-layout="code"] .launchpad-permission[aria-expanded="true"] { color: var(--text-1); background: var(--bg-hover); }
+[data-layout="code"] .launchpad-permission:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.launchpad-permission-menu { min-width: 168px; }
 /* The right column: two rows of 22px, level with the name and the path. */
 .launchpad-card-side { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 6px; flex: none; margin-left: auto; }
 .launchpad-card-side > * { height: 22px; }

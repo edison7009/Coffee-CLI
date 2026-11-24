@@ -978,6 +978,8 @@ export const ja = {
   "gambit.folder": "フォルダ",
   "theme.section.shape_hint": "角丸、パネル、背景の質感",
   "launchpad.choose_folder": "フォルダを選択",
+  "launchpad.permission_default": "既定の権限",
+  "launchpad.left": "残り",
   "worker.from": "サブタスク · {parent} から割り当て",
   "worker.from_device": "サブタスク · 別のPCから",
   "worker.instructions": "AI への指示をすべて表示",

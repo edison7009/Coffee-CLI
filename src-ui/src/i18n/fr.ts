@@ -975,6 +975,8 @@ export const fr = {
   "gambit.folder": "Dossier",
   "theme.section.shape_hint": "Coins, panneaux et texture du fond",
   "launchpad.choose_folder": "Choisir un dossier",
+  "launchpad.permission_default": "Par défaut",
+  "launchpad.left": "restant",
   "worker.from": "Sous-tâche · confiée par {parent}",
   "worker.from_device": "Sous-tâche · d’un autre ordinateur",
   "worker.instructions": "Voir les instructions complètes pour l’IA",

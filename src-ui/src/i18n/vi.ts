@@ -979,6 +979,8 @@ export const vi = {
   "gambit.folder": "Thư mục",
   "theme.section.shape_hint": "Góc bo, bảng và họa tiết nền",
   "launchpad.choose_folder": "Chọn thư mục",
+  "launchpad.permission_default": "Mặc định",
+  "launchpad.left": "còn lại",
   "worker.from": "Tác vụ con · giao từ {parent}",
   "worker.from_device": "Việc con · từ máy khác",
   "worker.instructions": "Xem toàn bộ chỉ dẫn gửi AI",

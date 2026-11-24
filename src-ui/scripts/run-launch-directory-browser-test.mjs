@@ -16,17 +16,17 @@ try{
  const {page,errors}=await prepare(['D:/Recent','D:/Older']);
  assert.equal(await page.locator('.launchpad-config').count(),0,'tool settings live in App configuration, not on the launch cards');
  for(let attempt=0;attempt<5;attempt++){
-   await page.locator('.launchpad-folder').first().click();
+   await page.locator('.launchpad-card-path--button').first().click();
    await page.keyboard.press('Escape');
    await page.locator('.folder-menu').waitFor({state:'hidden'});
  }
  for(const card of await page.locator('.launchpad-card').all()){
-   const folder=card.locator('.launchpad-folder');
+   const folder=card.locator('.launchpad-card-path--button');
    assert.equal(await folder.count(),1,'every directory-based card has a folder button');
    assert.ok((await folder.innerText()).trim().length>0,'Code names the folder button in words (choose folder), above how the tool opens');
    assert.equal((await card.locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder','a tool never opened shows the folder hint on its second line');
    assert.equal(await card.locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'ltr','the hint elides at its end; only paths keep their end');
-   for(const opener of [card.locator('.launchpad-card-info'),folder]){
+   for(const opener of [card.locator('.launchpad-card-title'),folder]){
      await opener.click();await page.locator('.folder-menu').waitFor();
      assert.equal((await state(page)).tool,null,'opening the list never launches');
      const [menu,cardBounds,button]=await Promise.all([page.locator('.folder-menu').boundingBox(),card.boundingBox(),folder.boundingBox()]);
@@ -61,7 +61,7 @@ try{
  await page.reload();await page.locator('.launchpad-mode-tabs').first().waitFor();
  const claudeCard=page.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]');
  assert.equal((await claudeCard.locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the last folder survives a reload');
- await claudeCard.locator('.launchpad-folder').click();assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
+ await claudeCard.locator('.launchpad-card-path--button').click();assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
  await page.keyboard.press('Escape');await page.locator('.folder-menu').waitFor({state:'hidden'});assert.equal((await state(page)).tool,null);
  await claudeCard.locator('.launchpad-card-info').click();await page.waitForFunction(()=>!document.querySelector('.launchpad-mode-tabs'));
  launched=await state(page);assert.equal(launched.tool,'claude','clicking the card opens the tool directly');assert.equal(launched.folderPath,'D:/Older','in its last folder');
@@ -84,7 +84,7 @@ try{
   await tidy.evaluate(()=>{localStorage.setItem('coffee:last-folder-by-tool',JSON.stringify({claude:'D:/Recent'}));});
   await tidy.reload();await tidy.locator('.launchpad-mode-tabs').first().waitFor();
   const claudeCard=tidy.getByRole('group',{name:'Claude launch mode'}).locator('xpath=ancestor::div[@class="launchpad-card"]');
-  await claudeCard.locator('.launchpad-folder').click();await tidy.locator('.folder-menu').waitFor();
+  await claudeCard.locator('.launchpad-card-path--button').click();await tidy.locator('.folder-menu').waitFor();
   await tidy.locator('.folder-menu-item',{hasText:'Recent'}).first().locator('.folder-menu-del').dispatchEvent('mousedown');
   await tidy.keyboard.press('Escape');
   assert.deepEqual(await tidy.evaluate(()=>JSON.parse(localStorage.getItem('coffee:recent-folders'))),['D:/Older']);

@@ -3368,6 +3368,8 @@ html.is-windows[data-frost="frost"] #root {
 /* Code's cards keep their tool's colour over that translucent fill (CenterPanel.css): the colour fades in toward the
    logo's corner as it does on the solid shapes. */
 :is([data-shape="carbon"], [data-shape="monogram"])[data-mode="light"][data-layout="code"] .launchpad-card-group {
+    border-color: transparent;
+    box-shadow: none;
     background-image: linear-gradient(135deg, color-mix(in srgb, var(--brand) calc(var(--brand-tint) * .25), transparent) 0%, color-mix(in srgb, var(--brand) calc(var(--brand-tint) * .55), transparent) 45%, color-mix(in srgb, var(--brand) var(--brand-tint), transparent) 100%);
 }
 

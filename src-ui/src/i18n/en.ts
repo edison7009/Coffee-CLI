@@ -981,6 +981,8 @@ export const en = {
   "gambit.folder": "Folder",
   "theme.section.shape_hint": "Corners, panels and background texture",
   "launchpad.choose_folder": "Choose folder",
+  "launchpad.permission_default": "Default",
+  "launchpad.left": "left",
   "worker.from": "Sub-task · assigned by {parent}",
   "worker.from_device": "Sub-task · from another computer",
   "worker.instructions": "Show the full instructions for the AI",

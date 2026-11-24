@@ -975,6 +975,8 @@ export const ru = {
   "gambit.folder": "Папка",
   "theme.section.shape_hint": "Углы, панели и фактура фона",
   "launchpad.choose_folder": "Выбрать папку",
+  "launchpad.permission_default": "По умолчанию",
+  "launchpad.left": "осталось",
   "worker.from": "Подзадача · от {parent}",
   "worker.from_device": "Подзадача · с другого компьютера",
   "worker.instructions": "Показать полные инструкции для ИИ",
