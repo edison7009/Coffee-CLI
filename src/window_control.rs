@@ -309,7 +309,7 @@ fn call(owner: &Owner, tool: &str, arguments: &Value) -> Result<Value, String> {
     ask_window(&app, &window, name, arguments)
 }
 
-fn ask_window(app: &AppHandle, window: &str, name: &str, arguments: Value) -> Result<Value, String> {
+pub(crate) fn ask_window(app: &AppHandle, window: &str, name: &str, arguments: Value) -> Result<Value, String> {
     let id = uuid::Uuid::new_v4().to_string();
     let (sender, receiver) = mpsc::channel();
     state().lock().map_err(|_| "unavailable")?.pending.insert(id.clone(), Pending { window: window.into(), sender });

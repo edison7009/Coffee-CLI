@@ -11,16 +11,22 @@ export interface OrchestrationTask {
   resultDelivery?: string | null;
   /** Present when the worker was started in its own git worktree. */
   worktree?: { root: string; path: string; branch: string } | null;
+  /** Work on another computer: the window that controls it. `tool` is then the helper's own tool. */
+  remote?: { window: string; computer: string; taskId: string | null; sessionId?: string | null } | null;
 }
 export type OrchestrationMode = 'auto' | 'manager' | 'lead';
-export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number; picks?: Record<string, string[]> }
+export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number; picks?: Record<string, string[]>;
+  /** Helpers on other computers right now, from their open windows (`tool@computer` in picks and tasks). */
+  remote?: { window: string; computer: string; agents: string[]; projects?: { path: string; repo: string | null }[] }[] }
 /** `parentId` is the target tab: the coordinator for results, the worker itself for a retry. */
 export interface ResultDelivery { id: string; parentId: string; generation: string; text: string; kind?: 'retry' }
 let snapshot: OrchestrationSnapshot = { enabled: false, agents: [], coordinators: [], tasks: [], revision: 0 };
 const listeners = new Set<() => void>();
 export function receiveOrchestration(value: OrchestrationSnapshot) {
   if (value.revision < snapshot.revision) return;
-  snapshot = value; listeners.forEach(listener => listener());
+  // A helper on another computer is `tool@computer` in the hub; the UI shows its tool and, beside it, the computer.
+  const tasks = value.tasks.map(task => task.remote ? { ...task, tool: task.tool.split('@')[0] as OrchestrationTask['tool'] } : task);
+  snapshot = { ...value, tasks }; listeners.forEach(listener => listener());
 }
 export function getOrchestrationSnapshot() { return snapshot; }
 export function refreshOrchestration() { return commands.orchestrationGet().then(value => { receiveOrchestration(value); return value; }); }

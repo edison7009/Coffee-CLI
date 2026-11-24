@@ -10,9 +10,11 @@ export function OrchestrationBridge() {
   useEffect(() => {
     if (!isTauri) return;
     let disposed = false, timer: ReturnType<typeof setTimeout> | undefined;
-    const stops: (() => void)[] = [], scopes = new Map<string, { parentId: string; generation: string; worker?: string }>();
+    const stops: (() => void)[] = [], scopes = new Map<string, { parentId: string; generation: string; worker?: string; device?: boolean }>();
     const cancelled = (id: string) => {
       const scope = scopes.get(id), tab = stateRef.current.terminals.find(tab => tab.id === scope?.parentId);
+      // Work a paired device delegated here has no coordinator tab on this computer; the hub decides whether it still stands.
+      if (scope?.device) return disposed;
       const snapshot = getOrchestrationSnapshot();
       return disposed || !snapshot.enabled || !scope || !tab || getAgentSession(tab)?.generation !== scope.generation || Boolean(scope.worker && !snapshot.agents?.includes(scope.worker));
     };
@@ -49,10 +51,12 @@ export function OrchestrationBridge() {
         listen<ToolRequest>('orchestration-request', async ({ payload }) => {
           let result: unknown;
           try {
-            const parent = stateRef.current.terminals.find(tab => tab.id === payload.parentId && tab.tool);
+            const device = (payload as ToolRequest & { device?: boolean }).device === true;
+            const parent = device ? undefined : stateRef.current.terminals.find(tab => tab.id === payload.parentId && tab.tool);
             const generation = parent && getAgentSession(parent)?.generation;
-            if (parent && generation) scopes.set(payload.requestId, { parentId: parent.id, generation, worker: payload.name === 'team_worker_start' ? String(payload.arguments.tool) : undefined });
-            if (!parent || !await pending(payload.requestId)) throw new Error('Coordinator closed or request expired');
+            if (device) scopes.set(payload.requestId, { parentId: String(payload.parentId), generation: '', device: true });
+            else if (parent && generation) scopes.set(payload.requestId, { parentId: parent.id, generation, worker: payload.name === 'team_worker_start' ? String(payload.arguments.tool) : undefined });
+            if (!device && !parent || !await pending(payload.requestId)) throw new Error('Coordinator closed or request expired');
             if (payload.name === 'team_worker_start') {
               const opened = await execute({ ...payload, name: 'sessions_open' }) as { ready?: boolean; sessionId: string; generation?: string; error?: string };
               if (!opened.ready || !opened.generation) throw new Error(opened.error ?? 'Worker is not ready. Its tab has been retained; inspect it before retrying.');

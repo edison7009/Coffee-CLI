@@ -23,7 +23,7 @@ import { sendSessionPrompt } from '../../lib/send-session-prompt';
 import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
-import { RemoteControlPicker } from './RemoteControlPicker';
+import { CollaborationPicker } from './OrchestrationPicker';
 import { remoteWindowName } from '../../lib/remote-control';
 import { useRemoteControlState } from '../../lib/remote-control-state';
 import { useCompact } from '../../lib/viewport';
@@ -177,7 +177,9 @@ export function ActiveGambit() {
       orchestration={coordinator}
       computer={controlsReady && controls.includes('computer')}
       browser={controlsReady && controls.includes('browser')}
-      remoteControl={activeId && remote?.attached ? <RemoteControlPicker key={`remote:${activeId}`} sessionId={activeId} state={remote} onState={setRemote} /> : undefined}
+      // One chip for both: the helpers this conversation hands work to, and the remote computer it operates.
+      remoteControl={activeId && (coordinator || remote?.attached) ? <CollaborationPicker key={`collab:${activeId}`} sessionId={activeId} coordinator={!!coordinator} remote={remote?.attached ? remote : undefined} onRemote={setRemote} /> : undefined}
+      placeSwitchable={!!remote?.attached}
       placeDevice={remote?.attached && remote.pick ? (name => name ? remoteWindowName(name, t('remote_control.window_prefix')) : null)(remote.windows.find(window => window.window === remote.pick)?.title) : null}
       worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode || isPi)
         // Sits beside the tool's composer controls, keyed by session: a shared key would strand a stale switch in the footer.

@@ -28,7 +28,7 @@ export function WorkerTaskCard({ prompt }: { prompt: WorkerPrompt }) {
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 10 5 5-5 5" /><path d="M4 4v7a4 4 0 0 0 4 4h12" /></svg>
       {parent && parentTitle
         ? <span className="worker-card-from">{before}<button type="button" className="worker-card-parent" onClick={() => dispatch({ type: 'SET_ACTIVE_TERMINAL', id: parent.id })}>{parentTitle}</button>{after}</span>
-        : <span className="worker-card-from">{t('worker.label')}</span>}
+        : <span className="worker-card-from">{t(task?.parentTool === 'device' ? 'worker.from_device' : 'worker.label')}</span>}
       {status && <span className="worker-card-state" data-state={status}>{(status === 'working' || status === 'starting') && <span className="worker-card-spin" aria-hidden="true" />}{t(`orchestration.${status}`)}</span>}
     </p>
     <div className="worker-card-task"><MarkdownContent content={prompt.task} /></div>

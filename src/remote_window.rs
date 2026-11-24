@@ -212,6 +212,7 @@ pub async fn remote_window_open(app: AppHandle, address: String, prefix: String)
     window.on_window_event(move |event| {
         if matches!(event, tauri::WindowEvent::Destroyed) {
             crate::remote_link::close_window(&closed_label);
+            crate::orchestration::remote_window_gone(&closed_label);
             if let Ok(mut map) = entries().lock() {
                 map.remove(&closed_label);
             }
@@ -240,6 +241,14 @@ pub async fn remote_window_focus(app: AppHandle, label: String) -> Result<(), St
 }
 
 /// Close a remote window: the same as closing it by hand, which ends the connection.
+/// Brings a computer's window forward on one of its tabs (work this computer handed over there).
+#[tauri::command]
+pub async fn remote_window_show_tab(app: AppHandle, label: String, session_id: String) -> Result<(), String> {
+    if !label.starts_with(LABEL_PREFIX) || session_id.is_empty() || session_id.len() > 128 { return Err("unknown window".into()); }
+    app.emit_to(tauri::EventTarget::webview_window(&label), "remote-show-tab", serde_json::json!({ "sessionId": session_id })).map_err(|e| e.to_string())?;
+    remote_window_focus(app, label).await
+}
+
 #[tauri::command]
 pub async fn remote_window_close(app: AppHandle, label: String) -> Result<(), String> {
     if !label.starts_with(LABEL_PREFIX) {

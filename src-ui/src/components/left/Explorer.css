@@ -510,17 +510,6 @@
   cursor: default;
   opacity: 1;
 }
-/* Windows: the installer is downloaded and waits for the user's click. */
-.update-check-btn.is-ready {
-  width: auto;
-  padding: 0 8px;
-}
-.update-install-label {
-  font-size: var(--type-caption);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
 .update-ring {
   display: block;
 }

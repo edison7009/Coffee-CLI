@@ -94,8 +94,10 @@ try {
     assert.deepEqual(await calls('download'), [['download', '9.9.9']]);
     await emit('downloaded', 100);
     await settle('download', 'resolve', '9.9.9');
-    await page.getByText('安装', { exact: true }).waitFor();
+    await page.locator('.update-check-btn.is-ready').waitFor();
     assert.equal(await label(), '安装更新 v9.9.9');
+    // Downloaded and waiting is an icon like the rest of the row; the words are its tip and its name.
+    assert.deepEqual(await button.evaluate(el => [el.innerText.trim(), el.querySelectorAll('svg').length]), ['', 1], 'the ready step shows an icon, not a word');
     assert.equal(await button.isDisabled(), false);
     assert.deepEqual(await calls('install'), [], 'a finished download never installs by itself');
     await page.screenshot({ path: join(directory, 'ready-dark.png'), clip: { x: 0, y: 560, width: 300, height: 90 } });
@@ -127,7 +129,7 @@ try {
   // Windows: an installer that disappeared goes back to Download; a failed download opens the website.
   {
     const { page, errors, button, label, calls, settle } = await open('Win32', '9.9.9');
-    await page.getByText('安装', { exact: true }).waitFor();
+    await page.locator('.update-check-btn.is-ready').waitFor();
     assert.deepEqual(await calls('download'), [], 'an earlier download is offered for installation straight away');
     await button.click();
     await page.getByRole('dialog').getByRole('button', { name: '开始更新' }).click();

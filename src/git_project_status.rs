@@ -150,6 +150,39 @@ async fn read_pr(base: &GitHubRepo, head: &GitHubRepo, branch: &str, local_head:
     (pr, available)
 }
 
+/// The repository a folder belongs to, as one comparable key (host/owner/name from its origin), so the same project
+/// is recognised on two computers whatever folder it sits in there. Local git only, no network.
+pub fn repo_key(folder: &str) -> Option<String> {
+    let root = git(folder, &["rev-parse", "--show-toplevel"]).ok()?.trim().to_string();
+    let origin = git(&root, &["config", "--get", "remote.origin.url"]).ok()?;
+    normalise_remote(origin.trim())
+}
+fn normalise_remote(remote: &str) -> Option<String> {
+    let rest = remote.split_once("://").map(|(_, rest)| rest).unwrap_or(remote);
+    let rest = rest.rsplit_once('@').map(|(_, rest)| rest).unwrap_or(rest);
+    let rest = rest.replacen(':', "/", if remote.contains("://") { 0 } else { 1 });
+    let key = rest.trim_end_matches('/').trim_end_matches(".git").to_ascii_lowercase();
+    // host/owner/name at least; a bare path is not a shareable identity.
+    (key.split('/').filter(|part| !part.is_empty()).count() >= 3).then_some(key)
+}
+
+#[tauri::command]
+pub async fn git_repo_key(folder: String) -> Option<String> {
+    tauri::async_runtime::spawn_blocking(move || repo_key(&folder)).await.ok().flatten()
+}
+
+#[cfg(test)]
+mod repo_key_tests {
+    #[test]
+    fn https_and_ssh_origins_of_one_repository_match() {
+        let key = super::normalise_remote;
+        assert_eq!(key("https://github.com/Edison/Coffee-CLI.git"), Some("github.com/edison/coffee-cli".into()));
+        assert_eq!(key("git@github.com:Edison/Coffee-CLI.git"), Some("github.com/edison/coffee-cli".into()));
+        assert_eq!(key("ssh://git@gitee.com:22/a/b"), Some("gitee.com:22/a/b".into()));
+        assert_eq!(key("/srv/repo"), None);
+    }
+}
+
 #[tauri::command]
 pub async fn git_project_status(folder: String, context: Option<SessionGitContext>) -> Result<Option<ProjectStatus>, String> {
     let local = tauri::async_runtime::spawn_blocking(move || {

@@ -23,6 +23,11 @@ export function ToolOrchestrationPanel({ active, tools }: {
       <span className="tool-control-symbol" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="11" y="3" width="10" height="8" rx="2" /><path d="M16 11v7M6 22v-4h20v4" /><rect x="2" y="22" width="8" height="7" rx="2" /><rect x="22" y="22" width="8" height="7" rx="2" /></svg></span>
       <div className="tool-control-summary"><strong>{t('tools.tab.orchestration')}</strong><p>{t('orchestration.description')}</p></div>
     </div>
+    {/* How the pieces fit: helpers here, other computers, and the composer's 协作 chip. The steps are a real order. */}
+    <details className="collab-guide" open>
+      <summary>{t('collab.guide.title')}</summary>
+      <ol>{(['collab.guide.1', 'collab.guide.2', 'collab.guide.3', 'collab.guide.4'] as const).map(step => <li key={step}>{t(step)}</li>)}</ol>
+    </details>
     {error && <p className="tool-memory-notice" role="alert">{t(ready ? 'control.write_error' : 'control.read_error')}</p>}
     <div className="tool-control-agents">
       {tools.slice(0, 6).map(tool => {

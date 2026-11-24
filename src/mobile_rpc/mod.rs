@@ -238,7 +238,7 @@ fn stop() {
 fn lane(request: &Value) -> Option<usize> {
     let method = request["method"].as_str().unwrap_or("");
     if method == "ui.invoke" && matches!(request["params"]["cmd"].as_str(), Some("tier_terminal_input" | "tier_terminal_raw_write")) { return Some(0); }
-    if matches!(method, "ui.dispatch" | "ui.storage" | "ui.call" | "ui.watch") || method.starts_with("upload.") { return Some(1); }
+    if matches!(method, "ui.dispatch" | "ui.storage" | "ui.call" | "ui.watch" | "team.delegate") || method.starts_with("upload.") { return Some(1); }
     None
 }
 
@@ -468,6 +468,16 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         "ui.wallpaper" => {
             let path = gui("wallpaper.path", json!({})).await?["path"].as_str().unwrap_or("").to_owned();
             wallpaper_chunk(&path, params["offset"].as_u64().unwrap_or(0))
+        }
+        // Work this device hands to this computer's coordination (a window controlling it, on another computer).
+        // The device is the one this connection authenticated, so it only reaches the work it delegated.
+        "team.delegate" | "team.call" => {
+            let device = client.device.clone();
+            let method = request["method"].as_str().unwrap_or("").to_owned();
+            let params = params.clone();
+            tauri::async_runtime::spawn_blocking(move || if method == "team.delegate" { crate::orchestration::device_delegate(&device, &params) }
+                else { crate::orchestration::device_call(&device, params["action"].as_str().unwrap_or(""), &params) })
+                .await.map_err(|e| ("internal", e.to_string()))?.map_err(|e| ("invalid_params", e))
         }
         "ui.subscribe" => { client.ui.store(true, Ordering::Relaxed); Ok(json!({"events": remote_ui::FORWARDED_EVENTS})) }
         // The desktop window runs the command, so the browser gets exactly what the desktop UI would.

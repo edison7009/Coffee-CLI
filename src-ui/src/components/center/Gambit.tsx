@@ -33,10 +33,10 @@ import { PiComposerControls } from './PiComposerControls';
 import { DshComposerControls } from './DshComposerControls';
 import { UsageMeter } from './UsageMeter';
 import { VoiceInputButton, VoiceUsageSlot } from './VoiceInputButton';
+import { CollaborationPicker } from './OrchestrationPicker';
 import { useUsageQuota } from '../../lib/usage-quota';
 import { attachToDraft, detachFromDraft, draftAttachments, draftForSend, joinDraft, splitDraft } from '../../lib/gambit-attachments';
 import './Gambit.css';
-import { OrchestrationPicker } from './OrchestrationPicker';
 import { fileToBase64 } from '../../lib/answer-image-paste';
 import { pickFiles } from '../../lib/folder-picker';
 
@@ -87,6 +87,8 @@ interface GambitProps {
   browser?: boolean;
   /** The remote control chip (RemoteControlPicker), for a tab that can operate remote windows. */
   remoteControl?: React.ReactNode;
+  /** The place tab can switch which remote computer this conversation works in. */
+  placeSwitchable?: boolean;
   /** Where this conversation works (方案 A's tab on the card): a remote computer's name, or null for this one. */
   placeDevice?: string | null;
   /** Controls beside the target label: the worktree switch for desktop conversations, New chat for Coffee Agent. */
@@ -215,6 +217,7 @@ function GambitImpl({
   computer,
   browser,
   remoteControl,
+  placeSwitchable,
   placeDevice,
   worktreeControl,
 }: GambitProps) {
@@ -954,8 +957,8 @@ function GambitImpl({
   const minimal = card && workLayout;
 
   const capabilitiesStatus = (orchestration || computer || browser || remoteControl) && <div className="gambit-capabilities" role="status">
-    {orchestration && <OrchestrationPicker sessionId={sessionId} />}
-    {remoteControl}
+    {/* The collaboration chip: given by the active tab (with Remote Control), or here for a coordinator alone. */}
+    {remoteControl ?? (orchestration && <CollaborationPicker sessionId={sessionId} coordinator />)}
     {computer && <span className="gambit-capability is-computer">{t('control.computer_label')}</span>}
     {browser && <span className="gambit-capability is-browser">{t('control.browser_label')}</span>}
   </div>;
@@ -1001,7 +1004,7 @@ function GambitImpl({
         })}
       </div>}
 
-      {card && !minimal && <PlaceTab device={placeDevice ?? null} folder={workspaceName} toolIcon={toolIcon} switchable={!!remoteControl} onPick={() => rootRef.current?.querySelector<HTMLButtonElement>('.gambit-capability.is-remote')?.click()} />}
+      {card && !minimal && <PlaceTab device={placeDevice ?? null} folder={workspaceName} toolIcon={toolIcon} switchable={!!placeSwitchable} onPick={() => rootRef.current?.querySelector<HTMLButtonElement>('.gambit-capability.is-remote')?.click()} />}
 
       {/* Input box: the textarea auto-grows to fit its content. */}
       <div

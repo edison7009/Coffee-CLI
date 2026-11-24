@@ -411,8 +411,6 @@
 .gambit-capabilities { display:flex; align-items:center; gap:5px; min-width:0; margin-right:auto; overflow:hidden; }
 .gambit-capability { min-width:0; padding:4px 7px; border-radius:var(--shape-radius-btn,5px); background:color-mix(in srgb,var(--capability-color) 12%,transparent); color:var(--capability-color); font:var(--type-caption) var(--font); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .gambit-capability.is-orchestration { --capability-color:var(--green); }
-.orchestration-pick-menu button { align-items:center; }
-.orchestration-pick-check { flex:0 0 1em; text-align:center; }
 .gambit-capability.is-picker { border:0; cursor:pointer; transition:background .15s; }
 .gambit-capability.is-picker:hover,.gambit-capability.is-picker[aria-expanded="true"] { background:color-mix(in srgb,var(--capability-color) 22%,transparent); }
 .gambit-capability.is-computer { --capability-color:var(--blue); }
@@ -712,3 +710,11 @@ button.gambit-place:focus-visible { outline: 1px solid var(--accent); outline-of
 .gambit--card.gambit--minimal .gambit-meta { grid-area: meta; display: flex; align-items: center; gap: 1px; min-width: 0; padding: 6px 4px 0; flex-wrap: wrap; row-gap: 2px; overflow: visible; }
 /* No folder below the line: Work's title already names it, Code's place tab does. */
 .gambit-footer--card.gambit-footer--card .gambit-meta > .gambit-workspace { display: none; }
+
+/* Windows draws CJK labels in Microsoft YaHei / Meiryo / Malgun Gothic, whose glyphs sit about 1.5px above the
+   line centre the icons align to (macOS's PingFang does not). There, the label drops 1.5px and its icon is lifted
+   back by the same, so icon and text share one centre. Latin labels and other systems are unchanged. */
+html.is-windows:is(:lang(zh), :lang(ja), :lang(ko)) .gambit-footer--card :is(.gambit-worktree-toggle, .claude-permission-control, .gambit-capability.is-orchestration, .gambit-capability.is-remote) { padding-top: 3px !important; }
+html.is-windows:is(:lang(zh), :lang(ja), :lang(ko)) .gambit-footer--card :is(.gambit-worktree-box, .gambit-capability.is-remote > svg),
+html.is-windows:is(:lang(zh), :lang(ja), :lang(ko)) .gambit-footer--card .claude-permission-control::before,
+html.is-windows:is(:lang(zh), :lang(ja), :lang(ko)) .gambit-footer--card .gambit-capability.is-orchestration::before { translate: 0 -1.5px; }

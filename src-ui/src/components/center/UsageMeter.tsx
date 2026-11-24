@@ -83,7 +83,9 @@ export function UsageMeter({ quotas, onRefresh, compact = false }: { quotas: Quo
   });
   if (compact) {
     const windows = shown.filter(quota => quota.balance === undefined);
-    const tightest = windows.reduce<Quota | undefined>((low, quota) => !low || remainingPercent(quota) < remainingPercent(low) ? quota : low, undefined);
+    // The nearest window leads (five hours before the week: it is the one people watch), unless a longer one is
+    // used up, which blocks the tool whatever the nearer one says. Windows arrive nearest first (usage-quota.ts).
+    const tightest = windows.find(quota => remainingPercent(quota) <= 0) ?? windows[0];
     const balance = shown.find(quota => quota.balance !== undefined);
     const percent = tightest ? Math.round(remainingPercent(tightest)) : undefined;
     const show = (el: HTMLElement) => { const r = el.getBoundingClientRect(); setTipAt({ x: r.left + r.width / 2, y: r.top }); };

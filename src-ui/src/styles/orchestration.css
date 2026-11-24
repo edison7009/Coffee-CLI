@@ -19,6 +19,8 @@
 .history-worker-icon { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; flex-shrink:0; font-size:14px; }
 .history-worker-icon svg, .history-worker-icon img { width:14px; height:14px; }
 .history-worker-title { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Work on another computer: the computer, quietly, after the title. */
+.history-worker-computer { flex:none; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-3); font-size:11.5px; }
 .history-worker-open { display:flex; align-items:center; gap:6px; flex:1; min-width:0; padding:0; border:0; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; }
 .history-worker-open:disabled { cursor:default; opacity:.6; }
 .history-worker-actions { position:relative; display:flex; align-items:center; justify-content:center; width:18px; height:18px; flex-shrink:0; }
