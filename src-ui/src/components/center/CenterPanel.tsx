@@ -175,6 +175,7 @@ import OMP_SVG from '../../icons-inline/omp.svg?raw';
 import CODEBUDDY_SVG from '../../icons-inline/codebuddy.svg?raw';
 import MUSE_DATA_URL from '../../icons-inline/muse.png?inline';
 import KIRO_SVG from '../../icons-inline/kiro.svg?raw';
+import QWEN_SVG from '../../icons-inline/qwen.svg?raw';
 import MINIMAX_SVG from '../../icons-inline/minimax.svg?raw';
 import AIDER_DATA_URL from '../../icons-inline/aider.png?inline';
 import KIMICODE_DATA_URL from '../../icons-inline/kimicode.png?inline';
@@ -229,7 +230,6 @@ const bgIcon = (dataUrl: string, size = '1em', extra: React.CSSProperties = {}) 
 // so it never flashes. Outer rect rounded (rx=18) to match the iOS-style
 // rounded square of the official PNG asset; previous opencode.svg lacked this.
 const OPENCODE_SVG  = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="100%" height="100%"><rect width="96" height="96" rx="18" ry="18" fill="#131010"/><rect x="24" y="18" width="48" height="60" fill="#FFFFFF"/><rect x="36" y="30" width="24" height="36" fill="#5A5858"/><rect x="36" y="30" width="24" height="12" fill="#131010"/></svg>';
-const QWEN_SVG      = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="17.5 27.7 135.6 135.6" width="100%" height="100%"><path fill="#082DFF" d="M130.06,43.66h-33.37c0-1.42-.37-2.84-1.1-4.11l-4.47-7.74c-1.47-2.54-4.18-4.11-7.12-4.11h-8.93c-2.94,0-5.65,1.57-7.12,4.11l-13.68,23.69c-1.47,2.54-1.47,5.67,0,8.22l4.47,7.74c1.47,2.54,4.18,4.11,7.12,4.11h64.19c2.94,0,5.65-1.57,7.12-4.11l4.47-7.74c1.47-2.54,1.47-5.67,0-8.22l-4.47-7.74c-1.47-2.54-4.18-4.11-7.12-4.11Z"/><path fill="#082DFF" d="M19.75,83.66l16.68,28.9c-1.23.71-2.27,1.74-3.01,3.01l-4.47,7.74c-1.47,2.54-1.47,5.67,0,8.22l4.47,7.74c1.47,2.54,4.18,4.11,7.12,4.11h27.35c2.94,0,5.65-1.57,7.12-4.11l4.47-7.74c1.47-2.54,1.47-5.67,0-8.22l-32.1-55.59c-1.47-2.54-4.18-4.11-7.12-4.11h-8.93c-2.94,0-5.65,1.57-7.12,4.11l-4.47,7.74c-1.47,2.54-1.47,5.67,0,8.22Z"/><path fill="#082DFF" d="M109.55,159.19l16.68-28.9c1.23.71,2.64,1.1,4.11,1.1h8.93c2.94,0,5.65-1.57,7.12-4.11l4.47-7.74c1.47-2.54,1.47-5.67,0-8.22l-13.68-23.69c-1.47-2.54-4.18-4.11-7.12-4.11h-8.93c-2.94,0-5.65,1.57-7.12,4.11l-32.1,55.59c-1.47,2.54-1.47,5.67,0,8.22l4.47,7.74c1.47,2.54,4.18,4.11,7.12,4.11h8.93c2.94,0,5.65-1.57,7.12-4.11Z"/></svg>';
 // OpenClaw brand (lobster mascot) — ported from Web-Home/agents/icons/openclaw.svg.
 // Markup lives in src/icons-inline/openclaw.svg and is imported ?raw above so
 // HistoryBoard can reuse the same bytes. InlineSvgIcon scopes definition IDs

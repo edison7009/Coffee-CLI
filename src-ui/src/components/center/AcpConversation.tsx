@@ -23,6 +23,7 @@ import { useTurnFolds } from '../../lib/use-turn-work';
 import { ChangedFilesCard, StepWorking, TurnFoldRow } from './TurnWork';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { ToolSwarm } from './ToolSwarm';
+import { isSwarmTool } from '../../lib/swarm-tools';
 import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
@@ -172,7 +173,7 @@ export function AcpConversation({ tool, mark, sessionId, cwd, resumeToken, isAct
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, name, t)}</div>}
         {empty && <div className="claude-empty">
-          {tool === 'antigravity' && <ToolSwarm tool="antigravity" isActive={isVisible} />}
+          {isSwarmTool(tool) && <ToolSwarm tool={tool} isActive={isVisible} />}
           <WelcomeGreeting />
           {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={toolMark} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={s.configOptions.find(c => c.category === 'model')?.options.find(o => o.value === s.configOptions.find(c => c.category === 'model')?.currentValue)?.name ?? ''} />

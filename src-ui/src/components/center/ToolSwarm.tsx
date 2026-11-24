@@ -5,6 +5,18 @@ import DSH_SVG from '../../icons-inline/deepseek-color.svg?raw';
 import OPENCODE_SVG from '../../icons-inline/opencode-mark.svg?raw';
 import ANTIGRAVITY_SVG from '../../icons-inline/antigravity.svg?raw';
 import PI_SVG from '../../icons-inline/pi.svg?raw';
+import CURSOR_SVG from '../../icons-inline/cursor.svg?raw';
+import KIRO_SVG from '../../icons-inline/kiro-mark.svg?raw';
+import KILO_SVG from '../../icons-inline/kilo-mark.svg?raw';
+import KIMI_SVG from '../../icons-inline/kimi-mark.svg?raw';
+import GROK_SVG from '../../icons-inline/grok.svg?raw';
+import CLINE_SVG from '../../icons-inline/cline.svg?raw';
+import CODEBUDDY_PNG from '../../icons-inline/codebuddy-mark.png?inline';
+import COPILOT_SVG from '../../icons-inline/copilot.svg?raw';
+import QWEN_SVG from '../../icons-inline/qwen.svg?raw';
+import MUSE_PNG from '../../icons-inline/muse.png?inline';
+import GOOSE_PNG from '../../icons-inline/goose.png?inline';
+import type { SwarmTool } from '../../lib/swarm-tools';
 import './ToolSwarm.css';
 
 /** The welcome animation every conversation tool shares, reproduced from the Playmand README header
@@ -17,17 +29,32 @@ import './ToolSwarm.css';
  *  1.6, 2.1 or 2.7, and there are 1,800 of them. Colour follows the demo's render pipeline: each star
  *  is the base colour times 1.6–2.86 (HDR, brighter than white), tonemapped back to the screen, then a
  *  bloom pass adds a soft glow of the base colour around and between the stars. */
-export type SwarmTool = 'claude' | 'codex' | 'dsh' | 'opencode' | 'pi' | 'antigravity';
+export type { SwarmTool } from '../../lib/swarm-tools';
 
-// `null` = a one-colour mark in the theme's text colour (light on dark, dark on light).
-const ICONS: Record<SwarmTool, { svg: string; color: string | null; own?: boolean }> = {
+// `null` = a one-colour mark in the theme's text colour (light on dark, dark on light). `own` keeps each
+// pixel's colour, and in an own-colour mark the parts drawn in `currentColor` still follow the text colour.
+// `png` = a raster mark (a data URL) instead of an SVG.
+const ICONS: Record<SwarmTool, { svg?: string; png?: string; color: string | null; own?: boolean }> = {
   claude: { svg: CLAUDE_SVG, color: '#D97757' },
   codex: { svg: CODEX_SVG, color: null },
   dsh: { svg: DSH_SVG, color: null, own: true },
   opencode: { svg: OPENCODE_SVG, color: null },
   antigravity: { svg: ANTIGRAVITY_SVG, color: null, own: true },
   pi: { svg: PI_SVG, color: null, own: true },
+  cursor: { svg: CURSOR_SVG, color: null },
+  kiro: { svg: KIRO_SVG, color: null, own: true },
+  muse: { png: MUSE_PNG, color: null, own: true },
+  goose: { png: GOOSE_PNG, color: null },
+  kilo: { svg: KILO_SVG, color: null },
+  kimicode: { svg: KIMI_SVG, color: null, own: true },
+  grok: { svg: GROK_SVG, color: null },
+  cline: { svg: CLINE_SVG, color: null },
+  codebuddy: { png: CODEBUDDY_PNG, color: null },
+  copilot: { svg: COPILOT_SVG, color: null },
+  qwen: { svg: QWEN_SVG, color: null, own: true },
 };
+// The colour `currentColor` is drawn in while sampling, so an own-colour mark can tell those pixels apart.
+const PROBE: [number, number, number] = [254, 1, 254];
 
 // ── The demo's numbers (icons.rs), in its units ──
 const BOX = 300; // icon box (sample_icons.py)
@@ -47,7 +74,7 @@ const FORMS = 4;
 const BLOOM: Array<[number, number]> = [[0.012, 0.2], [0.05, 0.26], [0.14, 0.62]];
 const TAU = Math.PI * 2;
 
-interface Star { tx: number; ty: number; base: [number, number, number]; s: [number, number, number]; rand: number; shimmer: number; dot: number; k: number }
+interface Star { tx: number; ty: number; base: [number, number, number]; mono: boolean; s: [number, number, number]; rand: number; shimmer: number; dot: number; k: number }
 
 const smooth = (x: number) => { const v = Math.min(1, Math.max(0, x)); return v * v * (3 - 2 * v); };
 /** icons.rs `assembled`: 0 in the nebula, 1 in the icon, zero at both ends of a segment. */
@@ -113,8 +140,9 @@ function sample(tool: SwarmTool): Promise<Star[]> {
   if (hit) return hit;
   const job = new Promise<Star[]>((resolve, reject) => {
     const res = 240;
-    const svg = ICONS[tool].svg.replace(/<\?xml[^>]*>|<!--[\s\S]*?-->/g, '')
-      .replace(/<svg\b([^>]*)>/, (_m, attrs: string) => `<svg${attrs.replace(/\s(width|height)="[^"]*"/g, '')} width="${res}" height="${res}" color="#000">`);
+    const icon = ICONS[tool];
+    const svg = (icon.svg ?? '').replace(/<\?xml[^>]*>|<!--[\s\S]*?-->/g, '')
+      .replace(/<svg\b([^>]*)>/, (_m, attrs: string) => `<svg${attrs.replace(/\s(width|height|color)="[^"]*"/g, '')} width="${res}" height="${res}" color="rgb(${PROBE.join(',')})">`);
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = res;
@@ -122,12 +150,13 @@ function sample(tool: SwarmTool): Promise<Star[]> {
       if (!ctx) { reject(new Error('no 2d context')); return; }
       ctx.drawImage(img, 0, 0, res, res);
       const data = ctx.getImageData(0, 0, res, res).data;
-      const inside: Array<[number, number, [number, number, number]]> = [];
+      const inside: Array<[number, number, [number, number, number], boolean]> = [];
       let x0 = res, x1 = 0, y0 = res, y1 = 0;
       for (let y = 0; y < res; y += 2) for (let x = 0; x < res; x += 2) {
         const i = (y * res + x) * 4;
         if (data[i + 3] < 128) continue;
-        inside.push([x, y, [data[i] / 255, data[i + 1] / 255, data[i + 2] / 255]]);
+        const probe = Math.abs(data[i] - PROBE[0]) + Math.abs(data[i + 1] - PROBE[1]) + Math.abs(data[i + 2] - PROBE[2]) < 24;
+        inside.push([x, y, [data[i] / 255, data[i + 1] / 255, data[i + 2] / 255], probe]);
         x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
       }
       if (!inside.length) { resolve([]); return; }
@@ -135,13 +164,13 @@ function sample(tool: SwarmTool): Promise<Star[]> {
       // Fisher–Yates with the fixed seed: a sample without replacement, repeated only if the shape is tiny.
       const order = inside.map((_, i) => i);
       for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
-      const fixed = ICONS[tool].color ? hexRgb(ICONS[tool].color) : null;
+      const fixed = icon.color ? hexRgb(icon.color) : null;
       const stars: Star[] = [];
       for (let n = 0; n < COUNT; n++) {
-        const [x, y, colour] = inside[order[n % order.length]];
+        const [x, y, colour, probe] = inside[order[n % order.length]];
         stars.push({
           tx: (x + rnd() * 2 - cx) * scale, ty: (cy - y - rnd() * 2) * scale,
-          base: ICONS[tool].own ? colour : fixed ?? [1, 1, 1],
+          base: icon.own && !probe ? colour : fixed ?? [1, 1, 1], mono: !fixed && (!icon.own || probe),
           s: [rnd(), rnd(), rnd()], rand: rnd(), shimmer: rnd() * TAU,
           dot: DOTS[Math.floor(rnd() * 3) % 3], k: PALETTE[Math.floor(rnd() * 8) % 8],
         });
@@ -149,7 +178,7 @@ function sample(tool: SwarmTool): Promise<Star[]> {
       resolve(stars);
     };
     img.onerror = () => reject(new Error(`cannot load ${tool} icon`));
-    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    img.src = icon.png ?? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   });
   cache.set(tool, job);
   return job;
@@ -219,7 +248,7 @@ export function ToolSwarm({ tool, isActive }: { tool: SwarmTool; isActive: boole
         // Near stars look bigger in the nebula; all settle to 1.15× in the icon.
         const nebulaScale = 0.8 + 0.4 * depth;
         const r = p.dot * (nebulaScale + (1.15 - nebulaScale) * w) * k;
-        const base = ICONS[tool].color || ICONS[tool].own ? p.base : mono;
+        const base = p.mono ? mono : p.base;
         const id = `${base.join(',')}|${p.k}`;
         let fill = palette.get(id);
         if (!fill) {
