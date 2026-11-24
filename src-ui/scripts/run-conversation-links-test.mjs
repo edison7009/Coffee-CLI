@@ -15,6 +15,10 @@ for (const [href, path] of [
   ['file://server/share/readme.md', '//server/share/readme.md'],
   ['./%2520.html', 'D:/Test Project/%20.html'],
   ['D:/', 'D:/'],
+  // The home folder, not a folder named ~ under the conversation's: the backend expands it.
+  ['~/.rustup', '~/.rustup'],
+  ['~/.cargo/bin/../env', '~/.cargo/env'],
+  ['~', '~'],
 ]) assert.deepEqual(link(href, cwd), { target: path, local: true }, href);
 assert.deepEqual(link('https://example.com/?a=1&b=2', cwd), { target: 'https://example.com/?a=1&b=2', local: false });
 for (const href of ['javascript:alert(1)', 'data:text/html,hello', 'vbscript:open()', 'tauri://localhost', '#heading', '%invalid', '']) assert.equal(link(href, cwd), null, href);

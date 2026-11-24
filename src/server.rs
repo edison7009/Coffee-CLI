@@ -560,9 +560,19 @@ async fn read_clipboard_image(app: tauri::AppHandle) -> Result<Option<String>, S
 
 // ─── File System Operations ───────────────────────────────────────────────────
 
+/// A conversation's `~/…` path names the home folder; the shell would expand it, the OS opener does not.
+fn expand_home(path: String) -> String {
+    let rest = if path == "~" { Some("") } else { path.strip_prefix("~/") };
+    match (rest, dirs::home_dir()) {
+        (Some(rest), Some(home)) => home.join(rest).to_string_lossy().into_owned(),
+        _ => path,
+    }
+}
+
 /// Open the native file explorer and highlight / reveal the given path.
 #[tauri::command]
 fn show_in_folder(path: String) -> Result<(), String> {
+    let path = expand_home(path);
     // Explorer opens an unrelated default folder for a path that does not exist.
     if !std::path::Path::new(&path).exists() { return Err(format!("Path not found: {path}")); }
     #[cfg(target_os = "windows")]
@@ -1440,6 +1450,7 @@ fn computer_name() -> Result<String, String> {
 
 #[tauri::command]
 fn open_url(url: String) -> Result<(), String> {
+    let url = expand_home(url);
     if url.is_empty() || url.starts_with('-') || url.contains('\0') {
         return Err("Invalid URL or file path".into());
     }

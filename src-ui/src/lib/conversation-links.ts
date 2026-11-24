@@ -15,18 +15,20 @@ export function conversationLink(href: string, cwd: string | null): Conversation
     path = decodeURIComponent(path.replace(/#.*$/, '')).replace(/:(\d+)(:\d+)?$/, '').replace(/\\/g, '/');
   } catch { return null; }
   if (!path || path.includes('\0')) return null;
-  if (!/^(?:[a-z]:\/|\/)/i.test(path)) {
+  // `~/…` is the home folder, not a folder named ~ under the conversation's: the backend expands it.
+  const home = path === '~' || path.startsWith('~/');
+  if (!home && !/^(?:[a-z]:\/|\/)/i.test(path)) {
     if (!cwd) return null;
     path = `${cwd.replace(/\\/g, '/').replace(/\/$/, '')}/${path}`;
   }
-  const prefix = path.startsWith('//') ? '//' : path.startsWith('/') ? '/' : '';
+  const prefix = home ? '~/' : path.startsWith('//') ? '//' : path.startsWith('/') ? '/' : '';
   const parts: string[] = [];
   for (const part of path.slice(prefix.length).split('/')) {
     if (!part || part === '.') continue;
     if (part === '..') { if (parts.length && !/^[a-z]:$/i.test(parts.at(-1)!)) parts.pop(); }
     else parts.push(part);
   }
-  const target = prefix + parts.join('/');
+  const target = home && !parts.length ? '~' : prefix + parts.join('/');
   return { target: /^[a-z]:$/i.test(target) ? `${target}/` : target, local: true };
 }
 
