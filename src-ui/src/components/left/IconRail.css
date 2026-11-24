@@ -118,12 +118,14 @@
 /* Open conversations (Clear 方案 A): the title's first character on a quiet tile, the tool's mark in the
    lower corner, the state in the upper one. The open one sits on a deeper tile with a short bar at the edge. */
 .icon-rail-sessions { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 6px 0 2px; }
-/* Close on the icon's corner (方案 A): shown while the pointer is on the conversation, filled with the text colour so
+/* Close on the icon's top-right corner (方案 A), clear of the active marker on the rail's left edge: shown while the
+   pointer is on the conversation (its state mark in that corner steps aside), filled with the text colour so
    it reads on any tile; it overhangs the corner, so the list leaves room above the first icon. */
 .icon-rail-session-item { position: relative; }
-.icon-rail-session-close { position: absolute; top: -5px; left: -5px; z-index: 2; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--text-1); color: var(--bg-app); box-shadow: 0 0 0 2px var(--bg-app); opacity: 0; pointer-events: none; cursor: pointer; transition: opacity .12s; }
+.icon-rail-session-close { position: absolute; top: -5px; right: -5px; z-index: 2; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--text-1); color: var(--bg-app); box-shadow: 0 0 0 2px var(--bg-app); opacity: 0; pointer-events: none; cursor: pointer; transition: opacity .12s; }
 .icon-rail-session-close svg { width: 9px; height: 9px; }
 .icon-rail-session-item:hover .icon-rail-session-close, .icon-rail-session-close:focus-visible { opacity: 1; pointer-events: auto; }
+.icon-rail-session-item:hover .icon-rail-state, .icon-rail-session-item:focus-within .icon-rail-state { opacity: 0; }
 .icon-rail-session-close:hover { background: color-mix(in srgb, var(--text-1) 80%, var(--bg-app)); }
 .icon-rail-session-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 @media (prefers-reduced-motion: reduce) { .icon-rail-session-close { transition: none; } }
@@ -151,7 +153,9 @@
    carry a 1px line, meeting in one rounded corner. The darker ground is the page's own wide shadow, which paints
    the window's ground colour (styles/clear-palette.css) behind that corner. */
 :root[data-layout="work"] .titlebar { background-image: linear-gradient(var(--clear-ground), var(--clear-ground)); }
-:root[data-layout="work"] .app-layout.has-rail:not(.is-compact) { overflow: hidden; }
+/* Clips the panel's wide ground shadow below: without it the shadow paints over the title bar (and its title and
+   Work / Code switch) on a narrow window too. */
+:root[data-layout="work"] .app-layout.has-rail { overflow: hidden; }
 /* A narrow window keeps the rail beside the drawers: an open drawer and its dimmed backdrop sit above the rail. */
 .app-layout.is-compact.has-rail > .drawer-scrim { z-index: 260; }
 .app-layout.is-compact.has-rail > .panel-left, .app-layout.is-compact.has-rail > .panel-right { z-index: 270; }
