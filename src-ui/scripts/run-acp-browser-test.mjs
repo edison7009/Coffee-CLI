@@ -14,13 +14,13 @@ const recorded = await readFile(new URL('./fixtures/antigravity-turn.json', impo
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
     import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
-    import {AntigravityConversation} from './src/components/center/AntigravityConversation';
+    import {AcpConversation} from './src/components/center/AcpConversation';
     import {Gambit} from './src/components/center/Gambit';
-    import {useAntigravitySession,sendAntigravityMessage,abortAntigravity} from './src/lib/antigravity-session';
+    import {useAcpSession,sendAcpMessage,abortAcp} from './src/lib/acp-session';
     import './src/styles/global.css';import './src/components/center/TierTerminal.css';
-    function Fixture(){const [draft,setDraft]=useState('');const s=useAntigravitySession('a');window.currentState=s;return <div className="panel-center">
-      <div className="host"><AntigravityConversation sessionId="a" cwd="D:/Test" isActive/></div>
-      <Gambit sessionId="a" draft={draft} onDraftChange={setDraft} onClose={()=>{}} onSend={text=>sendAntigravityMessage('a',text)} antigravity running={s.busy} onCancel={()=>abortAntigravity('a')} leftPanelHidden rightPanelHidden workspaceName="Test" toolIcon={<span>◈</span>}/>
+    function Fixture(){const [draft,setDraft]=useState('');const s=useAcpSession('a');window.currentState=s;return <div className="panel-center">
+      <div className="host"><AcpConversation tool="antigravity" mark={<span>◈</span>} sessionId="a" cwd="D:/Test" isActive/></div>
+      <Gambit sessionId="a" draft={draft} onDraftChange={setDraft} onClose={()=>{}} onSend={text=>sendAcpMessage('a',text)} acp running={s.busy} onCancel={()=>abortAcp('a')} leftPanelHidden rightPanelHidden workspaceName="Test" toolIcon={<span>◈</span>}/>
     </div>};createRoot(document.getElementById('root')).render(<Fixture/>);
   ` },
   bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic',
@@ -46,12 +46,12 @@ await build({
       export async function listen(name,fn){window.listener=fn;return()=>{}};
     ` : `
       const recorded=${recorded}; const session=recorded.session.sessionId; window.calls=[];
-      window.emit=event=>{if(['agent_message_chunk','agent_thought_chunk','tool_call'].includes(event.params?.update?.sessionUpdate))window.promptActive=true;const start=window.calls.find(c=>c.name==='antigravity_session_start');window.listener({payload:{id:'a',generation:start.generation,event}})};
+      window.emit=event=>{if(['agent_message_chunk','agent_thought_chunk','tool_call'].includes(event.params?.update?.sessionUpdate))window.promptActive=true;const start=window.calls.find(c=>c.name==='acp_session_start');window.listener({payload:{id:'a',generation:start.generation,event}})};
       window.finish=()=>{for(const event of recorded.events)window.emit(event);window.finishTurn(recorded.result)};
       export const isTauri=false,commands=new Proxy({},{get:(_,name)=>async()=>name==='computerName'?'TEST-DESKTOP':undefined});
       export async function invoke(name,args){window.calls.push({name,...args});
-        if(name==='antigravity_session_start')return recorded.session;
-        if(name==='antigravity_session_request') {
+        if(name==='acp_session_start')return recorded.session;
+        if(name==='acp_session_request') {
           if(args.method==='session/prompt'){window.promptActive=false;return new Promise(resolve=>window.finishTurn=resolve);}
           if(args.method==='session/cancel'){if(window.promptActive)window.finishTurn({stopReason:'cancelled'});return null;}
           if(args.method==='session/set_config_option') {
@@ -94,7 +94,7 @@ try {
  await page.waitForFunction(()=>window.currentState.busy);
  await page.evaluate(()=>window.emit({id:42,method:'session/request_permission',params:{sessionId:window.currentState.sessionId,toolCall:{title:'Run test command'},options:[{optionId:'no',kind:'reject_once',name:'Reject command'},{optionId:'yes',kind:'allow_once',name:'Allow command once'}]}}));
  await page.getByRole('button',{name:'Reject command',exact:true}).click();
- await page.waitForFunction(()=>window.calls.some(c=>c.name==='antigravity_session_respond'&&c.optionId==='no'&&c.requestId==='42'));
+ await page.waitForFunction(()=>window.calls.some(c=>c.name==='acp_session_respond'&&c.optionId==='no'&&c.requestId==='42'));
  // Antigravity's own tools read like every tool's: a read, a new file (its diff), on the step line.
  await page.evaluate(()=>{const sid=window.currentState.sessionId,up=update=>window.emit({method:'session/update',params:{sessionId:sid,update}});
   up({sessionUpdate:'tool_call',toolCallId:'r1',name:'read_file',kind:'read',title:'File a.txt',status:'in_progress',locations:[{path:'D:/Test/a.txt'}],rawInput:{Path:'D:/Test/a.txt'}});

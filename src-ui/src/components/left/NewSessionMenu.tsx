@@ -4,6 +4,7 @@ import { commands } from '../../tauri';
 import { getToolIcon } from '../center/CenterPanel';
 import { getToolDisplayName } from '../../lib/tool-info';
 import { WORK_TOOLS } from '../../lib/layout-mode';
+import { isAcpTool } from '../../lib/acp-tools';
 import { getProjectFolders, subscribeProjectFolders } from '../../lib/project-folders';
 import { homeShortPath } from '../../lib/home-short-path';
 
@@ -45,7 +46,8 @@ export function NewSessionMenu({ onDone, autoFocus = false }: { onDone: () => vo
   const pinned = readJson<unknown[]>('coffee_pinned_items', []).filter((id): id is string => typeof id === 'string' && id.startsWith('agent:')).map(id => id.slice(6));
   const pinnedHere = pinned.filter(tool => WORK_TOOLS.has(tool));
   // None pinned that Clean can start (only terminal tools): offer all of Clean's own rather than an empty menu.
-  const tools = pinnedHere.length ? pinnedHere : [...WORK_TOOLS];
+  // An ACP tool joins that list once it is found installed, so a long row of tools nobody has stays out of it.
+  const tools = pinnedHere.length ? pinnedHere : [...WORK_TOOLS].filter(tool => !isAcpTool(tool) || installed[tool] === true);
   const lastFolders = readJson<Record<string, string>>('coffee:last-folder-by-tool', {});
   const launch = (tool: string, folder?: string) => { onDone(); launchFromRail(tool, folder); };
   // Arrows: up / down between the tools (or folders), right into a tool's folders, left back to the tool.

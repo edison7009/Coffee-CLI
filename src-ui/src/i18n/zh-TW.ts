@@ -877,7 +877,7 @@ export const zhTW = {
   "codex.reconnect": "重新連接 Codex",
   "dsh.reconnect": "重新連線 DeepSeek Harness",
   "pi.reconnect": "重新連線 Pi",
-  "antigravity.reconnect": "重新連線 Antigravity",
+  "acp.reconnect": "重新連線 {tool}",
   "pi.no_model": "Pi 還沒有可用模型。請先在終端分頁裡開啟一次 Pi 並執行 /login，或設定服務商的 API Key，然後重新連線。",
   "pi.compacted": "對話已壓縮",
   "pi.retrying": "正在重試（{attempt}/{max}）",

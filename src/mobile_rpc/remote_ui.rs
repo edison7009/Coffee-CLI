@@ -45,7 +45,8 @@ const DENIED: [&str; 27] = [
 // `window_control_`: letting this computer's AI operate its windows is this computer's own setting.
 const DENIED_PREFIXES: [&str; 5] = ["mobile_rpc_", "voice_", "plugin:", "remote_", "window_control_"];
 
-const TOOLS: [&str; 6] = ["claude", "codex", "opencode", "pi", "dsh", "antigravity"];
+// `acp`: every tool whose desktop conversation runs over ACP (src/acp_session.rs).
+const TOOLS: [&str; 6] = ["claude", "codex", "opencode", "pi", "dsh", "acp"];
 
 pub fn allowed(cmd: &str) -> bool {
     !cmd.is_empty() && cmd.len() <= 64 && cmd.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')

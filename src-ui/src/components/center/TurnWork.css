@@ -97,3 +97,6 @@
 .step-working-mark { display:inline-grid; place-items:center; flex:none; width:16px; height:16px; color:var(--text-3); }
 .step-working-mark > * { max-width:16px; max-height:16px; }
 .step-working-word { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* An ACP tool's own icon, as its tab shows it, sized for the working line and the scroll button. */
+.acp-mark { display:inline-grid; place-items:center; width:16px; height:16px; flex:none; }
+.acp-mark > svg, .acp-mark > img, .acp-mark > span { display:block; width:16px !important; height:16px !important; }

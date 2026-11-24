@@ -1,13 +1,14 @@
 // Two shells over one session core: 工作式 (work) is a quiet chat app — an icon rail, the
 // conversation, no terminals; 代码式 (code) is the full workspace with tabs, sidebars and terminals.
 import type { ToolType } from '../store/app-state';
+import { ACP_TOOLS } from './acp-tools';
 
 export type LayoutMode = 'work' | 'code';
 
 const KEY = 'cc-layout';
 
 /** Tools that have a desktop conversation of their own; the only ones 工作式 starts. */
-export const WORK_TOOLS: ReadonlySet<string> = new Set(['claude', 'codex', 'opencode', 'pi', 'dsh', 'antigravity']);
+export const WORK_TOOLS: ReadonlySet<string> = new Set(['claude', 'codex', 'opencode', 'pi', 'dsh', ...ACP_TOOLS]);
 
 /**
  * The saved shell. A first start chooses 工作式; someone who already used Coffee CLI (any saved

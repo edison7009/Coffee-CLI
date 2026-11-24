@@ -6,7 +6,7 @@ mod codex_session;
 mod opencode_session;
 mod dsh_session;
 mod pi_session;
-mod antigravity_session;
+mod acp_session;
 mod session_directory;
 mod opencode_island;
 mod server;

@@ -1,4 +1,4 @@
-import { abortAntigravity, useAntigravitySession } from '../../lib/antigravity-session';
+import { abortAcp, useAcpSession } from '../../lib/acp-session';
 // ActiveGambit.tsx — app-level host for the docked compose panel.
 //
 // Gambit is a global overlay docked at the bottom of the center panel, and
@@ -21,7 +21,7 @@ import { useT } from '../../i18n/useT';
 import { useCallback, useEffect } from 'react';
 import { useAppState, useAppStateRef, matchHotkeyScheme } from '../../store/app-state';
 import { sendSessionPrompt } from '../../lib/send-session-prompt';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAntigravityConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAcpConversation } from '../../lib/chat-tools';
 import { getToolIcon } from './CenterPanel';
 import { Gambit } from './Gambit';
 import { CollaborationPicker } from './OrchestrationPicker';
@@ -79,9 +79,9 @@ export function ActiveGambit() {
   const isDsh = isDshConversation(activeSession);
   const isOpenCode = isOpenCodeConversation(activeSession);
   const isPi = isPiConversation(activeSession);
-  const isAntigravity = isAntigravityConversation(activeSession);
-  const antigravity = useAntigravitySession(isAntigravity ? activeId ?? '' : '');
-  const gambitOpen = isClaude || isCodex || isDsh || isOpenCode || isAntigravity || isPi || state.gambitOpen;
+  const isAcp = isAcpConversation(activeSession);
+  const acp = useAcpSession(isAcp ? activeId ?? '' : '');
+  const gambitOpen = isClaude || isCodex || isDsh || isOpenCode || isAcp || isPi || state.gambitOpen;
   const claude = useClaudeSession(isClaude ? activeId ?? '' : '');
   const codex = useCodexSession(isCodex ? activeId ?? '' : '');
   const dshBusy = useDshSession(isDsh ? activeId ?? '' : '', s => s.busy);
@@ -91,8 +91,8 @@ export function ActiveGambit() {
   const piBusy = usePiSession(isPi ? activeId ?? '' : '', s => s.busy);
   const piStarted = usePiSession(isPi ? activeId ?? '' : '', s => s.messages.length > 0);
   const controlsReady = isClaude ? claude.ready : isCodex ? codex.ready : true;
-  const running = isAntigravity ? antigravity.busy : isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isPi ? piBusy : isDsh && dshBusy;
-  const started = isAntigravity ? antigravity.messages.length > 0 : isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : isPi ? piStarted : openCodeStarted;
+  const running = isAcp ? acp.busy : isClaude ? claude.busy : isCodex ? codex.busy : isOpenCode ? openCodeBusy : isPi ? piBusy : isDsh && dshBusy;
+  const started = isAcp ? acp.messages.length > 0 : isClaude ? claude.messages.length > 0 : isCodex ? codex.messages.length > 0 : isDsh ? dshStarted : isPi ? piStarted : openCodeStarted;
   // Footer label telling the user where Send will land. Local sessions show
   // their working-folder name; SSH/WebSocket sessions show their connection
   // host, since folderPath may still contain the launchpad's previous folder.
@@ -184,7 +184,7 @@ export function ActiveGambit() {
       remoteControl={activeId && (coordinator || remote?.attached) ? <CollaborationPicker key={`collab:${activeId}`} sessionId={activeId} coordinator={!!coordinator} remote={remote?.attached ? remote : undefined} onRemote={setRemote} /> : undefined}
       placeSwitchable={!!remote?.attached}
       placeDevice={remote?.attached && remote.pick ? (name => name ? remoteWindowName(name, t('remote_control.window_prefix')) : null)(remote.windows.find(window => window.window === remote.pick)?.title) : null}
-      worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode || isAntigravity || isPi)
+      worktreeControl={activeSession && !activeSession.parentId && (isClaude || isCodex || isDsh || isOpenCode || isAcp || isPi)
         // Sits beside the tool's composer controls, keyed by session: a shared key would strand a stale switch in the footer.
         ? <WorktreeControl key={`worktree:${activeSession.id}`} tab={activeSession} started={started} running={running} /> : undefined}
       claude={isClaude}
@@ -193,10 +193,10 @@ export function ActiveGambit() {
       dsh={isDsh}
       opencode={isOpenCode}
       pi={isPi}
-      antigravity={isAntigravity}
+      acp={isAcp}
       attachable={activeSession?.tool !== 'remote'}
       running={running}
-      onCancel={isAntigravity ? () => { void abortAntigravity(activeId); } : isDsh ? () => { void stopDsh(activeId); } : isPi ? () => { void abortPi(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
+      onCancel={isAcp ? () => { void abortAcp(activeId); } : isDsh ? () => { void stopDsh(activeId); } : isPi ? () => { void abortPi(activeId); } : isOpenCode ? () => { void interruptOpenCode(activeId); } : isCodex ? () => { void interruptCodex(activeId); } : isClaude ? () => { void controlClaude(activeId, { subtype: 'interrupt' }).catch(() => {}); } : undefined}
       // Narrow: the panels are drawers over the center, so the composer spans the full width.
       leftPanelHidden={compact || state.leftPanelHidden}
       rightPanelHidden={compact || state.rightPanelHidden}

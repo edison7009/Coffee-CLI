@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { isAcpTool } from './acp-tools-fixture.mjs';
 
 const source = ts.createSourceFile('HistoryBoard.tsx', readFileSync(new URL('../src/components/right/HistoryBoard.tsx', import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const expressions = new Map();
@@ -129,6 +130,7 @@ const declarations = ['getTabOrder', 'splitForSession', 'reducer'].map(name => s
 let nextId = 0;
 context.crypto = { randomUUID: () => `history-tab-${++nextId}` };
 context.localStorage = { setItem() {}, removeItem() {} };
+context.isAcpTool = isAcpTool;
 context.reducer = vm.runInContext(ts.transpileModule(declarations.join('\n') + '\nreducer;', { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText, context);
 context.setAgentError = error => { context.error = error; };
 context.currentLayoutMode = () => 'code';

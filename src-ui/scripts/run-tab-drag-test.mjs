@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { isAcpTool } from './acp-tools-fixture.mjs';
 
 const source = file => ts.createSourceFile(file,
   readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8'),
@@ -28,7 +29,7 @@ const compile = code => ts.transpileModule(code, {
 }).outputText;
 const splitLayout = await import(`data:text/javascript;base64,${Buffer.from(compile(readFileSync(new URL('../src/lib/session-split-layout.ts', import.meta.url), 'utf8'))).toString('base64')}`);
 const stateApi = vm.runInNewContext(compile(`${declaration(store, 'getTabOrder')}; ${declaration(store, 'splitForSession')}; ${declaration(store, 'reducer')}; ({ getTabOrder, reducer });`), {
-  ...splitLayout,
+  ...splitLayout, isAcpTool,
   localStorage: { setItem() {}, removeItem() {} }, crypto: { randomUUID: () => 'replacement-terminal' },
   supportsAgentStatus: () => true,
   isCompact: () => false,

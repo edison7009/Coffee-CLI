@@ -4,7 +4,7 @@
 //! across releases, so Coffee CLI reads only its own conversation index
 //! (`~/.gemini/antigravity-cli/conversation_summaries.db`, in server.rs) for
 //! history and heatmap, and resumes terminal sessions with `agy --conversation <id>`.
-//! IDE conversations use the official ACP v1 transport in `antigravity_session`.
+//! Desktop conversations use its official ACP v1 server (`agy acp`) through `acp_session`.
 
 use super::ToolDescriptor;
 

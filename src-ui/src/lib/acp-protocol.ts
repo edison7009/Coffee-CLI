@@ -1,4 +1,5 @@
-// ACP v1 records observed from agy 1.5.16. Render through Coffee's shared conversation rows.
+// ACP v1 (Agent Client Protocol) records, first observed from agy 1.5.16, for every ACP tool's desktop conversation
+// (lib/acp-tools.ts). They render through Coffee's shared conversation rows.
 import type { ClaudeMessage } from './claude-protocol';
 import { acpToolStep } from './step-cards';
 export type Json = Record<string, unknown>;
@@ -8,13 +9,13 @@ export const str = (v: unknown): string => typeof v === 'string' ? v : '';
 export interface AcpOption { value: string; name: string; description?: string }
 export interface AcpConfig { id: string; name: string; category: string; currentValue: string; options: AcpOption[] }
 export interface AcpPermission { id: string; title: string; message: string; options: { optionId: string; name: string; kind: string }[] }
-export interface AntigravityState {
+export interface AcpState {
   ready: boolean; busy: boolean; sessionId: string; title: string; messages: ClaudeMessage[];
   requests: AcpPermission[]; configOptions: AcpConfig[]; commands: { name: string; description: string }[];
   contextTokens: number; contextWindow: number; startedAt?: number; endedAt?: number; interrupted: boolean;
   error?: string; current?: string; nextRow: number; turnStart?: number;
 }
-export function emptyAntigravityState(): AntigravityState {
+export function emptyAcpState(): AcpState {
   return { ready: false, busy: false, sessionId: '', title: '', messages: [], requests: [], configOptions: [], commands: [], contextTokens: 0, contextWindow: 0, interrupted: false, nextRow: 0 };
 }
 function options(v: unknown): AcpOption[] {
@@ -23,7 +24,7 @@ function options(v: unknown): AcpOption[] {
 export function acpConfig(v: unknown): AcpConfig[] {
   return arr(v).map(obj).filter(c => c.type === 'select' && typeof c.id === 'string').map(c => ({ id: str(c.id), name: str(c.name), category: str(c.category), currentValue: str(c.currentValue), options: options(c.options) }));
 }
-export function initializeAntigravity(s: AntigravityState, result: Json): AntigravityState {
+export function initializeAcp(s: AcpState, result: Json): AcpState {
   return { ...s, ready: true, sessionId: str(result.sessionId), configOptions: acpConfig(result.configOptions), messages: s.messages.map(m => ({ ...m, partial: false })), current: undefined, error: undefined };
 }
 function text(v: unknown): string {
@@ -34,7 +35,7 @@ function text(v: unknown): string {
   if (content.type === 'image') return `[${str(content.mimeType) || 'image'}]`;
   return '';
 }
-export function settleAntigravity(s: AntigravityState, result: Json, error?: string): AntigravityState {
+export function settleAcp(s: AcpState, result: Json, error?: string): AcpState {
   const now = Date.now(), interrupted = result.stopReason === 'cancelled';
   const usage = obj(result.usage);
   const messages = s.messages.map(m => ({ ...m, partial: false, ...(m.toolStatus === 'running' ? { toolStatus: 'failed' as const, interrupted, endedAt: now } : {}) }));
@@ -42,8 +43,8 @@ export function settleAntigravity(s: AntigravityState, result: Json, error?: str
   if (last && s.startedAt) last.turnStats = { durationMs: now - s.startedAt, usage: { input: Number(usage.inputTokens) || 0, output: Number(usage.outputTokens) || 0, cacheRead: Number(usage.cachedReadTokens) || 0, cacheWrite: Number(usage.cachedWriteTokens) || 0, cacheWrite1h: 0 } };
   return { ...s, busy: false, current: undefined, requests: [], messages, interrupted, endedAt: now, error };
 }
-export function reduceAntigravityEvent(s: AntigravityState, event: Json): AntigravityState {
-  if (event.type === 'coffee_exit') return { ...settleAntigravity(s, {}, str(event.detail) || 'Antigravity process exited'), ready: false };
+export function reduceAcpEvent(s: AcpState, event: Json): AcpState {
+  if (event.type === 'coffee_exit') return { ...settleAcp(s, {}, str(event.detail) || 'The tool\'s process exited'), ready: false };
   const params = obj(event.params);
   if (s.sessionId && params.sessionId && params.sessionId !== s.sessionId) return s;
   if (event.method === 'session/request_permission') {

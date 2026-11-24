@@ -31,7 +31,7 @@ assert.equal(readLayoutMode(storage({ 'cc-layout': 'sideways', 'cc-lang': 'en' }
 const broken = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); } };
 assert.equal(readLayoutMode(broken), 'code', 'unreadable storage keeps the full workspace');
 
-for (const tool of ['claude', 'codex', 'opencode', 'pi', 'dsh', 'antigravity']) assert.ok(workLaunchable(tool), `${tool} has a desktop conversation`);
-for (const tool of ['terminal', 'kimicode', 'qwen', 'remote', null, undefined, '']) assert.ok(!workLaunchable(tool), `${tool} is not started in 工作式`);
+for (const tool of ['claude', 'codex', 'opencode', 'pi', 'dsh', 'antigravity', 'cursor', 'kiro', 'qwen', 'kimicode', 'copilot']) assert.ok(workLaunchable(tool), `${tool} has a desktop conversation`);
+for (const tool of ['terminal', 'aider', 'hermes', 'openclaw', 'minimax', 'remote', null, undefined, '']) assert.ok(!workLaunchable(tool), `${tool} is not started in 工作式`);
 
 console.log('layout mode: ok');

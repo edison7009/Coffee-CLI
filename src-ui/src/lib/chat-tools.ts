@@ -1,4 +1,5 @@
 import type { TerminalSession, ToolType } from '../store/app-state';
+import { isAcpTool } from './acp-tools';
 
 export function isClaudeConversation(session: Pick<TerminalSession, 'tool' | 'claudeMode'> | undefined): boolean {
   return session?.tool === 'claude' && session.claudeMode !== 'terminal';
@@ -8,8 +9,9 @@ export function isCodexConversation(session: Pick<TerminalSession, 'tool' | 'cod
   return session?.tool === 'codex' && session.codexMode === 'conversation';
 }
 
-export function isAntigravityConversation(session: Pick<TerminalSession, 'tool' | 'antigravityMode'> | undefined): boolean {
-  return session?.tool === 'antigravity' && session.antigravityMode === 'conversation';
+/** Any ACP tool's desktop conversation (lib/acp-tools.ts): Antigravity, Cursor, Kiro, Qwen Code and the rest. */
+export function isAcpConversation(session: Pick<TerminalSession, 'tool' | 'acpMode'> | undefined): boolean {
+  return isAcpTool(session?.tool) && session?.acpMode === 'conversation';
 }
 
 export function isPiConversation(session: Pick<TerminalSession, 'tool' | 'piMode'> | undefined): boolean {
@@ -26,7 +28,7 @@ export function isDshConversation(session: Pick<TerminalSession, 'tool'> | undef
 }
 
 export function isConversationSession(session: TerminalSession | undefined): boolean {
-  return isAntigravityConversation(session) || isClaudeConversation(session) || isCodexConversation(session) || isOpenCodeConversation(session) || isPiConversation(session) || isDshConversation(session);
+  return isAcpConversation(session) || isClaudeConversation(session) || isCodexConversation(session) || isOpenCodeConversation(session) || isPiConversation(session) || isDshConversation(session);
 }
 
 const ENHANCED_TOOLS = new Set<ToolType>([

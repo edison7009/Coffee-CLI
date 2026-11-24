@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { acpLaunchMode, isAcpTool } from './acp-tools';
 import { currentLayoutMode } from './layout-mode';
 import type { ToolType, AppState, useAppDispatch } from '../store/app-state';
 import { commands, invoke } from '../tauri';
@@ -44,7 +45,7 @@ export function createAgentToolExecutor({ stateRef, dispatch, pending, isCancell
         let mode: 'terminal' | 'conversation' = 'conversation';
         // 工作式 opens every tool as its conversation.
         if (currentLayoutMode() !== 'work') try { if (localStorage.getItem(`coffee:${args.tool}-launch-mode`) === 'terminal') mode = 'terminal'; } catch { /* Use the desktop default when no preference is available. */ }
-        dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id, tool: args.tool as ToolType, cwd, strictCwd: true, resumeToken: typeof args.resumeToken === 'string' ? args.resumeToken : undefined, claudeMode: args.tool === 'claude' ? mode : undefined, codexMode: args.tool === 'codex' ? mode : undefined, opencodeMode: args.tool === 'opencode' ? mode : undefined, piMode: args.tool === 'pi' ? mode : undefined, antigravityMode: args.tool === 'antigravity' ? mode : undefined, parentId: request.parentId, background: request.background });
+        dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id, tool: args.tool as ToolType, cwd, strictCwd: true, resumeToken: typeof args.resumeToken === 'string' ? args.resumeToken : undefined, claudeMode: args.tool === 'claude' ? mode : undefined, codexMode: args.tool === 'codex' ? mode : undefined, opencodeMode: args.tool === 'opencode' ? mode : undefined, piMode: args.tool === 'pi' ? mode : undefined, acpMode: isAcpTool(args.tool) ? (currentLayoutMode() === 'work' ? 'conversation' : acpLaunchMode(args.tool)) : undefined, parentId: request.parentId, background: request.background });
         const deadline = Date.now() + openTimeoutMs;
         let appeared = false;
         while (Date.now() < deadline) {

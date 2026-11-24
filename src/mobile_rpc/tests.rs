@@ -332,7 +332,7 @@ fn browsers_only_type_into_terminals_and_leave_sessions_to_the_desktop() {
     // Typing reaches the desktop's terminals; starting, sizing, closing and conversations go through the desktop.
     assert!(ok("tier_terminal_input", json!({"sessionId":"desk"})));
     assert!(ok("tier_terminal_raw_write", json!({"sessionId":"desk"})));
-    for cmd in ["tier_terminal_start", "tier_terminal_resize", "tier_terminal_kill", "set_session_active", "claude_session_start", "claude_session_send", "codex_session_close", "pi_session_request", "antigravity_session_start", "antigravity_session_request", "antigravity_session_respond", "antigravity_session_close", "claude_session_history"] {
+    for cmd in ["tier_terminal_start", "tier_terminal_resize", "tier_terminal_kill", "set_session_active", "claude_session_start", "claude_session_send", "codex_session_close", "pi_session_request", "acp_session_start", "acp_session_request", "acp_session_respond", "acp_session_close", "claude_session_history"] {
         assert!(!ok(cmd, json!({"id":"desk","sessionId":"desk"})), "{cmd}");
     }
 }

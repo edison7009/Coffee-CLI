@@ -1,4 +1,5 @@
 import { worktreeFromPath } from '../../lib/worktree-path';
+import { acpLaunchMode, isAcpTool } from '../../lib/acp-tools';
 import { currentLayoutMode } from '../../lib/layout-mode';
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, useId, useCallback, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -510,7 +511,7 @@ export function HistoryBoard({ searchRequested = false, onSearchOpened }: { sear
       type: 'ADD_TERMINAL',
       split,
       // The tab opens under the conversation's history title; a tool that names it later replaces it.
-      session: { id: targetId, tool: saved.tool as ToolType, folderPath: worktree ? saved.worktree_cwd! : saved.cwd, ...(worktree ? { worktree, worktreeOrigin: saved.cwd } : {}), resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined, piMode: saved.tool === 'pi' ? mode : undefined, antigravityMode: saved.tool === 'antigravity' ? mode : undefined }
+      session: { id: targetId, tool: saved.tool as ToolType, folderPath: worktree ? saved.worktree_cwd! : saved.cwd, ...(worktree ? { worktree, worktreeOrigin: saved.cwd } : {}), resumeToken: saved.session_token, toolTitle: saved.name?.trim() || undefined, pinnedTitle: renamed[`${saved.tool ?? ''}:${saved.id}`]?.trim() || undefined, claudeMode: saved.tool === 'claude' ? mode : undefined, codexMode: saved.tool === 'codex' ? mode : undefined, opencodeMode: saved.tool === 'opencode' ? mode : undefined, piMode: saved.tool === 'pi' ? mode : undefined, acpMode: isAcpTool(saved.tool) ? (currentLayoutMode() === 'work' ? 'conversation' : acpLaunchMode(saved.tool)) : undefined }
     });
   };
 

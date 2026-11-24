@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useT } from '../../i18n/useT';
 import { useAppState } from '../../store/app-state';
 import { sameFolder } from '../../lib/worktree-path';
-import { setAntigravityConfig, useAntigravitySession } from '../../lib/antigravity-session';
+import { setAcpConfig, useAcpSession } from '../../lib/acp-session';
 import { ContextUsage } from './ContextUsage';
 import { AttachIcon } from './ClaudeComposerControls';
 import { ClaudeEffortControl } from './ClaudeEffortControl';
@@ -12,12 +12,12 @@ import { pickFiles } from '../../lib/folder-picker';
 import { attachToDraft } from '../../lib/gambit-attachments';
 import './ClaudeComposerControls.css';
 
-export function AntigravityComposerControls({ sessionId, draft, onDraftChange, keyHandler: keyHandlerRef, submitHandler: submitHandlerRef, quota, children }: {
+export function AcpComposerControls({ sessionId, draft, onDraftChange, keyHandler: keyHandlerRef, submitHandler: submitHandlerRef, quota, children }: {
   sessionId: string; draft: string; onDraftChange: (text: string) => void;
   keyHandler: MutableRefObject<((e: KeyboardEvent<HTMLTextAreaElement>) => boolean) | undefined>;
   submitHandler: MutableRefObject<((text: string) => boolean) | undefined>; quota?: ReactNode; children?: ReactNode;
 }) {
-  const s = useAntigravitySession(sessionId), t = useT(), { state, dispatch } = useAppState();
+  const s = useAcpSession(sessionId), t = useT(), { state, dispatch } = useAppState();
   const [menu, setMenu] = useState<string | null>(null), [dismissed, setDismissed] = useState<string | null>(null), [selected, setSelected] = useState(0);
   const [position, setPosition] = useState<CSSProperties>({});
   const root = useRef<HTMLDivElement>(null), popup = useRef<HTMLDivElement>(null), anchor = useRef<HTMLButtonElement | null>(null), commandsAnchor = useRef<HTMLButtonElement>(null);
@@ -36,7 +36,7 @@ export function AntigravityComposerControls({ sessionId, draft, onDraftChange, k
     if (c.target === 'native') return;
     if (/^\/[\w:-]*$/.test(draft)) onDraftChange('');
     anchor.current = commandsAnchor.current; setSelected(0);
-    if (c.target === 'new') { close(); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: 'antigravity', ...sameFolder(state.terminals.find(tab => tab.id === sessionId)), antigravityMode: 'conversation', startedAt: Date.now() } }); }
+    if (c.target === 'new') { close(); const tab = state.terminals.find(tab => tab.id === sessionId); dispatch({ type: 'ADD_TERMINAL', session: { id: crypto.randomUUID(), tool: tab?.tool ?? 'antigravity', ...sameFolder(tab), acpMode: 'conversation', startedAt: Date.now() } }); }
     else setMenu(c.target);
   };
   useEffect(() => {
@@ -82,8 +82,8 @@ export function AntigravityComposerControls({ sessionId, draft, onDraftChange, k
     {shown && createPortal(<div ref={popup} className="claude-control-menu" role="dialog" style={position}>
       {shown === 'commands' ? commands.map((c, i) => <button type="button" key={c.name} disabled={locked} className={selected === i ? 'is-selected' : ''} onMouseEnter={() => setSelected(i)} onClick={() => { if (c.target === 'native') { onDraftChange(`/${c.name} `); close(); } else choose(i); }}><strong>/{c.name}</strong><small>{c.description}</small></button>)
         : shown === 'context' ? <ContextUsage used={s.contextTokens} capacity={s.contextWindow} total={s.contextTokens} />
-        : config?.category === 'thought_level' ? <ClaudeEffortControl key={`${sessionId}:${config.id}`} levels={config.options.map(o => o.value)} value={config.currentValue} disabled={locked} onCommit={value => setAntigravityConfig(sessionId, config.id, value)} onClose={() => { close(); anchor.current?.focus(); }} />
-        : config?.options.map(o => <button type="button" key={o.value} disabled={locked} className={o.value === config.currentValue ? 'is-selected' : ''} onClick={() => { close(); if (o.value !== config.currentValue) void setAntigravityConfig(sessionId, config.id, o.value); }}><strong>{o.name}{o.value === config.currentValue ? ' ✓' : ''}</strong>{o.description && <small>{o.description}</small>}</button>)}
+        : config?.category === 'thought_level' ? <ClaudeEffortControl key={`${sessionId}:${config.id}`} levels={config.options.map(o => o.value)} value={config.currentValue} disabled={locked} onCommit={value => setAcpConfig(sessionId, config.id, value)} onClose={() => { close(); anchor.current?.focus(); }} />
+        : config?.options.map(o => <button type="button" key={o.value} disabled={locked} className={o.value === config.currentValue ? 'is-selected' : ''} onClick={() => { close(); if (o.value !== config.currentValue) void setAcpConfig(sessionId, config.id, o.value); }}><strong>{o.name}{o.value === config.currentValue ? ' ✓' : ''}</strong>{o.description && <small>{o.description}</small>}</button>)}
     </div>, document.body)}
   </div>;
 }

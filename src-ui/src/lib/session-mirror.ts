@@ -12,7 +12,7 @@ import { invoke } from '../tauri';
 import { onRemoteStatus, remoteRequest } from '../remote/bridge';
 
 /** Conversations by tool, plus `app` for the desktop's settings. */
-export type MirrorKind = 'claude' | 'codex' | 'opencode' | 'pi' | 'antigravity' | 'dsh' | 'app';
+export type MirrorKind = 'claude' | 'codex' | 'opencode' | 'pi' | 'acp' | 'dsh' | 'app';
 type State = Record<string, unknown>;
 interface ArrayPatch { len: number; items: Record<number, unknown> }
 export interface MirrorPatch { v: number; set?: State; unset?: string[]; arrays?: Record<string, ArrayPatch> }

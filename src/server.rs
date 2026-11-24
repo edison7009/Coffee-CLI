@@ -261,7 +261,8 @@ async fn check_tools_installed() -> Result<std::collections::HashMap<String, boo
         // DeepSeek Harness is "installed" exactly when its tab can start: `where dsh` also
         // matches scripts it cannot run, and misses the Desktop runtime, which stays off PATH.
         result.insert("dsh".to_string(), crate::dsh_session::executable().is_some());
-        result.insert("antigravity".to_string(), crate::antigravity_session::executable().is_some());
+        // An ACP tool counts as installed where its desktop tab can start (its custom command, or ~/.local/bin).
+        for tool in crate::tools::TOOLS { if crate::acp_session::executable(tool.id).is_some() { result.insert(tool.id.to_string(), true); } }
         // `terminal` (system shell) and `remote` (SSH) have no binary to
         // probe — always available, not registered.
         result.insert("terminal".to_string(), true);
@@ -1574,7 +1575,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
         .manage(crate::codex_session::CodexSessions::default())
         .manage(crate::dsh_session::DshSessions::default())
         .manage(crate::pi_session::PiSessions::default())
-        .manage(crate::antigravity_session::AntigravitySessions::default())
+        .manage(crate::acp_session::AcpSessions::default())
         .manage(crate::opencode_session::OpenCodeSessions::default())
         .manage(AppState {
             terminal_session,
@@ -1627,10 +1628,10 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::dsh_session::dsh_session_respond,
             crate::dsh_session::dsh_session_close,
             crate::dsh_session::dsh_session_history,
-            crate::antigravity_session::antigravity_session_start,
-            crate::antigravity_session::antigravity_session_request,
-            crate::antigravity_session::antigravity_session_respond,
-            crate::antigravity_session::antigravity_session_close,
+            crate::acp_session::acp_session_start,
+            crate::acp_session::acp_session_request,
+            crate::acp_session::acp_session_respond,
+            crate::acp_session::acp_session_close,
             crate::pi_session::pi_session_start,
             crate::pi_session::pi_session_request,
             crate::pi_session::pi_session_respond,
@@ -1894,7 +1895,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
                 crate::codex_session::shutdown(&app_handle.state::<crate::codex_session::CodexSessions>());
                 crate::dsh_session::shutdown(&app_handle.state::<crate::dsh_session::DshSessions>());
                 crate::pi_session::shutdown(&app_handle.state::<crate::pi_session::PiSessions>());
-                crate::antigravity_session::shutdown(&app_handle.state::<crate::antigravity_session::AntigravitySessions>());
+                crate::acp_session::shutdown(&app_handle.state::<crate::acp_session::AcpSessions>());
                 crate::opencode_session::shutdown(&app_handle.state::<crate::opencode_session::OpenCodeSessions>());
                 let state = app_handle.state::<AppState>();
                 let mut n = 0usize;

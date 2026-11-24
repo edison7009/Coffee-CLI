@@ -9,8 +9,8 @@ import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
 import type { ClaudeMessage } from '../../lib/claude-protocol';
-import type { AcpPermission } from '../../lib/antigravity-protocol';
-import { abortAntigravity, respondAntigravity, retainAntigravitySession, useAntigravitySession } from '../../lib/antigravity-session';
+import type { AcpPermission } from '../../lib/acp-protocol';
+import { abortAcp, respondAcp, retainAcpSession, useAcpSession } from '../../lib/acp-session';
 import { useConversationVirtualizer } from './conversation-virtualizer';
 import { MarkdownContent } from './MarkdownContent';
 import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './WelcomeGreeting';
@@ -21,8 +21,7 @@ import { ClaudeThinking, ClaudeTool, ToolGroup } from './ToolSteps';
 import { toolRuns } from '../../lib/tool-runs';
 import { useTurnFolds } from '../../lib/use-turn-work';
 import { ChangedFilesCard, StepWorking, TurnFoldRow } from './TurnWork';
-import ANTIGRAVITY_ICON from '../../icons-inline/antigravity.svg';
-const AntigravityMark = () => <img src={ANTIGRAVITY_ICON} alt="" width="18" height="18" />;
+import { getToolDisplayName } from '../../lib/tool-info';
 import { ToolSwarm } from './ToolSwarm';
 import './ConversationView.css';
 import './Gambit.css';
@@ -35,7 +34,7 @@ function Dialog({ sessionId, request }: { sessionId: string; request: AcpPermiss
   const [pending, setPending] = useState(false), [error, setError] = useState('');
   const answer = async (option: string) => {
     if (pending) return; setPending(true); setError('');
-    try { await respondAntigravity(sessionId, request.id, option); } catch (e) { setError(String(e)); setPending(false); }
+    try { await respondAcp(sessionId, request.id, option); } catch (e) { setError(String(e)); setPending(false); }
   };
   return <section className="claude-approval" aria-label={request.title}>
     <strong>{request.title}</strong>
@@ -51,13 +50,16 @@ function MeasuredRow({ id, measure, children }: { id: string; measure: (id: stri
   return <div ref={ref} className="claude-measured-row">{children}</div>;
 }
 
-export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, bgUrl, bgType, hasBg }: {
-  sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; bgUrl?: string; bgType?: string; hasBg?: boolean;
+/** One ACP tool's desktop conversation (lib/acp-tools.ts): `tool` names it, `mark` is its icon as the tab shows it. */
+export function AcpConversation({ tool, mark, sessionId, cwd, resumeToken, isActive, isVisible = isActive, bgUrl, bgType, hasBg }: {
+  tool: string; mark?: ReactNode; sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; bgUrl?: string; bgType?: string; hasBg?: boolean;
 }) {
   const t = useT();
+  const name = getToolDisplayName(tool);
+  const toolMark = <span className="acp-mark" aria-hidden="true">{mark}</span>;
   const language = useAppLanguage();
   const { dispatch } = useAppState();
-  const s = useAntigravitySession(sessionId);
+  const s = useAcpSession(sessionId);
   const initialToken = useRef(resumeToken);
   // Captured at mount like initialToken; state, not a ref, because the welcome screen renders from it.
   const [resumed] = useState(() => !!resumeToken);
@@ -76,7 +78,7 @@ export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive,
   const runs = useMemo(() => toolRuns(s.messages, clear ? 1 : 2), [s.messages, clear]);
   const folds = useTurnFolds(s.messages, s.busy);
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
-  useEffect(() => retainAntigravitySession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
+  useEffect(() => retainAcpSession(sessionId, tool, cwd, initialToken.current), [sessionId, tool, cwd]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [sessionId, s.busy, s.requests.length, dispatch]);
   // The ID becomes a history token only once the Session has a message, so it never points at an empty file.
   const started = s.messages.some(m => m.role === 'user');
@@ -102,7 +104,7 @@ export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive,
   }, [syncScroll]);
   useEffect(() => {
     if (!isActive) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && s.busy && !s.requests.length && !(e.target as HTMLElement)?.closest('[role="dialog"]')) { e.preventDefault(); void abortAntigravity(sessionId); } };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.isComposing && !e.defaultPrevented && s.busy && !s.requests.length && !(e.target as HTMLElement)?.closest('[role="dialog"]')) { e.preventDefault(); void abortAcp(sessionId); } };
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [isActive, s.busy, s.requests.length, sessionId]);
   const pauseFollow = useCallback(() => { anchor.current = null; pinned.current = false; setScrolled(true); }, []);
@@ -143,7 +145,7 @@ export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive,
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length;
   const restoring = resumed && !s.ready && !s.error;
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
-  return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation antigravity-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
+  return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation acp-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scrollRef} onPointerDownCapture={event => { if (event.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
@@ -165,23 +167,23 @@ export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive,
         </MeasuredRow>; })}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <Dialog key={request.id} sessionId={sessionId} request={request} />)}
-        {s.ready && s.busy && !s.requests.length && <StepWorking className="antigravity-working" mark={<AntigravityMark />} label={t('claude.status.working')} startedAt={s.startedAt} />}
+        {s.ready && s.busy && !s.requests.length && <StepWorking className="acp-working" mark={toolMark} label={t('claude.status.working')} startedAt={s.startedAt} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
-        {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'Antigravity', t)}</div>}
+        {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, name, t)}</div>}
         {empty && <div className="claude-empty">
-          <ToolSwarm tool="antigravity" isActive={isVisible} />
+          {tool === 'antigravity' && <ToolSwarm tool="antigravity" isActive={isVisible} />}
           <WelcomeGreeting />
-          {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={<AntigravityMark />} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
+          {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={toolMark} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={s.configOptions.find(c => c.category === 'model')?.options.find(o => o.value === s.configOptions.find(c => c.category === 'model')?.currentValue)?.name ?? ''} />
         </div>}
       </div>
     </div>
     {navigationItems.length > 1 && isActive && <ConversationNavigation items={navigationItems} scrollRef={scrollRef} onJump={jumpToTurn} />}
     {scrolled && <button type="button" className="claude-scroll-bottom" aria-label={t('claude.scroll_latest')} onClick={() => { anchor.current = null; pinned.current = true; syncScroll(); setScrolled(false); }}>
-      <ScrollLatestIcon working={s.ready && s.busy && !s.requests.length ? <AntigravityMark /> : undefined} />
+      <ScrollLatestIcon working={s.ready && s.busy && !s.requests.length ? toolMark : undefined} />
     </button>}
-    {s.error && !s.ready && (!directoryIssue || directoryIssue.status === 'unavailable') && <button type="button" className="claude-expand claude-reconnect" onClick={() => dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId: crypto.randomUUID() })}>{t('antigravity.reconnect')}</button>}
+    {s.error && !s.ready && (!directoryIssue || directoryIssue.status === 'unavailable') && <button type="button" className="claude-expand claude-reconnect" onClick={() => dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId: crypto.randomUUID() })}>{t('acp.reconnect', { tool: name })}</button>}
     {conversationMenu.menu}
   </div></ConversationDirectory.Provider>;
 }

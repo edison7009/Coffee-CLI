@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import ts from 'typescript';
+import { isAcpTool } from './acp-tools-fixture.mjs';
 
 const source = file => ts.createSourceFile(file,
   fs.readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8'),
@@ -57,7 +58,7 @@ function deferred() {
 
 // Actual reducer: a background PTY may only change its own session.
 const reducer = evaluate(`${declaration('store/app-state.tsx', 'reducer')}; reducer`, {
-  localStorage: { setItem() {} },
+  localStorage: { setItem() {} }, isAcpTool,
 });
 const state = { activeTerminalId: 'A', terminals: [
   { id: 'A', folderPath: '/A' }, { id: 'B', folderPath: '/B' },
@@ -284,7 +285,7 @@ const selectTool = evaluate(pinDeclarations.get('selectTool').initializer.getTex
   activeTerminalId: 'launchpad', dispatch: action => manualLaunches.push(action),
   activeIdRef: { current: 'launchpad' },
   commands: { async checkProjectDirectories(paths) { checkedLaunchFolders.push(...paths); return paths.map(path => ({ path, status: 'available' })); } },
-  rememberFolder(tool, folder) { rememberedFolders.push([tool, folder]); }, claudeLaunchMode: 'conversation',
+  rememberFolder(tool, folder) { rememberedFolders.push([tool, folder]); }, claudeLaunchMode: 'conversation', isAcpTool, acpLaunchModes: { antigravity: 'conversation' },
   state: { layoutMode: 'code' },
 });
 await selectTool('claude', undefined, 'E:\\tmp');
@@ -302,11 +303,14 @@ assert.deepEqual(rememberedFolders, [['claude', 'E:\\tmp']], 'the launch is reme
     activeTerminalId: 'launchpad', dispatch: action => workLaunches.push(action), activeIdRef: { current: 'launchpad' },
     commands: { async checkProjectDirectories(paths) { return paths.map(path => ({ path, status: 'available' })); } },
     rememberFolder() {}, claudeLaunchMode: 'terminal', codexLaunchMode: 'terminal', opencodeLaunchMode: 'terminal', piLaunchMode: 'terminal',
+    isAcpTool, acpLaunchModes: { qwen: 'terminal' },
     state: { layoutMode: 'work' },
   });
   await workSelect('claude', undefined, 'E:\\tmp');
   await workSelect('codex', undefined, 'E:\\tmp');
   assert.deepEqual(workLaunches.map(action => [action.claudeMode, action.codexMode]), [['conversation', undefined], [undefined, 'conversation']]);
+  await workSelect('qwen', undefined, 'E:\\tmp');
+  assert.equal(workLaunches.at(-1).acpMode, 'conversation', 'an ACP tool saved to its terminal also opens as its conversation in 工作式');
 }
 console.log('OK: actual tool-card folder selection uses the launch action and remembers the tool\'s folder');
 
@@ -350,6 +354,7 @@ console.log('OK: actual tool-card folder selection uses the launch action and re
     dispatch: action => actions.push(action), setAgentError() {},
     crypto: { randomUUID: () => 'native-tab' },
     isTauri: false, state: { terminals: [] }, liveSessions: [], renamed: { 'claude:claude-renamed': 'My name' }, currentLayoutMode: () => 'code',
+    isAcpTool, acpLaunchMode: tool => tool === 'antigravity' ? 'conversation' : 'terminal',
   });
   await click({ id: 'claude-history', tool: 'claude', cwd: 'E:\\tmp', session_token: 'native-resume' });
   assert.deepEqual(actions.map(action => action.type), ['ADD_TERMINAL']);
