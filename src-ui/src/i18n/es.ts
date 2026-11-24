@@ -647,7 +647,6 @@ export const es = {
   'self_update.connecting': 'Conectando',
   'self_update.downloading': 'Descargando actualización {percent}%',
   'self_update.install': 'Instalar actualización v{version}',
-  'self_update.install_short': 'Instalar',
   'self_update.restarting': 'Reiniciando',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'No se pudo actualizar. Comprueba la red y los permisos e inténtalo de nuevo.',

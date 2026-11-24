@@ -652,7 +652,6 @@ export const zhCN = {
   'self_update.connecting': '正在连接',
   'self_update.downloading': '正在下载更新 {percent}%',
   'self_update.install': '安装更新 v{version}',
-  'self_update.install_short': '安装',
   'self_update.restarting': '正在重启',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '更新失败，请检查网络或安装权限后重试。',

@@ -650,7 +650,6 @@ export const ko = {
   'self_update.connecting': '연결 중',
   'self_update.downloading': '업데이트 다운로드 중 {percent}%',
   'self_update.install': '업데이트 설치 v{version}',
-  'self_update.install_short': '설치',
   'self_update.restarting': '다시 시작하는 중',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '업데이트 실패. 네트워크와 설치 권한을 확인한 후 다시 시도하세요.',

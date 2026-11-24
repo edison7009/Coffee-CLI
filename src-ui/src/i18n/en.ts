@@ -653,7 +653,6 @@ export const en = {
   'self_update.connecting': 'Connecting',
   'self_update.downloading': 'Downloading update {percent}%',
   'self_update.install': 'Install update v{version}',
-  'self_update.install_short': 'Install',
   'self_update.restarting': 'Restarting',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Update failed. Check the network and installation permissions, then retry.',

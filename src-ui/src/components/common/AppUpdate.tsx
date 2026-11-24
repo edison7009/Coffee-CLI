@@ -74,13 +74,12 @@ export function AppUpdateButton({ rail = false, tip }: { rail?: boolean; tip?: (
             }
           />
         </svg>
-      ) : readyToInstall && rail ? (
-        /* On the rail the tile has no room for the word: Lucide package-check (license in /icons/LICENSE-lucide.txt). */
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      ) : readyToInstall ? (
+        /* Downloaded and waiting: an icon like the rest of the row, its tip says 安装更新 (Lucide package-check;
+           license in /icons/LICENSE-lucide.txt). */
+        <svg width={rail ? 18 : 15} height={rail ? 18 : 15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={rail ? 1.75 : 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m16 16 2 2 4-4" /><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14" /><path d="m7.5 4.27 9 5.15" /><path d="M3.29 7 12 12l8.71-5" /><path d="M12 22V12" />
         </svg>
-      ) : readyToInstall ? (
-        <span className="update-install-label" aria-hidden="true">{t('self_update.install_short')}</span>
       ) : (
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

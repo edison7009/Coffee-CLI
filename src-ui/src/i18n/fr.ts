@@ -647,7 +647,6 @@ export const fr = {
   'self_update.connecting': 'Connexion',
   'self_update.downloading': 'Téléchargement de la mise à jour {percent} %',
   'self_update.install': 'Installer la mise à jour v{version}',
-  'self_update.install_short': 'Installer',
   'self_update.restarting': 'Redémarrage',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': 'Échec de la mise à jour. Vérifiez le réseau et les autorisations, puis réessayez.',

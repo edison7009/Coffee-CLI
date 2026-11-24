@@ -650,7 +650,6 @@ export const ja = {
   'self_update.connecting': '接続中',
   'self_update.downloading': 'アップデートをダウンロード中 {percent}%',
   'self_update.install': 'アップデートをインストール v{version}',
-  'self_update.install_short': 'インストール',
   'self_update.restarting': '再起動中',
   'cli_update.hint': '{current} → {latest}',
   'cli_update.failed': '更新に失敗しました。ネットワークとインストール権限を確認してください。',
