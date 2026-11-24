@@ -5,7 +5,8 @@
    to "almost invisible" on the light theme since white-on-white has no
    contrast. */
 
-.task-list.history-session-list { gap: 0; }
+/* 2px apart: the open session and the one under the pointer stay two rows, not one block. */
+.task-list.history-session-list { gap: 2px; }
 
 .history-search-trigger, .history-layout-toggle, .history-project-row {
   display: flex;

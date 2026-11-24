@@ -18,7 +18,8 @@
 .claude-context-readout { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px; font-size:var(--type-label); color:var(--text-2); }
 .claude-context-readout > :last-child { font-variant-numeric:tabular-nums; }
 @media(prefers-reduced-motion:reduce) { .claude-context-progress { transition:none; } }
-.claude-control-menu { position:fixed; z-index:10020; display:flex; flex-direction:column; overflow:auto; padding:5px; background:var(--bg-panel,var(--bg-terminal)); border:1px solid var(--border); border-radius:var(--shape-radius-panel,8px); box-shadow:0 8px 30px #0005; color:var(--text-1); font:var(--type-label) var(--font); }
+/* Rows sit 2px apart, so the selected row and the one under the pointer never merge into one block. */
+.claude-control-menu { position:fixed; z-index:10020; display:flex; flex-direction:column; gap:2px; overflow:auto; padding:5px; background:var(--bg-panel,var(--bg-terminal)); border:1px solid var(--border); border-radius:var(--shape-radius-panel,8px); box-shadow:0 8px 30px #0005; color:var(--text-1); font:var(--type-label) var(--font); }
 .claude-control-menu button { display:flex; align-items:baseline; justify-content:space-between; flex-shrink:0; text-align:left; gap:12px; padding:7px 9px; background:transparent; color:var(--text-1); border:0; border-radius:var(--shape-radius-btn,5px); font:inherit; cursor:pointer; }
 .claude-control-menu button:hover,.claude-control-menu button.is-selected { background:var(--accent-bg,var(--bg-hover)); }
 /* The selected row of a menu (the setting in force in permissions, mode, model, effort or a picker, and the
