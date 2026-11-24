@@ -1399,20 +1399,23 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 [data-layout="work"] .launchpad-grid { display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--text-1) 4%, transparent); }
 [data-layout="work"] .launchpad-card-group { border-radius: max(0px, calc(var(--radius-md) - 6px)); overflow: hidden; }
 [data-layout="work"] .launchpad-card { height: 46px; padding: 0 8px 0 12px; gap: 12px; background: transparent !important; box-shadow: none !important; border-radius: inherit; }
-/* The row under the pointer wears the menus' moving blue stripes (ClaudeComposerControls.css): the choice about to be
-   made reads like the choice in force. A tool not installed keeps a still, plain row. */
-[data-layout="work"] .launchpad-card-group:not(.launchpad-card-disabled) .launchpad-card:hover {
+/* The row under the pointer wears the menus' moving blue stripes (the keyframes are in styles/global.css): the choice
+   about to be made reads like the choice in force. They are drawn on a layer of their own, behind the row's content:
+   the row's own background is set with !important, which would hold the stripes still (an !important declaration
+   outranks an animation). A tool not installed keeps a plain row. */
+[data-layout="work"] .launchpad-card { position: relative; isolation: isolate; }
+[data-layout="work"] .launchpad-card-group:not(.launchpad-card-disabled) .launchpad-card:hover::before {
   --menu-stripe-a: color-mix(in srgb, var(--blue) 34%, transparent);
   --menu-stripe-b: color-mix(in srgb, var(--blue) 18%, transparent);
-  background: linear-gradient(45deg, var(--menu-stripe-b) 25%, var(--menu-stripe-a) 25% 50%, var(--menu-stripe-b) 50% 75%, var(--menu-stripe-a) 75%) 0 0 / 20px 20px !important;
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(45deg, var(--menu-stripe-b) 25%, var(--menu-stripe-a) 25% 50%, var(--menu-stripe-b) 50% 75%, var(--menu-stripe-a) 75%) 0 0 / 20px 20px;
   animation: menu-selected-stripes 1.6s linear infinite;
 }
-[data-mode="light"][data-layout="work"] .launchpad-card-group:not(.launchpad-card-disabled) .launchpad-card:hover,
-[data-layout="work"] [data-mode="light"] .launchpad-card-group:not(.launchpad-card-disabled) .launchpad-card:hover {
+[data-mode="light"][data-layout="work"] .launchpad-card-group:not(.launchpad-card-disabled) .launchpad-card:hover::before {
   --menu-stripe-a: color-mix(in srgb, var(--blue) 10%, transparent);
   --menu-stripe-b: color-mix(in srgb, var(--blue) 22%, transparent);
 }
-@media (prefers-reduced-motion: reduce) { [data-layout="work"] .launchpad-card:hover { animation: none; } }
+@media (prefers-reduced-motion: reduce) { [data-layout="work"] .launchpad-card:hover::before { animation: none; } }
 [data-layout="work"] .launchpad-icon { width: 22px; height: 22px; }
 [data-layout="work"] .launchpad-icon > *, [data-layout="work"] .launchpad-icon > * > svg { width: 22px !important; height: 22px !important; }
 [data-layout="work"] .launchpad-card-info { flex-direction: row; align-items: baseline; gap: 10px; }
