@@ -154,7 +154,7 @@ export function IconRail() {
   return <nav className="icon-rail" aria-label={t('rail.label')}>
     {/* Start something, or find something. */}
     {/* Click: the start page in the middle, as before. Hover: the tools and their folders, beside the rail. */}
-    <button ref={newToggle} type="button" className="icon-rail-button" aria-label={t('explorer.new_session')} aria-expanded={flyout === 'new'} aria-haspopup="menu"
+    <button ref={newToggle} type="button" className="icon-rail-button icon-rail-start" aria-label={t('explorer.new_session')} aria-expanded={flyout === 'new'} aria-haspopup="menu"
       onClick={() => { setFlyout(null); window.dispatchEvent(new Event('coffee-new-session')); }} onMouseEnter={() => { hide(); holdList('new'); }} onMouseLeave={releaseList}
       onKeyDown={event => { if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); setNewByKey(true); holdList('new'); } }}>
       {glyph('new')}

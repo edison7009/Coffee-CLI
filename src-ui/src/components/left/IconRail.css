@@ -32,6 +32,12 @@
 .icon-rail-button[aria-pressed="true"], .icon-rail-button[aria-expanded="true"] { background: var(--bg-active); color: var(--text-1); }
 .icon-rail-button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
 .icon-rail-button > svg { width: 18px; height: 18px; }
+/* New session, as in the Code sidebar: inverted (the text colour as its fill) so it stands out in both themes;
+   hover and an open menu only soften the fill. */
+.icon-rail-button.icon-rail-start { background: var(--text-1); color: var(--bg-app); }
+.icon-rail-button.icon-rail-start:hover, .icon-rail-button.icon-rail-start[aria-expanded="true"] { background: color-mix(in srgb, var(--text-1) 86%, var(--bg-app)); color: var(--bg-app); }
+.icon-rail-button.icon-rail-start:active { background: color-mix(in srgb, var(--text-1) 76%, var(--bg-app)); }
+.icon-rail-button.icon-rail-start:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon-rail-badge { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 2px var(--bg-app); }
 .icon-rail-separator { width: 18px; height: 1px; margin: 5px 0; background: var(--border); }
 .icon-rail-spacer { flex: 1; }
