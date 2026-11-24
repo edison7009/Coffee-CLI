@@ -142,6 +142,13 @@ try {
   await page.locator('.turn-fold').click();
   await page.waitForFunction(() => !document.body.textContent.includes('Reading the script.'));
 
+  // A run that starts with a thought keeps the thought and the calls on one line.
+  await page.evaluate(messages => window.setSession({ messages }), [turn[0], turn[1], turn[3], turn[4], turn[6]]);
+  await page.locator('.turn-fold').click();
+  await page.locator('.claude-rail .claude-step-kind-think').waitFor();
+  assert.equal(await page.locator('.claude-rail .claude-step').count(), 3, 'the thought, the read and the edit');
+  assert.equal(await page.locator('.claude-reasoning').count(), 0, 'no stray thinking row in place of the line');
+  await page.locator('.turn-fold').click();
   // An interrupted turn with no reply reads as stopped.
   await page.evaluate(messages => window.setSession({ messages }), [turn[0], turn[1], turn[3], { ...turn[5], interrupted: true }]);
   await page.waitForFunction(() => document.querySelector('.turn-fold-label')?.textContent.startsWith('Stopped'));

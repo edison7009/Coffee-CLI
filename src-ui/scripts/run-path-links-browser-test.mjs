@@ -10,7 +10,8 @@ import { build } from 'esbuild';
 const { chromium } = await import(process.env.COFFEE_PLAYWRIGHT_MODULE || 'playwright-core');
 const project = fileURLToPath(new URL('..', import.meta.url));
 const directory = await mkdtemp(join(tmpdir(), 'coffee-path-links-'));
-const content = ['Built it:', '', '```', 'D:\\Coffee-CLI\\target\\nsis\\Coffee CLI_3.8.1_x64-setup.exe', '```', '', '- **File**: 17 MiB', '- Plain words here', '- Inline `src/app.ts` and `npm run build`', '', 'Details are in D:\\Repo\\notes.md today.'].join('\n');
+const content = ['Built it:', '', '```', 'D:\\Coffee-CLI\\target\\nsis\\Coffee CLI_3.8.1_x64-setup.exe', '```', '', '- **File**: 17 MiB', '- Plain words here', '- Inline `src/app.ts` and `npm run build`',
+'- Home `~/.rustup` folder', '', 'Details are in D:\\Repo\\notes.md today.'].join('\n');
 await build({
   stdin: { resolveDir: project, loader: 'tsx', contents: `
     import React,{useRef} from 'react';import {createRoot} from 'react-dom/client';
@@ -136,6 +137,12 @@ try {
   assert.deepEqual(shown, { svg: true, name: 'app.ts', dirWidth: 0, code: false });
   const selected = await page.evaluate(() => { const item = document.querySelector('.md-file-link').closest('li'); const range = document.createRange(); range.selectNodeContents(item); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); const text = selection.toString(); selection.removeAllRanges(); return text; });
   assert.ok(selected.includes('src/app.ts'), `selection copies the whole path: ${selected}`);
+  // A home path reads as its folder and opens the home folder's copy, not one under the conversation's.
+  const home = page.getByRole('link', { name: '~/.rustup' });
+  assert.equal(await home.locator('.md-file-name').innerText(), '.rustup');
+  await page.evaluate(() => { window.native.length = 0; });
+  await home.click();
+  assert.deepEqual(await native(), [['showInFolder', '~/.rustup']]);
 
   // The block keeps clear of the list under it.
   const gap = await page.evaluate(() => { const code = document.querySelector('.md-code').getBoundingClientRect(), list = document.querySelector('.md-body ul').getBoundingClientRect(); return list.top - code.bottom; });

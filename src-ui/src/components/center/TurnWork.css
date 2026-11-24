@@ -42,7 +42,7 @@
 .claude-step-line > .conversation-chevron { margin-left:auto; width:12px; height:12px; opacity:0; color:var(--text-3); transition:opacity .15s, transform .15s ease; }
 .claude-step-line:hover > .conversation-chevron, .claude-step-line > .conversation-chevron[data-open="true"] { opacity:.8; }
 /* A thought: its first sentence, quiet and slanted. */
-.claude-step-kind-think .claude-step-thought { flex:1; }
+.claude-step-kind-think .claude-step-thought { flex:1; min-width:0; justify-content:flex-start; text-align:left; }
 .claude-step-kind-think .claude-step-verb { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:italic; }
 /* Opened, under the step: the call's own view on a faint fill. */
 .claude-step-detail { margin:2px 0 6px 34px; padding:8px 12px; border-radius:8px; background:color-mix(in srgb,var(--text-1) 4%,transparent); }

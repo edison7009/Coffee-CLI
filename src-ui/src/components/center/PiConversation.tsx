@@ -171,7 +171,8 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
           {fold && foldLead && <TurnFoldRow fold={fold} open={!folded} onToggle={() => folds.toggle(fold)} />}
           {!folded && <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? 'claude-row--group' : ''} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''}`}>
             {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} text={m.content} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></>
-              : m.role === 'tool' ? (runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} /> : <ClaudeTool message={m} />)
+              : runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} />
+              : m.role === 'tool' ? <ClaudeTool message={m} />
               : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? false} onToggle={open => setThinkingExpansion(previous => ({ ...previous, [m.id]: open }))} />
               : m.role === 'notice' ? <div className={`claude-turn-summary${m.toolStatus === 'failed' ? ' is-error' : ''}`} role="status">{system(m)}</div>
               : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}

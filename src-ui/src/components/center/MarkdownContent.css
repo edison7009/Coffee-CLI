@@ -2,6 +2,5 @@
    The folder part stays in the text at zero size, so selecting the reply still copies the whole path. */
 .md-body .md-file-link { color:var(--link); text-decoration:none; font:inherit; font-weight:500; white-space:nowrap; cursor:pointer; }
 .md-body .md-file-link svg { display:inline-block; width:.95em; height:.95em; margin-right:.22em; vertical-align:-.12em; opacity:.85; }
-.md-body .md-file-link:hover .md-file-name { text-decoration:underline; text-underline-offset:2px; }
 .md-body .md-file-link:focus-visible { outline:1px solid var(--accent); outline-offset:1px; border-radius:3px; }
 .md-body .md-file-dir { font-size:0; }
