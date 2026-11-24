@@ -822,7 +822,7 @@ export const en = {
   'claude.worked_for': 'Worked for {duration}',
   'claude.interrupted': 'Interrupted',
   'turn.stopped_plain': 'Stopped',
-  'turn.steps': '{count} steps',
+  'turn.steps': 'Steps: {count}',
   'turn.fixed_after': 'Fixed after {count} failed',
   'turn.last_failed': 'Last step failed',
   'turn.steps_done': '{count} steps done',

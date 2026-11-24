@@ -141,7 +141,8 @@ try {
   await input.fill('Read readme.txt');
   await page.keyboard.press('Enter');
   const running = page.locator('.opencode-working');
-  await running.getByText(/read.*readme\.txt/).waitFor();
+  await running.waitFor();
+  await page.locator('.claude-step.is-now').filter({ hasText: /Read.*readme\.txt/ }).waitFor();
   assert.equal(await running.locator('.opencode-activity-mark rect').count(),12);
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await running.locator('.opencode-activity-mark rect').first().evaluate(rect=>getComputedStyle(rect).animationName),'none');
@@ -149,15 +150,17 @@ try {
   await page.evaluate(()=>{window.stopAt=undefined;return window.replay(undefined,'session.tool.success')});
   await page.waitForFunction(() => document.querySelector('.claude-row--completed'));
   const rows = await page.locator('.claude-row').evaluateAll(rows => rows.map(row => row.className.match(/claude-row--(\w+)/)[1]));
-  assert.deepEqual(rows, ['user', 'tool', 'assistant', 'completed']);
-  assert.match(await page.locator('.codex-group-heading').textContent(), /Activity 1.*read/);
+  assert.deepEqual(rows, ['user', 'assistant', 'completed'], 'the finished turn folds its call away from the reply');
+  assert.match(await page.locator('.turn-fold-label').textContent(), /^Steps: 1/);
   assert.equal(await page.locator('.claude-row--assistant').innerText(), 'The readme.txt file contains the single word: hello.');
   assert.equal(await page.locator('.claude-row--user').count(), 1, 'the prompt is shown once though both the reply and the event carry it');
-  assert.equal(await page.locator('.codex-working').count(), 0);
+  assert.equal(await page.locator('.step-working').count(), 0);
   assert.deepEqual(await page.evaluate(() => window.actions.filter(a => a.type === 'SET_SESSION_TOKEN').map(a => a.token).slice(-1)), [await page.evaluate(() => window.currentState.nativeId)]);
-  await page.locator('.codex-group-heading').click();
-  await page.locator('.codex-tool .claude-tool-heading').click();
-  assert.match(await page.locator('.codex-tool-body').textContent(), /readme\.txt/);
+  await page.locator('.turn-fold').click();
+  const step = page.locator('.claude-step').filter({ hasText: 'readme.txt' });
+  assert.equal(await step.locator('.claude-step-verb').innerText(), 'Read', 'OpenCode\'s read reads like any tool\'s');
+  await step.locator('.claude-step-toggle').click();
+  assert.match(await page.locator('.claude-step-detail').textContent(), /readme\.txt/);
   await shot('turn');
 
   // Approvals and questions while a turn runs.

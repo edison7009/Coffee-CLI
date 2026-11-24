@@ -113,7 +113,7 @@ try {
   // Finished: one quiet line with the time and a failure mark; the reply and its changed files stay in sight.
   await page.evaluate(messages => window.setSession({ busy: false, status: 'idle', messages }), turn);
   await page.locator('.turn-fold').waitFor();
-  assert.equal((await page.locator('.turn-fold-label').innerText()).trim(), '4 steps · 45s');
+  assert.equal((await page.locator('.turn-fold-label').innerText()).trim(), 'Steps: 4 · 45s');
   assert.deepEqual(await page.locator('.turn-fold-dots i').evaluateAll(dots => dots.map(dot => dot.className)), ['is-think', 'is-tool', 'is-edit', 'is-fail'], 'a dot per step: thought, call, changed file, failure');
   assert.equal(await page.locator('.turn-fold-warn').innerText(), 'Last step failed');
   assert.equal(await page.locator('.claude-tool-group, .claude-reasoning').count(), 0, 'the work hides behind the fold');

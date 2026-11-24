@@ -5,7 +5,6 @@ import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { formatElapsed } from '../../lib/claude-i18n';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -18,8 +17,8 @@ import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './Welcome
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
-import { ClaudeThinking, ClaudeTool, ToolGroup } from './ClaudeConversation';
-import { ChangedFilesCard, TurnFoldRow } from './TurnWork';
+import { ClaudeThinking, ClaudeTool, ToolGroup } from './ToolSteps';
+import { ChangedFilesCard, StepWorking, TurnFoldRow } from './TurnWork';
 import { useTurnFolds } from '../../lib/use-turn-work';
 import { toolRuns } from '../../lib/tool-runs';
 import { PiMark } from './PiWelcomeLogo';
@@ -32,17 +31,6 @@ import { ScrollLatestIcon } from './ScrollLatestIcon';
 
 
 /** Pi's working status: its logo with the three colors moving clockwise, the label and the time. */
-function Running({ label, startedAt, tool }: { label: string; startedAt?: number; tool?: string }) {
-  const t = useT();
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  return <div className="pi-running" role="status">
-    <PiMark />
-    <span>{label}</span>
-    {tool && <span className="conversation-working-detail" title={tool}>{tool}</span>}
-    {startedAt && <span className="pi-running-elapsed">{formatElapsed(now - startedAt, t)}</span>}
-  </div>;
-}
 
 /** An extension's dialog: pick an option, confirm, or type an answer. */
 function Dialog({ sessionId, request }: { sessionId: string; request: PiDialog }) {
@@ -194,8 +182,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
         </MeasuredRow>; })}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <Dialog key={request.id} sessionId={sessionId} request={request} />)}
-        {s.ready && s.busy && !s.requests.length && <Running label={label} startedAt={s.startedAt}
-          tool={s.status === 'working' ? s.messages.findLast(message => message.toolStatus === 'running')?.toolName : undefined} />}
+        {s.ready && s.busy && !s.requests.length && <StepWorking className="pi-working" mark={<PiMark />} label={label} startedAt={s.startedAt} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {noModel && <div className="claude-session-error" role="alert">{t('pi.no_model')}</div>}

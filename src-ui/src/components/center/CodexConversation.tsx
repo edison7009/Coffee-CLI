@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { shownMessageText } from '../../lib/worker-prompt';
 import { startErrorText } from '../../lib/start-error';
 import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { orchestrationToolLabel } from '../../lib/orchestration-label';
-import { arr, obj, str, num, pretty, codexSubTasks, type CodexMessage, type CodexRequest, type Json } from '../../lib/codex-protocol';
+import { arr, obj, str, num, pretty, codexSubTasks, type CodexRequest, type Json } from '../../lib/codex-protocol';
 import { approveCodexPlan, continueCodexInNewThread, interruptCodex, loadCodexHistory, respondCodex, retainCodexSession, settleCodexColdReturn, useCodexSession } from '../../lib/codex-session';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
@@ -17,26 +16,22 @@ import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './Welcome
 import { ToolSwarm } from './ToolSwarm';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { CollapsibleUserMessage, ColdReturnCard, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, Chevron } from './ConversationControls';
+import { CollapsibleUserMessage, ColdReturnCard, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
-import commandSpriteUrl from './codex-activity-command.webp';
-import readSpriteUrl from './codex-activity-read.webp';
-import searchSpriteUrl from './codex-activity-search.webp';
 import { pasteImageIntoAnswer } from '../../lib/answer-image-paste';
 import { ScrollLatestIcon } from './ScrollLatestIcon';
+import { ClaudeThinking, ToolGroup } from './ToolSteps';
+import { ChangedFilesCard, StepWorking, TurnFoldRow } from './TurnWork';
+import { codexStepCards } from '../../lib/step-cards';
+import { toolRuns } from '../../lib/tool-runs';
+import { useTurnFolds } from '../../lib/use-turn-work';
 
 function Measured({ id, measure, children }: { id: string; measure: (id: string, height: number) => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { const node = ref.current; if (!node) return; const update = () => measure(id, node.getBoundingClientRect().height); update(); const observer = new ResizeObserver(update); observer.observe(node); return () => observer.disconnect(); }, [id, measure]);
   return <div ref={ref}>{children}</div>;
-}
-function title(message: CodexMessage): string {
-  const item = message.item;
-  if (item.type === 'commandExecution') return str(item.command);
-  if (item.type === 'fileChange') return arr(item.changes).map(value => str(obj(value).path)).join(', ');
-  return str(item.tool) || str(item.query) || str(item.type);
 }
 function RequestCard({ sessionId, request }: { sessionId: string; request: CodexRequest }) {
   const t = useT(), [pending, setPending] = useState(false), [error, setError] = useState('');
@@ -95,147 +90,6 @@ function CodexActivityMark({ kind = 'working', paused = false }: {
   </svg>;
 }
 
-type LiveActivity = { key: string; toolId?: string; kind: CodexActivityKind; label: string; detail: string; animateIcon: boolean; midTurnThinking: boolean };
-const liveSprites: Partial<Record<CodexActivityKind, string>> = {
-  command: commandSpriteUrl, read: readSpriteUrl, search: searchSpriteUrl, list: searchSpriteUrl,
-};
-
-function CodexLiveActivity({ activity, messages, busy, interrupted, paused, visible }: {
-  activity: LiveActivity; messages: readonly CodexMessage[]; busy: boolean; interrupted: boolean; paused: boolean; visible: boolean;
-}) {
-  const status = useRef<HTMLDivElement>(null);
-  const [current, setCurrent] = useState(activity);
-  const [outgoing, setOutgoing] = useState<LiveActivity>();
-  const [fadeLabel, setFadeLabel] = useState(false);
-  const [decodedSprite, setDecodedSprite] = useState<string>();
-  const [wasBusy, setWasBusy] = useState(busy);
-  const [finishing, setFinishing] = useState(false);
-  const [inView, setInView] = useState(true);
-  const [pageVisible, setPageVisible] = useState(() => !document.hidden);
-  const motionVisible = visible && inView && pageVisible;
-  const hasStatus = busy || finishing;
-  const spriteUrl = liveSprites[current.kind];
-  const animateIcon = current.animateIcon && (!busy || current.key === activity.key ||
-    messages.some(message => message.id === current.toolId && message.partial));
-  const cadenceStart = useRef<number | null>(null);
-  const displayedSince = useRef(0);
-  const immediate = paused || current.kind === 'waiting' || current.kind === 'stopping';
-  if (busy !== wasBusy) {
-    setWasBusy(busy);
-    setFinishing(!busy && !interrupted && motionVisible && !document.hidden &&
-      !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    setOutgoing(undefined);
-    setFadeLabel(false);
-    if (busy) setCurrent(activity);
-  } else if (busy && immediate && current.key !== activity.key) {
-    setOutgoing(current);
-    setFadeLabel(current.midTurnThinking || activity.midTurnThinking);
-    setCurrent(activity);
-  } else if (busy && current.key === activity.key && (current.label !== activity.label ||
-    current.detail !== activity.detail || current.animateIcon !== activity.animateIcon ||
-    current.midTurnThinking !== activity.midTurnThinking)) {
-    setCurrent(activity);
-  }
-  useEffect(() => {
-    if (!spriteUrl || decodedSprite === spriteUrl || !animateIcon) return;
-    const image = new Image();
-    image.src = spriteUrl;
-    let cancelled = false;
-    void image.decode().then(() => { if (!cancelled) setDecodedSprite(spriteUrl); }, () => {});
-    return () => { cancelled = true; };
-  }, [spriteUrl, decodedSprite, animateIcon]);
-  useEffect(() => {
-    const updatePageVisibility = () => setPageVisible(!document.hidden);
-    document.addEventListener('visibilitychange', updatePageVisibility);
-    return () => document.removeEventListener('visibilitychange', updatePageVisibility);
-  }, []);
-  useEffect(() => {
-    const row = status.current;
-    if (!row) return;
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, [hasStatus]);
-  useEffect(() => {
-    if (!busy) {
-      cadenceStart.current = null;
-      return;
-    }
-    displayedSince.current = Date.now();
-    cadenceStart.current ??= displayedSince.current;
-  }, [busy, current.key]);
-  const pendingActivity = busy && current.key !== activity.key && !immediate;
-  const sampleActivity = useEffectEvent(() => {
-    if (!pendingActivity) return;
-    setOutgoing(current);
-    setFadeLabel(current.midTurnThinking || activity.midTurnThinking);
-    setCurrent(activity);
-  });
-  useEffect(() => {
-    if (!pendingActivity) return;
-    let timer: number;
-    const schedule = () => {
-      window.clearTimeout(timer);
-      if (document.hidden) return;
-      const now = Date.now();
-      const delay = current.midTurnThinking
-        ? Math.max(0, 1000 - (now - displayedSince.current))
-        : 3500 - (now - (cadenceStart.current ?? now)) % 3500;
-      timer = window.setTimeout(sampleActivity, delay);
-    };
-    schedule();
-    document.addEventListener('visibilitychange', schedule);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('visibilitychange', schedule);
-    };
-  }, [current.key, current.midTurnThinking, pendingActivity]);
-  useEffect(() => {
-    if (!finishing) return;
-    const finish = () => setFinishing(false);
-    const timer = window.setTimeout(finish, 150);
-    document.addEventListener('visibilitychange', finish);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('visibilitychange', finish);
-    };
-  }, [finishing]);
-  if (!hasStatus) return null;
-  return <div ref={status} className="codex-working codex-live-status" role={busy ? 'status' : undefined}
-    aria-hidden={!busy || undefined} data-finishing={finishing || undefined} data-motion-hidden={!motionVisible || undefined}>
-    <span className="codex-live-stack">
-      {outgoing && <span key={outgoing.key} className="codex-live-outgoing" aria-hidden="true"
-        onAnimationEnd={event => { if (event.target === event.currentTarget) setOutgoing(undefined); }}>
-        {outgoing.kind !== 'working' && <span className="codex-live-icon">
-          {outgoing.kind !== current.kind && <CodexActivityMark kind={outgoing.kind} paused />}
-        </span>}
-        <span className="codex-live-text">{outgoing.label}{outgoing.detail && ` ${outgoing.detail}`}</span>
-      </span>}
-      <span className="codex-live-activity" data-paused={paused || !motionVisible || undefined} data-fade-label={fadeLabel || undefined}>
-        {current.kind === 'working' && outgoing && outgoing.kind !== 'working' &&
-          <span className="codex-live-icon-exit" aria-hidden="true" />}
-        {current.kind !== 'working' && <span key={current.kind} className="codex-live-icon"
-          data-animating={(animateIcon && !!spriteUrl && decodedSprite === spriteUrl) || undefined}>
-          <CodexActivityMark kind={current.kind} paused={paused || !motionVisible} />
-          {spriteUrl &&
-            <span className="codex-live-sprite" data-kind={current.kind} aria-hidden="true" />}
-        </span>}
-        <span key={current.key} className="codex-live-text-slot" title={current.detail || undefined}>
-          <span className="codex-live-text">
-            <span className="codex-live-label">{current.label}</span>
-            {current.detail && <> <span className="codex-live-detail">{current.detail}</span></>}
-            {!paused && motionVisible && <span className="codex-live-sweep"
-              data-delay={current.midTurnThinking || fadeLabel || undefined} aria-hidden="true">
-              <span>{current.label}{current.detail && ` ${current.detail}`}</span>
-            </span>}
-          </span>
-        </span>
-      </span>
-    </span>
-  </div>;
-}
-
-type Row = CodexMessage & { members?: CodexMessage[] };
 export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useCodexSession(sessionId), t = useT(), { state, dispatch } = useAppState();
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
@@ -254,46 +108,12 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
   // The conversation's own title names the tab, as a terminal tab takes the tool's OSC title.
   useEffect(() => { if (s.title) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: s.title }); }, [s.title, sessionId, dispatch]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [s.requests.length, s.busy, sessionId, dispatch]);
-  const rows = useMemo<Row[]>(() => {
-    const result: Row[] = [];
-    for (const message of s.messages) {
-      const activity = (message.role === 'tool' || message.role === 'reasoning') && message.item.type !== 'turnStatus';
-      const previous = result.at(-1);
-      if (activity && previous?.members && previous.turnId === message.turnId) {
-        previous.members.push(message); previous.partial ||= message.partial; previous.content += `\n${title(message)}`;
-      } else result.push(activity ? { ...message, id: `group:${message.id}`, content: title(message), members: [message] } : message);
-    }
-    return result;
-  }, [s.messages]);
+  // Every tool draws its steps alike (lib/step-cards.ts): calls and thoughts on one line, a finished turn folded.
+  const rows = useMemo(() => s.messages.flatMap(codexStepCards), [s.messages]);
+  const runs = useMemo(() => toolRuns(rows, 1), [rows]);
+  const folds = useTurnFolds(rows, s.busy);
   const paused = s.interrupting || s.requests.length > 0;
-  const activeTool = s.busy && !paused ? s.messages.findLast(message =>
-    message.turnId === s.turnId && message.role === 'tool' && message.partial,
-  ) : undefined;
-  const lastItem = s.messages.at(-1);
-  const completedCommand = s.busy && !paused && !activeTool && lastItem?.turnId === s.turnId &&
-    lastItem.item.type === 'commandExecution' && !lastItem.partial ? lastItem : undefined;
-  const activityItem = activeTool ?? completedCommand;
-  const item = activityItem?.item;
-  const action = obj(arr(item?.commandActions).at(-1));
-  const activityKind = s.interrupting ? 'stopping' : paused ? 'waiting'
-    : action.type === 'read' ? 'read'
-    : item?.type === 'webSearch' ? 'webSearch'
-    : action.type === 'search' ? 'search'
-    : action.type === 'listFiles' ? 'list'
-    : item?.type === 'commandExecution' ? 'command'
-    : item?.type === 'fileChange' ? 'edit'
-    : 'working';
-  const searchPath = activityKind === 'search' ? str(action.path) : '';
-  const searchFolder = searchPath.replace(/[\\/]+$/, '').split(/[\\/]/).at(-1) || searchPath;
-  const activityDetail = (searchFolder || str(action.name) || str(action.query) || str(action.path) ||
-    str(item?.command) || str(item?.query) || str(item?.tool) ||
-    (item?.type === 'fileChange' && activeTool ? title(activeTool) : '')).replace(/\s+/g, ' ').trim();
-  const activityLabel = t(({
-    stopping: 'codex.stopping', waiting: 'codex.waiting', working: 'claude.status.thinking',
-    command: completedCommand ? 'codex.activity.ran' : 'codex.activity.running',
-    read: 'codex.activity.reading', search: searchFolder ? 'codex.activity.searching_folder' : 'codex.activity.searching',
-    list: 'codex.activity.listing', edit: 'codex.activity.editing', webSearch: 'codex.activity.searching_web',
-  } as const)[activityKind]);
+  const turnStart = s.busy ? s.messages.findLast(message => message.role === 'user')?.timestamp : undefined;
   const virtual = useConversationVirtualizer(rows, scroll);
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => rows.flatMap((row, messageIndex) => row.role === 'user' ? [{
     id: row.id, sourceMessageId: row.id, content: row.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null,
@@ -355,15 +175,7 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
     }
     void loadCodexHistory(sessionId);
   };
-  const toggle = (id: string) => setExpanded(old => ({ ...old, [id]: !old[id] }));
   const copy = (id: string, content: string) => { void clipboardWrite(shownMessageText(content)).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
-  const tool = (message: CodexMessage) => {
-    const label = orchestrationToolLabel(str(message.item.tool), t, str(message.item.server));
-    return <div className={`codex-tool is-${message.interrupted ? 'interrupted' : message.toolStatus ?? 'reasoning'}`} key={message.id}>
-    <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true"><Chevron open={expanded[message.id]} /></span><strong>{label ?? (message.role === 'reasoning' ? t('conversation.reasoning') : message.item.type === 'fileChange' ? t('codex.files') : message.item.type === 'commandExecution' ? t('codex.command') : str(message.item.type))}</strong><span>{label ? str(obj(message.item.arguments).title) : title(message)}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), message.content].join('\n'))} /></div>
-    {expanded[message.id] && (message.role === 'reasoning' ? <MarkdownContent content={message.content} /> : <pre className="codex-tool-body">{message.content || pretty(message.item)}</pre>)}
-  </div>;
-  };
   return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation codex-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scroll} onPointerDownCapture={e => { if (e.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onWheelCapture={e => { if (e.deltaY < 0 && !e.ctrlKey) pause(); }} onTouchMoveCapture={pause} onKeyDownCapture={e => { if (['ArrowUp', 'PageUp', 'Home'].includes(e.key) && !(e.target as HTMLElement).closest('input,textarea,select')) pause(); }} onScroll={() => {
@@ -382,21 +194,25 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
       <div className={`claude-thread${!rows.length ? ' is-empty' : ''}`}>
         {s.historyCursor && <button className="claude-expand" disabled={s.loadingHistory} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
-        {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
-          <article className={`claude-row claude-row--${row.item.type === 'turnStatus' ? str(row.item.status) : row.partial && row.role !== 'user' ? 'running' : row.role} codex-row`} data-message-id={row.id}>
-            {row.members ? <>
-              <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true"><Chevron open={expanded[row.id]} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <CodexActivityMark paused={paused} />}<small>{title(row.members.at(-1)!)}</small></button>
-              {expanded[row.id] && <div className="codex-activity-list">{row.members.map(tool)}</div>}
-            </> : row.item.type === 'turnStatus' ? (row.turnStats
-              ? <TurnSummary stats={row.turnStats} sessionKey={s.nativeId} messageId={row.id} prefix={t(row.item.status === 'interrupted' ? 'claude.interrupted' : row.item.status === 'failed' ? 'codex.failed' : 'codex.completed')} />
-              : <div className="claude-turn-summary" role="status">{t(row.item.status === 'interrupted' ? 'claude.interrupted' : row.item.status === 'failed' ? 'codex.failed' : 'codex.completed')}{num(row.item.durationMs) > 0 && ` · ${Math.round(num(row.item.durationMs) / 1000)}s`}</div>) : <>
+        {rows.slice(virtual.start, virtual.end).map((row, i) => {
+          const index = virtual.start + i, item = row.source.item, fold = folds.owner.get(index), folded = !!fold && !folds.isOpen(fold), foldLead = fold?.start === index;
+          const status = (state: unknown) => t(state === 'interrupted' ? 'claude.interrupted' : state === 'failed' ? 'codex.failed' : 'codex.completed');
+          return <Measured key={row.id} id={virtual.measurementKeys[index]} measure={virtual.measureRow}>
+          {fold && foldLead && <TurnFoldRow fold={fold} open={!folded} onToggle={() => folds.toggle(fold)} />}
+          {!(runs.follower.has(index) || folded) && <article className={`claude-row claude-row--${item.type === 'turnStatus' ? str(item.status) : row.partial && row.role !== 'user' ? 'running' : row.role}${runs.lead.has(index) ? ' claude-row--group' : ''} codex-row`} data-message-id={row.id}>
+            {runs.lead.has(index) ? <ToolGroup messages={rows.slice(index, runs.lead.get(index)! + 1)} />
+            : row.role === 'reasoning' ? <ClaudeThinking message={row} expanded={!!expanded[row.id]} onToggle={open => setExpanded(old => ({ ...old, [row.id]: open }))} />
+            : item.type === 'turnStatus' ? (row.turnStats
+              ? <TurnSummary stats={row.turnStats} sessionKey={s.nativeId} messageId={row.id} prefix={status(item.status)} />
+              : <div className="claude-turn-summary" role="status">{status(item.status)}{num(item.durationMs) > 0 && ` · ${Math.round(num(item.durationMs) / 1000)}s`}</div>) : <>
               {row.role === 'user'
                 ? <CollapsibleUserMessage sentAt={row.timestamp} text={row.content} expanded={!!expanded[row.id]} onToggle={() => setExpanded(old => ({ ...old, [row.id]: !old[row.id] }))}><MarkdownContent content={row.content} /></CollapsibleUserMessage>
                 : <div><MarkdownContent content={row.content} /></div>}
               <MessageCopyButton copied={copied === row.id} onCopy={() => copy(row.id, row.content)} />
+              {folds.byReply.has(index) && <ChangedFilesCard files={folds.byReply.get(index)!} />}
             </>}
-          </article>
-        </Measured>)}
+          </article>}
+        </Measured>; })}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <RequestCard key={JSON.stringify(request.id)} sessionId={sessionId} request={request} />)}
         {s.planMode && s.planReady && !s.busy && <section className="claude-approval" aria-label={t('codex.plan.ready')}>
@@ -408,13 +224,8 @@ export function CodexConversation({ sessionId, cwd, resumeToken, isActive, isVis
           onNew={s.busy || s.requests.length || codexSubTasks(s).length || state.terminals.some(tab => tab.parentId && (tab.id === sessionId || tab.parentId === sessionId)) ? undefined : () => { const newId = crypto.randomUUID(); if (continueCodexInNewThread(sessionId, newId)) dispatch({ type: 'RESTART_TERMINAL', id: sessionId, newId, fresh: true }); }}
           onFull={() => { void settleCodexColdReturn(sessionId, 'full'); }} onNever={() => { void settleCodexColdReturn(sessionId, 'never'); }}
           onCancel={() => { void settleCodexColdReturn(sessionId, 'cancel').then(draft => dispatch({ type: 'SET_GAMBIT_DRAFT', id: sessionId, draft })); }} />}
-        {s.ready && <CodexLiveActivity messages={s.messages} busy={s.busy} interrupted={lastItem?.item.status === 'interrupted'}
-          paused={paused} visible={isVisible} activity={{
-          key: `${activityItem?.id ?? ''}:${activityKind}`, kind: activityKind, label: activityLabel, detail: activityDetail,
-          toolId: activityItem?.id, animateIcon: !!activeTool,
-          midTurnThinking: activityKind === 'working' && !!s.messages.findLast(message =>
-            message.turnId === s.turnId && message.role === 'tool'),
-        }} />}
+        {s.ready && s.busy && <StepWorking mark={<CodexActivityMark paused={paused} />} startedAt={turnStart}
+          label={t(s.interrupting ? 'codex.stopping' : paused ? 'codex.waiting' : 'claude.status.working')} />}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'Codex CLI', t)}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {!directoryIssue && !rows.length && <div className="claude-empty"><ToolSwarm tool="codex" isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="codex-working" mark={<CodexActivityMark />} />}<WelcomeSessionMeta cwd={cwd} model={s.model} /></div>}

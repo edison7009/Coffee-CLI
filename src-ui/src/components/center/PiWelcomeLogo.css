@@ -1,10 +1,6 @@
 /* Pi brand colors from its installer; they stay fixed across themes, like Pi's own logo. */
-/* Running status: the Pi mark with its colors moving clockwise, the label and the time. */
-/* Centered on the timeline line (x = 10.5px): the 12px mark starts 4.5px in, as the Codex spinner does. */
-.pi-running { display: flex; align-items: center; gap: 10px; min-height: 28px; margin: 0 0 20px 4.5px; color: var(--text-2); font-size: var(--type-body); }
 .pi-mark { display: inline-grid; grid-template-columns: repeat(4, 3px); grid-auto-rows: 3px; flex-shrink: 0; }
 .pi-mark > span { transition: background-color 0.15s ease; }
 .pi-mark > span.is-coral { background: rgb(240 144 130); }
 .pi-mark > span.is-blue { background: rgb(77 154 191); }
 .pi-mark > span.is-gold { background: rgb(241 190 88); }
-.pi-running-elapsed { color: var(--text-3, var(--text-2)); font-variant-numeric: tabular-nums; }

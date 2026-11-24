@@ -1,4 +1,4 @@
-import { useContext, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
 import { useT } from '../../i18n/useT';
 import { formatElapsed } from '../../lib/claude-i18n';
 import { ConversationDirectory } from '../../lib/conversation-links';
@@ -65,4 +65,17 @@ export function ChangedFilesCard({ files }: { files: ChangedFile[] }) {
     {shown.length < files.length && <button type="button" className="turn-file turn-files-more" onClick={() => setAll(true)}>{t('turn.more_files', { count: files.length - shown.length })}<Chevron open={false} /></button>}
     {tip}
   </section>;
+}
+
+/** The turn's one timer, under its steps, for every tool alike: the tool's own small mark, a word, the time so far.
+ *  The step under way is on the line above, so this line never repeats it. */
+export function StepWorking({ mark, label, startedAt, className = '' }: { mark: ReactNode; label: string; startedAt?: number; className?: string }) {
+  const t = useT();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  return <div className={`claude-working step-working ${className}`} role="status">
+    <span className="step-working-mark" aria-hidden="true">{mark}</span>
+    <span className="step-working-word">{label}</span>
+    {startedAt !== undefined && <span className="claude-elapsed">{elapsed(Math.max(0, now - startedAt), t)}</span>}
+  </div>;
 }
