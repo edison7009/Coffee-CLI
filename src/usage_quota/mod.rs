@@ -37,16 +37,6 @@ fn context<'a>(cwd: Option<String>, var: &'a dyn Fn(&str) -> Option<String>) -> 
     }
 }
 
-/// The model a tool is set to start with (its own settings, read-only), for the start page's card; `None` when it
-/// leaves the choice to its vendor.
-#[tauri::command]
-pub async fn tool_configured_model(tool: String, cwd: Option<String>) -> Option<String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let var = |key: &str| std::env::var(key).ok();
-        sources::model(&tool, &context(cwd, &var))
-    }).await.ok().flatten()
-}
-
 fn route(tool: &str, cwd: Option<String>) -> sources::Route {
     let var = |key: &str| std::env::var(key).ok();
     sources::resolve(tool, &context(cwd, &var))

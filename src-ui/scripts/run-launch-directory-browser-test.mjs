@@ -25,12 +25,12 @@ try{
    assert.equal(await folder.count(),1,'every directory-based card has a folder button');
    assert.ok((await folder.innerText()).trim().length>0,'Code names the folder button in words (choose folder), above how the tool opens');
    assert.equal((await card.locator('.launchpad-card-path').innerText()).trim(),'Choose a project folder','a tool never opened shows the folder hint on its second line');
-   assert.equal(await card.locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'ltr','the hint elides at its end; only paths keep their end');
+   assert.equal(await card.locator('.launchpad-card-path-text').evaluate(el=>getComputedStyle(el).direction),'ltr','the hint elides at its end; only paths keep their end');
    for(const opener of [card.locator('.launchpad-card-title'),folder]){
      await opener.click();await page.locator('.folder-menu').waitFor();
      assert.equal((await state(page)).tool,null,'opening the list never launches');
      const [menu,cardBounds,button]=await Promise.all([page.locator('.folder-menu').boundingBox(),card.boundingBox(),folder.boundingBox()]);
-     assert.ok(Math.abs(menu.y-(cardBounds.y+cardBounds.height+4))<.5,'the list opens below the card, clear of the mode tabs');
+     assert.ok(Math.abs(menu.y-(button.y+button.height+6))<.5,'the list opens right under the folder line it came from');
      assert.ok(Math.abs(menu.x-Math.min(button.x,1400-290))<.5,'the list is left-aligned with the folder button');
      assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Recent','Older']);
      await page.keyboard.press('Escape');await page.locator('.folder-menu').waitFor({state:'hidden'});assert.equal((await state(page)).tool,null);
@@ -53,7 +53,7 @@ try{
  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('coffee:last-folder-by-tool'))),{claude:'D:/Older'},'each tool remembers its own last folder');
  await fresh(page);
  assert.equal((await claude.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the card shows its last folder');
- assert.equal(await claude.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-path').evaluate(el=>getComputedStyle(el).direction),'rtl','a long path elides its start and keeps the folder name');await page.locator('.launchpad-mode-tabs').first().waitFor();
+ assert.equal(await claude.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-path-text').evaluate(el=>getComputedStyle(el).direction),'rtl','a long path elides its start and keeps the folder name');await page.locator('.launchpad-mode-tabs').first().waitFor();
  const codex=page.getByRole('group',{name:'Codex launch mode'});await codex.getByRole('button',{name:'IDE desktop',exact:true}).click();await codex.locator('xpath=ancestor::div[@class="launchpad-card"]').locator('.launchpad-card-info').click();
  assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
  await page.locator('.folder-menu-item:not(.folder-menu-open)').first().click();launched=await state(page);assert.equal(launched.tool,'codex');assert.equal(launched.folderPath,'D:/Older');assert.equal(launched.codexMode,'conversation');

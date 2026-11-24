@@ -1170,10 +1170,12 @@ export function CenterPanel() {
 
   const openToolFolderMenu = (tool: ToolType, anchor: HTMLElement) => {
     if (recentFolders.length === 0) { void handlePickFolder(tool); return; }
-    // The list opens below the card, its left edge on the folder button's left edge (Code: the folder line itself).
+    // The list opens with its left edge on the folder button's: in Code right under the folder line itself (it follows
+    // the line it came from), in Work below the card.
     const card = anchor.closest('.launchpad-card');
-    const button = card?.querySelector('.launchpad-folder, .launchpad-card-path--button') ?? anchor;
-    setFolderMenu({ x: button.getBoundingClientRect().left, y: (card ?? anchor).getBoundingClientRect().bottom + 4, tool });
+    const line = card?.querySelector<HTMLElement>('.launchpad-card-path--button');
+    const button = line ?? card?.querySelector('.launchpad-folder') ?? anchor;
+    setFolderMenu({ x: button.getBoundingClientRect().left, y: line ? line.getBoundingClientRect().bottom + 6 : (card ?? anchor).getBoundingClientRect().bottom + 4, tool });
     void commands.checkProjectDirectories(recentFolders).then(checks => {
       for (const check of checks) {
         if (check.status === 'missing' || check.status === 'not_directory') forgetMissingFolder(check.path);
@@ -1677,7 +1679,7 @@ export function CenterPanel() {
                                     {tool.requiresCwd && (state.layoutMode !== 'work'
                                       // Code: the folder itself opens the recent folders (its own button, as 选择目录 was).
                                       ? <button type="button" className={`launchpad-card-path launchpad-card-path--button${tool.key && lastFolders[tool.key] ? ' is-path' : ''}`} disabled={disabled} aria-label={t('launchpad.choose_folder')} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
-                                          <bdi>{tool.key && lastFolders[tool.key] ? homeShortPath(lastFolders[tool.key], homeDir) : t('launchpad.pick_folder')}</bdi>
+                                          <span className="launchpad-card-path-text"><bdi>{tool.key && lastFolders[tool.key] ? homeShortPath(lastFolders[tool.key], homeDir) : t('launchpad.pick_folder')}</bdi></span>
                                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                         </button>
                                       : tool.key && lastFolders[tool.key]

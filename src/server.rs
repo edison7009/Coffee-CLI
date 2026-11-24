@@ -1614,7 +1614,6 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::window_control::window_control_resolve,
             crate::orchestration::orchestration_remote_update,
             crate::git_project_status::git_repo_key,
-            crate::usage_quota::tool_configured_model,
             crate::remote_window::remote_window_show_tab,
             crate::window_control::window_control_state,
             crate::window_control::window_control_set_pick,
