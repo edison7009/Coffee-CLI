@@ -673,13 +673,14 @@ export function Explorer() {
       {/* History scrolls as one sheet with the actions above it; the workspace
           tree keeps its own scroller so its header stays put. */}
       <div className="explorer-scroll" data-tab={activeTab} ref={scrollRef}>
+      {/* The sidebar's most used action, on a row of its own with its name. */}
+      <button type="button" className="explorer-new-button" onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
+        {/* Lucide plus; license in /icons/LICENSE-lucide.txt. */}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        <span>{t('explorer.new_session')}</span>
+      </button>
       <div className="explorer-tabs">
-        {/* Code 方案 A: the sidebar's entries as one row of icons (names in the tips), the sessions right under. */}
-        <button className="explorer-icon-button explorer-new-icon" aria-label={t('explorer.new_session')} {...tipFor(t('explorer.new_session'))} onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
-          {/* Lucide plus; license in /icons/LICENSE-lucide.txt. */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          <span className="explorer-icon-label">{t('explorer.new_session')}</span>
-        </button>
+        {/* Code 方案 A: the sidebar's other entries as one row of icons (names in the tips), the sessions right under. */}
       <button type="button" className="explorer-icon-button" aria-pressed={!!state.toolSettingsOpen} {...tipFor(t('tools.title'))} onClick={() => dispatch({ type: 'SET_TOOL_SETTINGS_OPEN', open: true })}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 17.5h7M17.5 14v7" /></svg><span className="explorer-icon-label">{t('tools.title')}</span>
         </button>

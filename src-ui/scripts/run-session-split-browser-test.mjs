@@ -91,12 +91,16 @@ try {
   assert.equal(await page.locator('[data-fixture-view][data-visible="true"]:visible').count(), 4, 'all visible views remain active for scrolling and rendering');
   await page.getByRole('button', { name: 'Usage statistics', exact: true }).click();
   await page.getByRole('region', { name: 'Usage statistics', exact: true }).waitFor();
-  const navigationStyles = await page.evaluate(() => ['.explorer-tabs .explorer-new-icon', '.explorer-tabs .explorer-icon-button:nth-child(3)'].map(selector => {
+  const navigationStyles = await page.evaluate(() => ['.explorer-tabs .explorer-icon-button:nth-child(1)', '.explorer-tabs .explorer-icon-button:nth-child(2)'].map(selector => {
     const button = document.querySelector(selector), style = getComputedStyle(button), icon = button.querySelector('svg').getBoundingClientRect();
     return { font: style.font, padding: style.padding, iconX: icon.x, iconWidth: icon.width, iconHeight: icon.height };
   }));
-  // Code 方案 A: the entries are one row of icons — statistics sizes its icon exactly like New session.
-  assert.deepEqual({ ...navigationStyles[1], iconX: 0 }, { ...navigationStyles[0], iconX: 0 }, 'statistics use the same icon button as New session');
+  // Code 方案 A: the entries are one row of icons — statistics sizes its icon exactly like app configuration.
+  assert.deepEqual({ ...navigationStyles[1], iconX: 0 }, { ...navigationStyles[0], iconX: 0 }, 'statistics use the same icon button as app configuration');
+  // New session is not one of them: a named button on a row of its own, as wide as the row of icons.
+  const newSession = await page.evaluate(() => { const button = document.querySelector('.explorer-new-button'), row = document.querySelector('.explorer-tabs'); const a = button.getBoundingClientRect(), b = row.getBoundingClientRect(); return { text: button.textContent.trim(), width: a.width, rowWidth: b.width, above: a.bottom <= b.top, inRow: !!row.querySelector('[aria-label="New session"]') }; });
+  assert.equal(newSession.text, 'New session');
+  assert.ok(newSession.above && Math.abs(newSession.width - newSession.rowWidth) < 1 && !newSession.inRow, `new session sits alone above the icons (${JSON.stringify(newSession)})`);
   assert.equal(await page.locator('[data-fixture-view]:visible').count(), 0, 'statistics hide native surfaces without ending their sessions');
   assert.equal(await page.locator('.gambit').count(), 0, 'statistics do not leave the composer over the charts');
   await row('Claude desktop task').click(); await count(4);
