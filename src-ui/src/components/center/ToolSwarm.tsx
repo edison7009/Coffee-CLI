@@ -235,7 +235,9 @@ export function ToolSwarm({ tool, isActive }: { tool: SwarmTool; isActive: boole
       // Bloom: the base colour, blurred at a tight, a middle and a wide radius. The tight pass fills the
       // gaps between stars with deep colour; the wide pass is the halo around the icon.
       ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
-      const bloom: Array<[number, number]> = light ? [[0.03, 0.12]] : BLOOM;
+      // An engine without canvas filters (older WebKitGTK) would stack the glow unblurred and overexpose the
+      // stars: it gets the stars alone.
+      const bloom: Array<[number, number]> = !('filter' in ctx) ? [] : light ? [[0.03, 0.12]] : BLOOM;
       for (const [radius, alpha] of bloom) {
         ctx.filter = `blur(${Math.max(1, Math.round(radius * BOX * k))}px)`;
         ctx.globalAlpha = alpha;

@@ -62,6 +62,10 @@ import { onRemoteStatus, remoteRequest } from '../../remote/bridge';
 import './ClaudeConversation.css';
 import { TERM_COLOR_SCHEMES, themePair, normalizePasteNewlines, LINK_RE, trimLink, lineCells, buildFontFamily, buildXtermTheme } from '../../lib/terminal-theme';
 import { attachWebglRenderer, detachWebglRenderer, suspendWebglRenderer } from '../../lib/terminal-webgl';
+import { ToolSwarm, type SwarmTool } from './ToolSwarm';
+
+// Tools with a swarm icon start under it, as their conversations welcome with it; the rest keep the cup.
+const SWARM_TOOLS = new Set<string>(['claude', 'codex', 'dsh', 'opencode', 'pi']);
 export { TERM_COLOR_SCHEMES, buildFontFamily };
 export type { TermColorScheme } from '../../lib/terminal-theme';
 // Sessions being detached to a new window — skip kill on unmount
@@ -2117,6 +2121,7 @@ function TierTerminalImpl({
         >
           {/* Animated coffee cup + label + dots — grouped as one visual unit */}
           <div className="splash-group">
+            {tool && SWARM_TOOLS.has(tool) ? <ToolSwarm tool={tool as SwarmTool} isActive={isVisible} /> : (
             <div className="splash-icon">
               <svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -2150,6 +2155,7 @@ function TierTerminalImpl({
                 <path fill="currentColor" d="M0 0h24v24H0z" mask={`url(#splashMask-${sessionId})`}/>
               </svg>
             </div>
+            )}
             {(() => {
               const splashText =
                 toolName ||
@@ -2163,11 +2169,11 @@ function TierTerminalImpl({
               const hasCJK = /[一-鿿぀-ヿ가-힯]/.test(splashText);
               return <span className="splash-label" lang={hasCJK ? 'zh' : 'en'}>{splashText}</span>;
             })()}
-            <div className="splash-dots">
+            {!(tool && SWARM_TOOLS.has(tool)) && <div className="splash-dots">
               <span className="splash-dot" />
               <span className="splash-dot" />
               <span className="splash-dot" />
-            </div>
+            </div>}
           </div>
         </div>
       )}
