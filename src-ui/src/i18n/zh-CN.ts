@@ -855,6 +855,7 @@ export const zhCN = {
   "codex.reconnect": "重新连接 Codex",
   "dsh.reconnect": "重新连接 DeepSeek Harness",
   "pi.reconnect": "重新连接 Pi",
+  "antigravity.reconnect": "重新连接 Antigravity",
   "pi.no_model": "Pi 还没有可用模型。请先在终端标签里打开一次 Pi 并运行 /login，或设置服务商的 API Key，然后重新连接。",
   "pi.compacted": "对话已压缩",
   "pi.retrying": "正在重试（{attempt}/{max}）",

@@ -1,5 +1,6 @@
+import { sendAntigravityMessage } from './antigravity-session';
 import type { TerminalSession } from '../store/app-state';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from './chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAntigravityConversation } from './chat-tools';
 import { controlClaude, sendClaudeInteractive, sendClaudeMessage } from './claude-session';
 import { sendCodexInteractive, sendCodexMessage } from './codex-session';
 import { sendDshMessage } from './dsh-session';
@@ -8,12 +9,13 @@ import { sendPiMessage } from './pi-session';
 import { submitTerminalPrompt } from './terminal-control';
 
 /** Send through the existing conversation or terminal without opening another session. */
-export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 'tool' | 'claudeMode' | 'codexMode' | 'opencodeMode' | 'piMode' | 'parentId'> | undefined, text: string): Promise<boolean> {
+export async function sendSessionPrompt(session: Pick<TerminalSession, 'id' | 'tool' | 'claudeMode' | 'codexMode' | 'opencodeMode' | 'piMode' | 'antigravityMode' | 'parentId'> | undefined, text: string): Promise<boolean> {
   if (!session?.tool || !text.trim()) return false;
   try {
     if (isCodexConversation(session)) return await (session.parentId ? sendCodexMessage(session.id, text) : sendCodexInteractive(session.id, text));
     if (isDshConversation(session)) return await sendDshMessage(session.id, text);
     if (isOpenCodeConversation(session)) return await sendOpenCodeMessage(session.id, text);
+    if (isAntigravityConversation(session)) return await sendAntigravityMessage(session.id, text);
     if (isPiConversation(session)) return await sendPiMessage(session.id, text);
     if (isClaudeConversation(session)) {
       if (/^\/plan\s+\S/.test(text)) {

@@ -3,8 +3,8 @@
 //! Antigravity is closed-source and its private conversation files have changed
 //! across releases, so Coffee CLI reads only its own conversation index
 //! (`~/.gemini/antigravity-cli/conversation_summaries.db`, in server.rs) for
-//! history and heatmap, and resumes with `agy --conversation <id>`. No hook or
-//! protocol integration.
+//! history and heatmap, and resumes terminal sessions with `agy --conversation <id>`.
+//! IDE conversations use the official ACP v1 transport in `antigravity_session`.
 
 use super::ToolDescriptor;
 

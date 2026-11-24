@@ -7,7 +7,7 @@ export type LayoutMode = 'work' | 'code';
 const KEY = 'cc-layout';
 
 /** Tools that have a desktop conversation of their own; the only ones 工作式 starts. */
-export const WORK_TOOLS: ReadonlySet<string> = new Set(['claude', 'codex', 'opencode', 'pi', 'dsh']);
+export const WORK_TOOLS: ReadonlySet<string> = new Set(['claude', 'codex', 'opencode', 'pi', 'dsh', 'antigravity']);
 
 /**
  * The saved shell. A first start chooses 工作式; someone who already used Coffee CLI (any saved

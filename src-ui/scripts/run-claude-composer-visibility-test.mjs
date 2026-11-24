@@ -18,25 +18,26 @@ const isClaudeConversation = evaluate('lib/chat-tools.ts', 'isClaudeConversation
 const isCodexConversation = evaluate('lib/chat-tools.ts', 'isCodexConversation');
 const isDshConversation = evaluate('lib/chat-tools.ts', 'isDshConversation');
 const isOpenCodeConversation = evaluate('lib/chat-tools.ts', 'isOpenCodeConversation');
+const isAntigravityConversation = evaluate('lib/chat-tools.ts', 'isAntigravityConversation');
 const isPiConversation = evaluate('lib/chat-tools.ts', 'isPiConversation');
-const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation });
+const isConversationSession = evaluate('lib/chat-tools.ts', 'isConversationSession', { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAntigravityConversation });
 const splitSessionIds = evaluate('lib/session-split-layout.ts', 'splitSessionIds');
 const replaceSplitSession = evaluate('lib/session-split-layout.ts', 'replaceSplitSession', { splitSessionIds });
 const reducer = evaluate('store/app-state.tsx', 'reducer', { isConversationSession, replaceSplitSession, getTabOrder: state => state.tabOrder, isCompact: () => false });
 const terminals = [{ id: 'claude', tool: 'claude' }, { id: 'terminal', tool: null }];
 let state;
 const effects = [];
-const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [], openCodeSends = [], piSends = [];
+const terminalSends = [], claudeSends = [], codexSends = [], dshSends = [], openCodeSends = [], piSends = [], antigravitySends = [];
 let team = { enabled: false, agents: [], coordinators: [] };
 const context = {
-  isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isConversationSession,
+  isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAntigravityConversation, isConversationSession,
   useAppState: () => ({ state, dispatch: action => { state = reducer(state, action); } }),
   useAppStateRef: () => ({ get current() { return state; } }),
   useAppDispatch: () => context.useAppState().dispatch,
   useOrchestration: () => team,
   useSessionControls: () => [],
   useCallback: fn => fn, useEffect: fn => effects.push(fn), useT: () => key => key,
-  useClaudeSession: () => ({ busy: false, messages: [] }), useCodexSession: () => ({ busy: false, messages: [] }), useDshSession: () => false, stopDsh: async () => {}, useOpenCodeSession: () => false, interruptOpenCode: async () => {}, usePiSession: () => false, abortPi: async () => {}, getToolIcon: () => '',
+  useClaudeSession: () => ({ busy: false, messages: [] }), useCodexSession: () => ({ busy: false, messages: [] }), useDshSession: () => false, stopDsh: async () => {}, useOpenCodeSession: () => false, interruptOpenCode: async () => {}, useAntigravitySession: () => ({ busy: false, messages: [] }), abortAntigravity: async () => {}, usePiSession: () => false, abortPi: async () => {}, getToolIcon: () => '',
   schemeLabels: () => ({ left: 'Alt+Q', gambit: 'Alt+W', right: 'Alt+E' }),
   React: { createElement: (type, props, ...children) => ({ type, props, children }) },
   Gambit: 'gambit', WorktreeControl: 'worktree-control', RemoteControlPicker: 'remote-control', useRemoteControlState: () => [null, () => {}], Changelog: 'changelog', IS_MACOS: false, IS_WEB: false,
@@ -47,6 +48,7 @@ const context = {
   sendCodexInteractive: async (id, text) => { codexSends.push({ id, text }); return true; },
   sendDshMessage: async (id, text) => { dshSends.push({ id, text }); return true; },
   sendOpenCodeMessage: async (id, text) => { openCodeSends.push({ id, text }); return true; },
+  sendAntigravityMessage: async (id, text) => { antigravitySends.push({ id, text }); return true; },
   sendPiMessage: async (id, text) => { piSends.push({ id, text }); return true; },
 };
 context.basename = evaluate('components/center/ActiveGambit.tsx', 'basename');
@@ -196,3 +198,15 @@ team = {...team,enabled:false};assert.equal(host().props.orchestration,false);
 team = {...team,enabled:true,coordinators:['claude']};state.terminals[0].parentId='another';assert.equal(host().props.orchestration,false,'workers do not advertise coordinator capabilities');
 state = {terminals:[{id:'codex',tool:'codex',codexMode:'conversation'}],activeTerminalId:'codex',gambitOpen:true};assert.equal(host().props.orchestration,false,'unintegrated coordinators do not claim orchestration is enabled');
 console.log('OK: autonomous Claude routing, live coordinator badge, new-session activation and worker isolation');
+
+for (const antigravityMode of ['conversation', 'terminal']) {
+ const launched = reducer({ terminals: [{id:'agy', tool:null}], tabOrder:['agy'] }, {type:'LAUNCH_TERMINAL_TOOL',id:'agy',tool:'antigravity',antigravityMode});
+ assert.equal(isAntigravityConversation(launched.terminals[0]),antigravityMode==='conversation');
+ const restarted = reducer({...launched,activeTerminalId:'agy'},{type:'RESTART_TERMINAL',id:'agy',newId:'retry-agy'});
+ assert.equal(restarted.terminals[0].antigravityMode,antigravityMode);
+}
+state={terminals:[{id:'agy',tool:'antigravity',antigravityMode:'conversation'}],activeTerminalId:'agy',gambitOpen:false};
+assert.equal(host().props.antigravity,true);assert.equal(toggle().props.disabled,true);
+assert.equal(await host().props.onSend('Antigravity prompt'),true);
+assert.equal(antigravitySends.at(-1).id,'agy');assert.equal(terminalSends.some(s=>s.id==='agy'),false);
+console.log('OK: Antigravity uses ACP, keeps its composer and retains terminal/conversation mode on restart');

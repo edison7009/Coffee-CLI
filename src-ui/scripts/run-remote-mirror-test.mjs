@@ -18,6 +18,15 @@ await mkdir(`${root}node_modules/.cache`, { recursive: true });
 await writeFile(out, compiled.outputFiles[0].text);
 const { reducer, diffState, applyPatch, isMirroredKey } = await import(pathToFileURL(out).href);
 
+for (const antigravityMode of ['conversation', 'terminal']) {
+  const desktop = [{ id: 'agy', tool: 'antigravity', title: 'ACP', cwd: '/project', antigravityMode }];
+  const first = reducer({ terminals: [], tabOrder: [], activeTerminalId: null }, { type: 'SYNC_MIRROR_TABS', tabs: desktop });
+  assert.equal(first.terminals[0].antigravityMode, antigravityMode);
+  assert.equal(reducer(first, { type: 'SYNC_MIRROR_TABS', tabs: desktop }), first);
+  const flipped = reducer(first, { type: 'SYNC_MIRROR_TABS', tabs: [{ ...desktop[0], antigravityMode: antigravityMode === 'terminal' ? 'conversation' : 'terminal' }] });
+  assert.notEqual(flipped, first, 'changing the desktop mode propagates to its mirror');
+}
+
 const tab = (id, extra = {}) => ({ id, tool: 'claude', cwd: '/p', title: id, claudeMode: (extra.tool ?? 'claude') === 'claude' ? 'conversation' : undefined, ...extra });
 let state = { terminals: [{ id: 'blank', tool: null, folderPath: null }], tabOrder: ['blank'], activeTerminalId: 'blank' };
 const sync = tabs => { state = reducer(state, { type: 'SYNC_MIRROR_TABS', tabs }); };

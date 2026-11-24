@@ -1,6 +1,7 @@
+import { getAntigravityConnection, sendAntigravityMessage, abortAntigravity } from './antigravity-session';
 import type { TerminalSession } from '../store/app-state';
 import { invoke, commands } from '../tauri';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from './chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAntigravityConversation } from './chat-tools';
 import { getClaudeConnection, sendClaudeMessage, controlClaude, loadClaudeHistory } from './claude-session';
 import { getCodexConnection, sendCodexMessage, interruptCodex, loadCodexHistory } from './codex-session';
 import { getDshConnection, sendDshMessage, stopDsh } from './dsh-session';
@@ -16,8 +17,8 @@ import { terminalControlStatus, submitTerminalPrompt, sendTerminalKey, TerminalI
 
 /** Adapt the existing session; observation and control never start another process. */
 export function getAgentSession(tab: TerminalSession) {
-  const id = tab.id, claude = isClaudeConversation(tab), codex = isCodexConversation(tab), dsh = isDshConversation(tab), opencode = isOpenCodeConversation(tab), pi = isPiConversation(tab);
-  if (!claude && !codex && !dsh && !opencode && !pi) {
+  const id = tab.id, claude = isClaudeConversation(tab), codex = isCodexConversation(tab), dsh = isDshConversation(tab), opencode = isOpenCodeConversation(tab), pi = isPiConversation(tab), antigravity = isAntigravityConversation(tab);
+  if (!claude && !codex && !dsh && !opencode && !pi && !antigravity) {
     const observer = getTerminalObserver(id);
     return observer && {
       mode: 'terminal' as const, generation: observer.generation, ...terminalControlStatus(id),
@@ -27,7 +28,7 @@ export function getAgentSession(tab: TerminalSession) {
       close: () => commands.tierTerminalKill(id),
     };
   }
-  const connection = () => pi ? getPiConnection(id) : opencode ? getOpenCodeConnection(id) : dsh ? getDshConnection(id) : claude ? getClaudeConnection(id) : getCodexConnection(id);
+  const connection = () => antigravity ? getAntigravityConnection(id) : pi ? getPiConnection(id) : opencode ? getOpenCodeConnection(id) : dsh ? getDshConnection(id) : claude ? getClaudeConnection(id) : getCodexConnection(id);
   const initial = connection();
   if (!initial) return;
   const generation = `desktop:${tab.tool}:${initial.generation}`;
@@ -38,7 +39,7 @@ export function getAgentSession(tab: TerminalSession) {
   };
   const historyCursor = () => { const { state } = current(); return 'historyCursor' in state ? !!state.historyCursor : 'cursor' in state && !!state.cursor; };
   // OpenCode keeps its native timeline; its requests are permissions and forms.
-  const requests = () => { const { state } = current(); return 'native' in state ? openCodeRequests(state) : state.requests.map(request => ({ id: request.id, kind: 'method' in request ? request.method : String(request.request.subtype ?? 'approval') })); };
+  const requests = () => { const { state } = current(); return 'native' in state ? openCodeRequests(state) : state.requests.map(request => ({ id: request.id, kind: 'method' in request ? request.method : 'request' in request ? String(request.request.subtype ?? 'approval') : 'permission' })); };
   const rows = () => { const { state } = current(); return ('native' in state ? openCodeRows(state.native) : state.messages).flatMap((message: ClaudeMessage | CodexMessage | DshMessage | OpenCodeRow) => {
     const parts = [message.content];
     if ('toolInput' in message && message.toolInput) parts.push(message.toolInput);
@@ -93,7 +94,7 @@ export function getAgentSession(tab: TerminalSession) {
       // A running desktop session takes the message into its current turn; automatic results still wait for idle.
       if (c.inputBusy && deliveryId) throw new Error('会话正在执行任务，请等待完成或明确请求中断');
       if (deliveryId && !claude) throw new Error('此会话不支持自动编排结果投递');
-      const sent = await (pi ? sendPiMessage(id, text) : opencode ? sendOpenCodeMessage(id, text) : dsh ? sendDshMessage(id, text) : claude ? sendClaudeMessage(id, text, deliveryId) : sendCodexMessage(id, text));
+      const sent = await (antigravity ? sendAntigravityMessage(id, text) : pi ? sendPiMessage(id, text) : opencode ? sendOpenCodeMessage(id, text) : dsh ? sendDshMessage(id, text) : claude ? sendClaudeMessage(id, text, deliveryId) : sendCodexMessage(id, text));
       if (!sent) throw new TerminalInputError('消息发送未得到确认，请读取会话核实，不要自动重发', true);
     },
     key: async (key: string, guard: () => boolean) => {
@@ -103,7 +104,8 @@ export function getAgentSession(tab: TerminalSession) {
       if (!c.ready && !c.state.busy) throw new Error('桌面会话尚未就绪或已经断开');
       try {
         // Stopping restarts the DeepSeek Harness runtime, which an idle session has no need of.
-        if (dsh) { if (c.state.busy) await stopDsh(id); }
+        if (antigravity) { if (c.state.busy) await abortAntigravity(id); }
+        else if (dsh) { if (c.state.busy) await stopDsh(id); }
         else if (opencode) { if (c.state.busy) await interruptOpenCode(id); }
         else if (pi) { if (c.state.busy) await abortPi(id); }
         else if (claude) await controlClaude(id, { subtype: 'interrupt' });
@@ -114,6 +116,6 @@ export function getAgentSession(tab: TerminalSession) {
         }
       } catch (error) { throw new TerminalInputError(String(error), true); }
     },
-    close: () => invoke<void>(pi ? 'pi_session_close' : opencode ? 'opencode_session_close' : dsh ? 'dsh_session_close' : claude ? 'claude_session_close' : 'codex_session_close', { id, generation: current().generation }),
+    close: () => invoke<void>(antigravity ? 'antigravity_session_close' : pi ? 'pi_session_close' : opencode ? 'opencode_session_close' : dsh ? 'dsh_session_close' : claude ? 'claude_session_close' : 'codex_session_close', { id, generation: current().generation }),
   };
 }

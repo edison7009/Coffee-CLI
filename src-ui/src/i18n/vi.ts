@@ -854,6 +854,7 @@ export const vi = {
   "codex.reconnect": "Kết nối lại Codex",
   "dsh.reconnect": "Kết nối lại DeepSeek Harness",
   "pi.reconnect": "Kết nối lại Pi",
+  "antigravity.reconnect": "Kết nối lại Antigravity",
   "pi.no_model": "Pi chưa có mô hình. Hãy mở Pi một lần trong tab terminal và chạy /login, hoặc đặt API key của nhà cung cấp, rồi kết nối lại.",
   "pi.compacted": "Đã nén cuộc trò chuyện",
   "pi.retrying": "Đang thử lại ({attempt}/{max})",

@@ -850,6 +850,7 @@ export const ru = {
   "codex.reconnect": "Переподключить Codex",
   "dsh.reconnect": "Переподключить DeepSeek Harness",
   "pi.reconnect": "Переподключить Pi",
+  "antigravity.reconnect": "Переподключить Antigravity",
   "pi.no_model": "У Pi пока нет модели. Откройте Pi один раз во вкладке терминала и выполните /login или задайте API-ключ провайдера, затем переподключитесь.",
   "pi.compacted": "Разговор сжат",
   "pi.retrying": "Повтор ({attempt}/{max})",
