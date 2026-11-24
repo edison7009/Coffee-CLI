@@ -151,6 +151,9 @@ body.gambit-docked .claude-scroll-bottom { bottom:calc(var(--gambit-dock-h,200px
 .claude-interrupted { margin:10px 0; color:var(--text-2); font-style:italic; }
 .claude-thread.is-empty { min-height:100%; box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; padding:8px 0; }
 .claude-empty { text-align:center; color:var(--text-2); overflow-wrap:anywhere; }
+/* Before the first message, why the tool can't start (no model, no sign-in, a missing folder) is a line under the
+   welcome's folder: no box, so the logo and greeting keep their place. */
+.claude-thread.is-empty > .claude-session-error { order:1; width:fit-content; max-width:min(560px,100%); margin:14px auto 0; padding:0; border:0; text-align:center; font-size:13.5px; line-height:1.5; }
 .claude-empty-title { font-size:20px; font-weight:500; }
 .claude-empty-restoring { display:flex; align-items:center; justify-content:center; gap:9px; width:fit-content; margin:14px auto 0; min-height:24px; font-size:14px; }
 .claude-empty-restoring.dsh-running, .claude-empty-restoring.codex-working { margin:14px auto 0; padding:0; font-size:14px; }

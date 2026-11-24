@@ -357,6 +357,8 @@ try {
   await page.evaluate(()=>window.setSession({error:'Startup unavailable'}));
   await page.waitForFunction(()=>document.querySelector('.claude-reconnect'));
   assert.equal(await page.locator('.claude-session-error').textContent(),'Startup unavailable','a failed start says why in place');
+  // Before the first message it is a line under the welcome's folder, not a box above the logo.
+  assert.deepEqual(await page.evaluate(()=>{const e=document.querySelector('.claude-session-error'),w=document.querySelector('.claude-empty');return [e.getBoundingClientRect().top>=w.getBoundingClientRect().bottom-1,getComputedStyle(e).borderTopWidth];}),[true,'0px'],'the start error sits under the welcome, unboxed');
   assert.equal(await page.locator('.claude-reconnect').getAttribute('title'),'Startup unavailable');
   await page.evaluate(()=>window.setSession({ready:true,status:'idle',error:undefined}));
   const resolvedModel = 'deepseek-flash[1m]';
