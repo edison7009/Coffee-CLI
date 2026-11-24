@@ -1711,6 +1711,7 @@ pub fn start_ui(pending_launch: Option<crate::launch::LaunchRequest>) -> anyhow:
             crate::orchestration::orchestration_set_agent,
             crate::orchestration::orchestration_set_pick,
             crate::orchestration::orchestration_set_mode,
+            crate::orchestration::orchestration_set_device_access,
             crate::worker_worktree::worktree_available,
             crate::worker_worktree::worktree_create,
             crate::worker_worktree::worktree_status,

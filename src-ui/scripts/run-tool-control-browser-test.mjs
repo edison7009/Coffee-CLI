@@ -13,7 +13,7 @@ window.calls=[];const agents=()=>[{tool:'claude',supported:true,enabled:false,co
 window.controlStatus={computer:{supported:true,installed:true,ready:true,browser:null,agents:agents()},browser:{supported:true,installed:false,ready:false,browser:null,agents:agents()}};
 window.team={enabled:false,agents:[],tasks:[],revision:0};window.remoteControl=[];window.teamCalls=[];
 export const commands={
-async orchestrationGet(){window.teamCalls.push('get');const value=structuredClone(window.team);if(window.delayTeamRead)await new Promise(resolve=>window.resolveTeamRead=resolve);return value},async orchestrationSetMode(mode){window.teamCalls.push({mode});window.team.mode=mode;window.team.revision++;return structuredClone(window.team)},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
+async orchestrationGet(){window.teamCalls.push('get');const value=structuredClone(window.team);if(window.delayTeamRead)await new Promise(resolve=>window.resolveTeamRead=resolve);return value},async orchestrationSetDeviceAccess(access){window.teamCalls.push({access});window.team={...window.team,deviceAccess:access,revision:window.team.revision+1};return structuredClone(window.team)},async orchestrationSetMode(mode){window.teamCalls.push({mode});window.team.mode=mode;window.team.revision++;return structuredClone(window.team)},async orchestrationSetAgent(tool,enabled){window.teamCalls.push({tool,enabled});if(window.delayTeam)await new Promise(resolve=>window.resolveTeam=resolve);if(window.failTeam)throw 'write failed';window.team.agents=window.team.agents.filter(id=>id!==tool);if(enabled)window.team.agents.push(tool);window.team.enabled=window.team.agents.length>0;window.team.revision++;return structuredClone(window.team)},
 async getToolControl(kind){window.calls.push({type:'read',kind});const value=structuredClone(window.controlStatus[kind]);if(window.delayRead===kind)await new Promise(resolve=>window.resolveRead=resolve);if(window.failRead===kind)throw 'control_read';return value},
 async checkToolControl(kind){window.calls.push({type:'check',kind});if(window.delayCheck)await new Promise(resolve=>window.resolveCheck=resolve);if(window.failCheck)throw 'control_unavailable';return structuredClone(window.controlStatus[kind])},
 async installBrowserControl(){window.calls.push({type:'install'});if(window.delayInstall)await new Promise(resolve=>window.resolveInstall=resolve);window.controlStatus.browser.installed=true;return structuredClone(window.controlStatus.browser)},
@@ -256,6 +256,13 @@ const emptyGeometry=await page.locator('.skills-empty').evaluate(element=>{const
 assert.ok(Math.abs(emptyGeometry.bottom-emptyGeometry.expected)<2,'empty skills fill the available page height');assert.ok(Math.abs(emptyGeometry.center-emptyGeometry.textCenter)<2,'empty text is vertically centered');
 // Remote Control: a switch per assistant that can take the window tools, read when the tab opens.
 await page.evaluate(()=>window.calls=[]);await tab('协作').click();
+// Work from other computers: restricted by default, one choice of two, the chosen one checked.
+const access=name=>page.getByRole('radio',{name:new RegExp('^'+name),exact:false});
+await access('受限').waitFor();assert.equal(await access('受限').getAttribute('aria-checked'),'true');
+await access('完全').click();await page.waitForFunction(()=>window.teamCalls.some(call=>call.access==='full'));
+await page.waitForFunction(()=>document.querySelector('.remote-access-option.is-selected strong')?.textContent==='完全');
+await page.locator('.remote-access-list').screenshot({path:join(directory,'access-full.png')});
+
 await page.waitForFunction(()=>!document.querySelector('.remote-control-page [role="switch"][aria-label="Claude Code"]').disabled);
 const remotePanel=page.locator('.remote-control-page'),remoteSwitch=name=>remotePanel.getByRole('switch',{name,exact:true});
 assert.equal(await remoteSwitch('Claude Code').getAttribute('aria-checked'),'false');

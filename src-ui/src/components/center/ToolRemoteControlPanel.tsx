@@ -3,11 +3,13 @@ import { listen } from '@tauri-apps/api/event';
 import { commands } from '../../tauri';
 import { useT } from '../../i18n/useT';
 import { canRequestControl, remoteHost, requestControl, type RemoteWindow } from '../../lib/remote-control';
+import { receiveOrchestration, useOrchestration } from '../../lib/orchestration';
 import './ToolControlPanel.css';
 import './ToolRemoteControlPanel.css';
 
 /** The assistants that can be given the window tools (src/window_control.rs `TOOLS`). */
 const SUPPORTED = new Set(['claude', 'codex', 'opencode', 'dsh']);
+const CHECK = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>;
 const MONITOR = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="4" width="13" height="9" rx="2" /><rect x="9" y="11" width="13" height="9" rx="2" /></svg>;
 
 /**
@@ -16,6 +18,8 @@ const MONITOR = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
  */
 export function ToolRemoteControlPanel({ active, tools }: { active: boolean; tools: { value: string; label: string; icon: ReactNode; installed?: boolean }[] }) {
   const t = useT();
+  const { deviceAccess } = useOrchestration();
+  const [accessPending, setAccessPending] = useState(false);
   const [enabled, setEnabled] = useState<string[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -82,5 +86,21 @@ export function ToolRemoteControlPanel({ active, tools }: { active: boolean; too
       {!tools.length && <span className="tool-control-no-agents">{t('control.no_agents')}</span>}
     </div>
     <p className="remote-control-note">{t('ai_remote.risk')}</p>
+
+    {/* What a paired computer may do with work it hands to this one: one choice of two, the selected one checked. */}
+    <div className="remote-control-section">{t('collab.access.title')}</div>
+    <div className="remote-control-list remote-access-list" role="radiogroup" aria-label={t('collab.access.title')}>
+      {(['restricted', 'full'] as const).map(level => {
+        const selected = (deviceAccess ?? 'restricted') === level;
+        return <button type="button" role="radio" aria-checked={selected} key={level} disabled={accessPending} className={`remote-control-row tool-control-agent remote-access-option${selected ? ' is-selected' : ''}`} onClick={async () => {
+          if (selected) return;
+          setAccessPending(true);
+          try { receiveOrchestration(await commands.orchestrationSetDeviceAccess(level)); } catch { setFailed(true); } finally { setAccessPending(false); }
+        }}>
+          <span className="remote-access-text"><strong>{t(`collab.access.${level}`)}</strong><small>{t(`collab.access.${level}_desc`)}</small></span>
+          <span className="remote-access-check" aria-hidden="true">{selected && CHECK}</span>
+        </button>;
+      })}
+    </div>
   </div>;
 }

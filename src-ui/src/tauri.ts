@@ -193,6 +193,7 @@ export const commands = {
   updateCli: (tool: string) => invoke<CliUpdateStatus>('update_cli', { tool }),
   orchestrationGet: () => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_get'),
   orchestrationSetMode: (mode: string) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_mode', { mode }),
+  orchestrationSetDeviceAccess: (access: 'restricted' | 'full') => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_device_access', { access }),
   orchestrationSetPick: (sessionId: string, tools: string[]) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_pick', { sessionId, tools }),
   orchestrationSetAgent: (tool: string, enabled: boolean) => invoke<import('./lib/orchestration').OrchestrationSnapshot>('orchestration_set_agent', { tool, enabled }),
   orchestrationSync: (sessions: unknown[]) => invoke<import('./lib/orchestration').ResultDelivery[]>('orchestration_sync', { sessions }),

@@ -9,12 +9,17 @@ use tauri::{AppHandle, Emitter};
 pub struct Snapshot { pub enabled: bool, #[serde(default = "default_agents")] pub agents: Vec<String>, #[serde(default = "default_mode")] pub mode: String, pub tasks: Vec<Task>, pub revision: u64, #[serde(default, skip_deserializing)] pub coordinators: Vec<String>,
     /// Per-conversation choice of assistants, keyed by the coordinator's tab id. Absent = automatic (every enabled one).
     #[serde(default, skip_serializing_if = "HashMap::is_empty")] pub picks: HashMap<String, Vec<String>>,
+    /// What a paired computer may do with work here: `restricted` (only the work it handed over) or `full` (any
+    /// coordination work on this computer, as if it were one of this computer's own conversations).
+    #[serde(default = "default_device_access")] pub device_access: String,
     /// Helpers on other computers right now (from their windows), for the composer's choice. Never saved.
     #[serde(default, skip_deserializing, skip_serializing_if = "Vec::is_empty")] pub remote: Vec<Value> }
 /// The coordinator's role: `auto` decides for itself, `manager` only plans, delegates and audits, `lead` does the core
 /// work itself and delegates only peripheral tasks.
 const MODES: [&str; 3] = ["auto", "manager", "lead"];
 fn default_mode() -> String { "auto".into() }
+fn default_device_access() -> String { "restricted".into() }
+const DEVICE_ACCESS: [&str; 2] = ["restricted", "full"];
 fn default_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh"].into_iter().map(str::to_owned).collect() }
 /// Agents that can be workers. Pi is supported but stays off until the user turns it on.
 fn supported_agents() -> Vec<String> { ["claude", "codex", "opencode", "dsh", "pi"].into_iter().map(str::to_owned).collect() }
@@ -305,6 +310,16 @@ fn settle_group(snapshot: &mut Snapshot, id: &str, keep_children: bool) {
     }
 }
 #[tauri::command]
+pub async fn orchestration_set_device_access(access: String) -> Result<Snapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || orchestration_set_device_access_blocking(access)).await.map_err(|e| e.to_string())?
+}
+fn orchestration_set_device_access_blocking(access: String) -> Result<Snapshot, String> {
+    if !DEVICE_ACCESS.contains(&access.as_str()) { return Err("Unknown access level".into()); }
+    let mut state = hub().state.lock().map_err(|_| "Coordinator unavailable")?;
+    let mut next = state.snapshot.clone(); next.device_access = access;
+    save(&next)?; state.snapshot = next; publish(&mut state); Ok(current_snapshot(&state))
+}
+#[tauri::command]
 pub async fn orchestration_set_mode(mode: String) -> Result<Snapshot, String> {
     tauri::async_runtime::spawn_blocking(move || orchestration_set_mode_blocking(mode)).await.map_err(|e| e.to_string())?
 }
@@ -581,6 +596,10 @@ fn available(state: &State, parent_id: &str) -> Vec<String> {
     local.into_iter().chain(if picked.is_empty() { remote } else { picked }).collect()
 }
 fn task_for(state: &State, parent_id: &str, task_id: &str) -> Result<Task, String> {
+    // A paired computer with full access reaches any coordination work here; otherwise only its own.
+    if parent_id.starts_with(DEVICE) && state.snapshot.device_access == "full" {
+        return state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden).cloned().ok_or("Task not found".into());
+    }
     state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden && task.parent_id == parent_id).cloned().ok_or("Task does not belong to this coordinator".into())
 }
 fn fingerprint(tool: &str, prompt: &str) -> String {
@@ -1180,7 +1199,7 @@ fn parent_call(token: &str, action: &str, args: &Value) -> Result<Value, String>
             task.result_delivery = Some("read".into()); read = true;
         }
         if read { save(&state.snapshot)?; publish(&mut state); }
-        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":available(&state, &owner),"parentId":owner,"computers":computers(&state, &owner),"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && task.parent_id == owner).collect::<Vec<_>>()}));
+        return Ok(json!({"revision":state.snapshot.revision,"availableAgents":available(&state, &owner),"parentId":owner,"computers":computers(&state, &owner),"tasks":state.snapshot.tasks.iter().filter(|task| !task.detached && !task.hidden && (task.parent_id == owner || owner.starts_with(DEVICE) && state.snapshot.device_access == "full")).collect::<Vec<_>>()}));
     }
     let task_id = text(args, "taskId", 80)?; let task = task_for(&state, &owner, &task_id)?;
     // Work on another computer: the same operations, carried out over there through its window.
@@ -1863,7 +1882,7 @@ mod tests {
     }
     fn fixture() -> State {
         let task = Task { id: "task".into(), parent_id: "parent".into(), parent_native_id: Some("native-parent".into()), session_id: "child".into(), parent_tool: "claude".into(), native_id: None, tool: "codex".into(), title: "Review".into(), cwd: "D:\\Project".into(), phase: "running".into(), summary: None, question: None, generation: None, activity: None, dispatch: None, result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false, remote: None };
-        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![], picks: HashMap::new(), remote: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new(), helpers: HashMap::new(), devices: HashSet::new() }
+        State { snapshot: Snapshot { enabled: true, agents: default_agents(), mode: default_mode(), tasks: vec![task], revision: 0, coordinators: vec![], picks: HashMap::new(), device_access: default_device_access(), remote: vec![] }, live: HashMap::new(), parents: HashMap::from([("token".into(), Parent { id: "parent".into(), native_id: Some("native-parent".into()), tool: "claude".into(), agents: default_agents(), connected: false, cwd: "D:\\Project".into(), generation: None, seen: false, turn: String::new(), running: false, queued: VecDeque::new(), sent_since_result: false, paused: false, automatic: None, restart_tasks: vec![] })]), workers: HashMap::new(), pending: HashMap::new(), runs: HashMap::new(), app: None, port: None, stopped: HashSet::new(), helpers: HashMap::new(), devices: HashSet::new() }
     }
     #[test]
     fn worker_history_restore_keeps_native_id_result_and_settled_phase() {
@@ -2183,4 +2202,21 @@ mod tests {
         sync_live(&mut state, vec![]);
         assert_eq!(state.snapshot.tasks[0].phase, "running");
     }
+
+    #[test]
+    fn a_paired_computer_reaches_only_its_own_work_unless_given_full_access() {
+        let mut state = fixture();
+        let device = device_token("abc");
+        state.devices.insert(device.clone());
+        let mut own = state.snapshot.tasks[0].clone();
+        own.id = "own".into(); own.parent_id = device.clone(); own.session_id = "own-tab".into();
+        state.snapshot.tasks.push(own);
+        assert!(task_for(&state, &device, "own").is_ok(), "its own work");
+        assert!(task_for(&state, &device, "task").is_err(), "a conversation's own worker here stays out of reach");
+        assert!(task_for(&device_free(&state), &device_token("other"), "own").is_err(), "another device does not reach it");
+        state.snapshot.device_access = "full".into();
+        assert!(task_for(&state, &device, "task").is_ok(), "full access reaches every coordination task");
+        assert!(orchestration_set_device_access_blocking("everything".into()).is_err());
+    }
+    fn device_free(state: &State) -> State { let mut copy = fixture(); copy.snapshot = state.snapshot.clone(); copy.devices.insert(device_token("other")); copy }
 }

@@ -15,7 +15,7 @@ export interface OrchestrationTask {
   remote?: { window: string; computer: string; taskId: string | null; sessionId?: string | null } | null;
 }
 export type OrchestrationMode = 'auto' | 'manager' | 'lead';
-export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; coordinators: string[]; tasks: OrchestrationTask[]; revision: number; picks?: Record<string, string[]>;
+export interface OrchestrationSnapshot { enabled: boolean; agents: string[]; mode?: OrchestrationMode; deviceAccess?: 'restricted' | 'full'; coordinators: string[]; tasks: OrchestrationTask[]; revision: number; picks?: Record<string, string[]>;
   /** Helpers on other computers right now, from their open windows (`tool@computer` in picks and tasks). */
   remote?: { window: string; computer: string; agents: string[]; projects?: { path: string; repo: string | null }[] }[] }
 /** `parentId` is the target tab: the coordinator for results, the worker itself for a retry. */
