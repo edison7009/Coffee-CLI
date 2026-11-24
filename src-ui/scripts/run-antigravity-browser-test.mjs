@@ -95,9 +95,23 @@ try {
  await page.evaluate(()=>window.emit({id:42,method:'session/request_permission',params:{sessionId:window.currentState.sessionId,toolCall:{title:'Run test command'},options:[{optionId:'no',kind:'reject_once',name:'Reject command'},{optionId:'yes',kind:'allow_once',name:'Allow command once'}]}}));
  await page.getByRole('button',{name:'Reject command',exact:true}).click();
  await page.waitForFunction(()=>window.calls.some(c=>c.name==='antigravity_session_respond'&&c.optionId==='no'&&c.requestId==='42'));
+ // Antigravity's own tools read like every tool's: a read, a new file (its diff), on the step line.
+ await page.evaluate(()=>{const sid=window.currentState.sessionId,up=update=>window.emit({method:'session/update',params:{sessionId:sid,update}});
+  up({sessionUpdate:'tool_call',toolCallId:'r1',name:'read_file',kind:'read',title:'File a.txt',status:'in_progress',locations:[{path:'D:/Test/a.txt'}],rawInput:{Path:'D:/Test/a.txt'}});
+  up({sessionUpdate:'tool_call_update',toolCallId:'r1',name:'read_file',kind:'read',title:'File a.txt',status:'completed',locations:[{path:'D:/Test/a.txt'}],rawInput:{Path:'D:/Test/a.txt'}});
+  up({sessionUpdate:'tool_call',toolCallId:'w1',name:'write_file',kind:'edit',title:'File b.txt',status:'in_progress',locations:[{path:'D:/Test/b.txt'}],rawInput:{Path:'D:/Test/b.txt',Content:'HELLO\n'}});
+  up({sessionUpdate:'tool_call_update',toolCallId:'w1',name:'write_file',kind:'edit',title:'File b.txt',status:'completed',content:[{type:'diff',path:'D:/Test/b.txt',newText:'HELLO\n'}]});});
+ await page.locator('.claude-step').filter({hasText:'a.txt'}).locator('.claude-step-verb').filter({hasText:/^Read$/}).waitFor();
  await page.evaluate(()=>window.finish());
  await page.getByText('COFFEE_ACP_OK',{exact:true}).waitFor();
  await page.waitForFunction(()=>!window.currentState.busy);
+ await page.locator('.turn-fold').waitFor();
+ assert.match(await page.locator('.turn-fold-label').innerText(),/^Steps: 2/,'the finished turn folds its steps');
+ assert.deepEqual([await page.locator('.turn-file-badge').innerText(),await page.locator('.turn-file-name').innerText()],['A','b.txt'],'the new file is listed after the reply');
+ await page.locator('.turn-fold').click();
+ assert.equal(await page.locator('.claude-step').filter({hasText:'b.txt'}).locator('.claude-step-file').innerText(),'b.txt','the written file is a link to its diff');
+ if(process.env.COFFEE_SCREENSHOT) await page.screenshot({path:process.env.COFFEE_SCREENSHOT.replace('.png','-turn.png')});
+ await page.locator('.turn-fold').click();
  await editor.fill('Cancel this turn');await editor.press('Enter');await page.waitForFunction(()=>window.currentState.busy);
  await page.keyboard.press('Escape');
  assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.method==='session/cancel').length),1,'cancel immediately reaches an active model/network wait');

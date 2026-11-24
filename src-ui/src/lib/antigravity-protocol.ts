@@ -1,5 +1,6 @@
 // ACP v1 records observed from agy 1.5.16. Render through Coffee's shared conversation rows.
 import type { ClaudeMessage } from './claude-protocol';
+import { acpToolStep } from './step-cards';
 export type Json = Record<string, unknown>;
 export const obj = (v: unknown): Json => v && typeof v === 'object' && !Array.isArray(v) ? v as Json : {};
 export const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
@@ -67,12 +68,9 @@ export function reduceAntigravityEvent(s: AntigravityState, event: Json): Antigr
   }
   if (kind === 'tool_call' || kind === 'tool_call_update') {
     const id = `tool:${str(update.toolCallId)}`, previous = s.messages.find(m => m.id === id);
-    const input = obj(update.rawInput), location = obj(arr(update.locations)[0]);
     const content = arr(update.content).map(obj);
-    const diff = content.find(c => c.type === 'diff');
-    const toolName = diff ? 'Edit' : update.kind === 'execute' ? 'Bash' : previous?.toolName || str(update.title) || str(update.kind) || 'Tool';
-    const row: ClaudeMessage = { id, role: 'tool', content: '', timestamp: previous?.timestamp ?? now, ...previous, toolName,
-      input: diff ? { file_path: str(diff.path), old_string: str(diff.oldText), new_string: str(diff.newText) } : Object.keys(input).length ? { ...previous?.input, ...input, ...(toolName === 'Bash' ? { command: str(input.CommandLine) || str(input.command) || str(update.title) } : {}) } : previous?.input ?? { file_path: str(location.path), description: str(update.title) },
+    const { toolName, input } = acpToolStep(update, previous);
+    const row: ClaudeMessage = { id, role: 'tool', content: '', timestamp: previous?.timestamp ?? now, ...previous, toolName, input,
       output: update.content ? content.map(c => text(c.content)).filter(Boolean).join('\n') : typeof update.rawOutput === 'string' ? update.rawOutput : previous?.output,
       toolStatus: update.status === 'completed' ? 'done' : update.status === 'failed' ? 'failed' : previous?.toolStatus ?? 'running', startedAt: previous?.startedAt ?? now,
       ...(update.status === 'completed' || update.status === 'failed' ? { endedAt: now } : {}) };

@@ -89,3 +89,35 @@ export function openCodeStepCard(row: OpenCodeRow): StepCard<OpenCodeRow> {
     : { ...raw, description: str(raw.description) || row.title || '' };
   return { ...base, role: 'tool', content: '', toolStatus: status(row), output: row.output ?? row.content, toolName, input };
 }
+
+/**
+ * An ACP tool call (Agent Client Protocol, as `agy acp` speaks it) under the shared step names: the protocol's own
+ * kind says what the call does (read, edit, execute, search, fetch), its locations where. An edit that finished
+ * with a diff reads as that diff; one with no old text wrote a new file. The agent's own tool name and raw input
+ * fill in what the kind leaves open.
+ */
+export function acpToolStep(update: Json, previous?: { toolName?: string; input?: unknown }): { toolName: string; input: Json } {
+  const raw = obj(update.rawInput), name = str(update.name), kind = str(update.kind);
+  const path = str(obj(arr(update.locations)[0]).path) || str(raw.AbsolutePath) || str(raw.Path) || str(raw.TargetFile) || str(raw.path) || str(raw.file_path);
+  const diff = arr(update.content).map(obj).find(content => content.type === 'diff');
+  if (diff) {
+    const file = str(diff.path) || path, before = str(diff.oldText), after = str(diff.newText);
+    return before ? { toolName: 'Edit', input: { file_path: file, old_string: before, new_string: after } } : { toolName: 'Write', input: { file_path: file, content: after } };
+  }
+  const known = previous?.toolName && previous.toolName !== 'Tool' ? previous : undefined;
+  // A later update with no input, or one after the edit already showed its change, keeps what the call was.
+  const shown = obj(known?.input), changed = !!(str(shown.old_string) || str(shown.new_string) || str(shown.content));
+  if (known && (!Object.keys(raw).length || changed)) return { toolName: known.toolName!, input: shown };
+  if (kind === 'execute' || name === 'run_command') return { toolName: 'Bash', input: { command: str(raw.CommandLine) || str(raw.command) || str(update.title), description: str(raw.toolSummary) } };
+  if (name === 'list_dir') return { toolName: 'LS', input: { path: str(raw.DirectoryPath) || path || '.' } };
+  if (kind === 'read') return { toolName: 'Read', input: { file_path: path } };
+  if (kind === 'edit') return typeof raw.Content === 'string' || typeof raw.CodeContent === 'string'
+    ? { toolName: 'Write', input: { file_path: path, content: str(raw.Content) || str(raw.CodeContent) } }
+    : { toolName: 'Edit', input: { file_path: path, old_string: str(raw.TargetContent), new_string: str(raw.ReplacementContent) } };
+  if (kind === 'search') return name === 'find_by_name'
+    ? { toolName: 'Glob', input: { pattern: str(raw.Pattern) || str(update.title), path } }
+    : name === 'search_web' ? { toolName: 'WebSearch', input: { query: str(raw.query) || str(raw.Query) || str(update.title) } }
+    : { toolName: 'Grep', input: { pattern: str(raw.Query) || str(raw.Pattern) || str(raw.query) || str(update.title), path } };
+  if (kind === 'fetch') return { toolName: 'WebFetch', input: { url: str(raw.Url) || str(raw.url) || str(update.title) } };
+  return { toolName: name || str(update.title) || kind || 'Tool', input: { ...raw, description: str(update.title) } };
+}

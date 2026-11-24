@@ -11,7 +11,7 @@ const load = async file => {
   runInNewContext(result.outputFiles[0].text, { module, exports: module.exports });
   return module.exports;
 };
-const { codexStepCards, openCodeStepCard, diffSides } = await load('../src/lib/step-cards.ts');
+const { codexStepCards, openCodeStepCard, diffSides, acpToolStep } = await load('../src/lib/step-cards.ts');
 const { changedFiles, turnFolds } = await load('../src/lib/turn-work.ts');
 const plain = value => JSON.parse(JSON.stringify(value));
 const pick = (card, ...keys) => plain(Object.fromEntries(keys.map(key => [key, card[key]])));
@@ -47,4 +47,15 @@ assert.equal(openCodeStepCard(open({ role: 'assistant', kind: 'notice', content:
 // The cards fold like Claude's: the work before the reply, the status line after it left alone.
 const rows = [{ role: 'user', timestamp: 0 }, ...codexStepCards(codex({ type: 'commandExecution', command: 'ls' })), codexStepCards(codex({ type: 'agentMessage', id: 'r' }, { content: 'Done.', timestamp: 5 }))[0], ...codexStepCards(codex({ type: 'turnStatus', id: 's' }))];
 assert.deepEqual(plain([...turnFolds(rows, false).lead.values()].map(fold => [fold.start, fold.end, fold.reply])), [[1, 1, 2]]);
+// ACP tool calls (agy acp): the protocol's kind and locations decide the step; a finished edit is its diff.
+const loc = path => [{ path }];
+assert.deepEqual(plain(acpToolStep({ name: 'read_file', kind: 'read', title: 'File a.txt', locations: loc('/p/a.txt'), rawInput: { Path: '/p/a.txt' } })), { toolName: 'Read', input: { file_path: '/p/a.txt' } }, 'agy\'s read reads as a read, not its title');
+assert.deepEqual(plain(acpToolStep({ name: 'write_file', kind: 'edit', locations: loc('/p/b.txt'), rawInput: { Path: '/p/b.txt', Content: 'HELLO\n' } })), { toolName: 'Write', input: { file_path: '/p/b.txt', content: 'HELLO\n' } });
+assert.deepEqual(plain(acpToolStep({ name: 'write_file', kind: 'edit', content: [{ type: 'diff', path: '/p/b.txt', newText: 'HELLO\n' }] })), { toolName: 'Write', input: { file_path: '/p/b.txt', content: 'HELLO\n' } }, 'a diff with no old text wrote a new file');
+assert.deepEqual(plain(acpToolStep({ name: 'replace_file_content', kind: 'edit', content: [{ type: 'diff', path: '/p/a.ts', oldText: 'a\n', newText: 'b\n' }] })), { toolName: 'Edit', input: { file_path: '/p/a.ts', old_string: 'a\n', new_string: 'b\n' } });
+assert.deepEqual(plain(acpToolStep({ name: 'run_command', kind: 'execute', title: 'echo hi', rawInput: { CommandLine: 'echo hi', toolSummary: 'Say hi' } })), { toolName: 'Bash', input: { command: 'echo hi', description: 'Say hi' } });
+assert.equal(acpToolStep({ name: 'grep_search', kind: 'search', rawInput: { Query: 'TODO' } }).toolName, 'Grep');
+assert.equal(acpToolStep({ name: 'list_dir', kind: 'read', rawInput: { DirectoryPath: '/p' } }).toolName, 'LS');
+assert.deepEqual(plain(acpToolStep({ toolCallId: 'x', status: 'completed' }, { toolName: 'Read', input: { file_path: '/p/a.txt' } })), { toolName: 'Read', input: { file_path: '/p/a.txt' } }, 'an update without input keeps what the call was');
+assert.equal(acpToolStep({ rawInput: { TargetFile: '/p/a.ts' }, content: [{ type: 'content', content: { type: 'text', text: 'File updated' } }] }, { toolName: 'Edit', input: { file_path: '/p/a.ts', old_string: 'a', new_string: 'b' } }).input.old_string, 'a', 'output after the diff keeps the diff');
 console.log('step cards: ok');

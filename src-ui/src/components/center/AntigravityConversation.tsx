@@ -5,7 +5,6 @@ import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppLanguage, useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { formatElapsed } from '../../lib/claude-i18n';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
 import { bindAutoHideScrollbar } from '../../lib/auto-hide-scrollbar';
@@ -20,28 +19,16 @@ import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import { ClaudeThinking, ClaudeTool, ToolGroup } from './ToolSteps';
 import { toolRuns } from '../../lib/tool-runs';
+import { useTurnFolds } from '../../lib/use-turn-work';
+import { ChangedFilesCard, StepWorking, TurnFoldRow } from './TurnWork';
 import ANTIGRAVITY_ICON from '../../icons-inline/antigravity.svg';
 const AntigravityMark = () => <img src={ANTIGRAVITY_ICON} alt="" width="18" height="18" />;
 import { ToolSwarm } from './ToolSwarm';
 import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
-import './PiWelcomeLogo.css';
 import { ScrollLatestIcon } from './ScrollLatestIcon';
 
-
-/** Shared working status, with the tool's own glyph. */
-function Running({ label, startedAt, tool }: { label: string; startedAt?: number; tool?: string }) {
-  const t = useT();
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  return <div className="pi-running" role="status">
-    <AntigravityMark />
-    <span>{label}</span>
-    {tool && <span className="conversation-working-detail" title={tool}>{tool}</span>}
-    {startedAt && <span className="pi-running-elapsed">{formatElapsed(now - startedAt, t)}</span>}
-  </div>;
-}
 
 /** Permission choices are the agent's native options; never auto-select an approval. */
 function Dialog({ sessionId, request }: { sessionId: string; request: AcpPermission }) {
@@ -87,6 +74,7 @@ export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive,
   // call's full card (its diff or command output open).
   const clear = useAppState().state?.layoutMode === 'work';
   const runs = useMemo(() => toolRuns(s.messages, clear ? 1 : 2), [s.messages, clear]);
+  const folds = useTurnFolds(s.messages, s.busy);
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainAntigravitySession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: s.requests.length ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [sessionId, s.busy, s.requests.length, dispatch]);
@@ -155,28 +143,29 @@ export function AntigravityConversation({ sessionId, cwd, resumeToken, isActive,
   const empty = !directoryIssue && !s.messages.length && !s.busy && !s.requests.length;
   const restoring = resumed && !s.ready && !s.error;
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
-  const label = t('claude.status.working');
-  return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation pi-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
+  return <ConversationDirectory.Provider value={cwd}><div className={`claude-conversation antigravity-conversation${hasBg && bgUrl ? ' has-background' : ''}${navigationItems.length > 1 ? ' has-navigation' : ''}`}>
     {hasBg && bgUrl && <div className="conversation-background">{bgType === 'video' ? <video src={bgUrl} autoPlay loop muted /> : <img src={bgUrl} alt="" />}</div>}
     <div className="claude-scroll" ref={scrollRef} onPointerDownCapture={event => { if (event.button === 0) pointerHeld.current = true; }} onContextMenu={conversationMenu.onContextMenu} onCopy={conversationMenu.onCopy} onScroll={onScroll} onWheelCapture={event => { if (event.deltaY < 0 && !event.ctrlKey) pauseFollow(); }} onTouchMoveCapture={pauseFollow} onKeyDownCapture={event => { if ((['ArrowUp', 'PageUp', 'Home'].includes(event.key) || event.key === ' ' && event.shiftKey) && !(event.target as HTMLElement).closest('input,textarea,select,[contenteditable="true"]')) pauseFollow(); }}>
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
-        {s.messages.slice(virtual.start, virtual.end).map((m, i) => runs.follower.has(virtual.start + i) ? <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>{null}</MeasuredRow> : <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
+        {s.messages.slice(virtual.start, virtual.end).map((m, i) => { const fold = folds.owner.get(virtual.start + i), folded = !!fold && !folds.isOpen(fold), foldLead = fold?.start === virtual.start + i; return runs.follower.has(virtual.start + i) || (folded && !foldLead) ? <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>{null}</MeasuredRow> : <MeasuredRow key={m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           {new Date(m.timestamp).toDateString() !== new Date(s.messages[virtual.start + i - 1]?.timestamp ?? 0).toDateString() && <div className="claude-date">{new Date(m.timestamp).toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}</div>}
-          <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? 'claude-row--group' : ''} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''}`}>
+          {fold && foldLead && <TurnFoldRow fold={fold} open={!folded} onToggle={() => folds.toggle(fold)} />}
+          {!folded && <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? 'claude-row--group' : ''} ${m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''}`}>
             {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} text={m.content} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></>
-              : m.role === 'tool' ? (runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} /> : <ClaudeTool message={m} />)
-              : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? false} onToggle={open => setThinkingExpansion(previous => ({ ...previous, [m.id]: open }))} />
+              : runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} />
+              : m.role === 'tool' ? <ClaudeTool message={m} />
+              : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? false} onToggle={(open: boolean) => setThinkingExpansion(previous => ({ ...previous, [m.id]: open }))} />
               : m.role === 'notice' ? <div className={`claude-turn-summary${m.toolStatus === 'failed' ? ' is-error' : ''}`} role="status">{m.content}</div>
               : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
             {(m.role === 'user' || m.role === 'assistant') && !m.partial && <MessageCopyButton copied={copied === m.id} onCopy={() => copy(m)} />}
+            {folds.byReply.has(virtual.start + i) && <ChangedFilesCard files={folds.byReply.get(virtual.start + i)!} />}
             {m.turnStats && !(s.busy && virtual.start + i === s.messages.length - 1) && <TurnSummary stats={m.turnStats} sessionKey={s.sessionId} messageId={m.id} />}
-          </article>
-        </MeasuredRow>)}
+          </article>}
+        </MeasuredRow>; })}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(request => <Dialog key={request.id} sessionId={sessionId} request={request} />)}
-        {s.ready && s.busy && !s.requests.length && <Running label={label} startedAt={s.startedAt}
-          tool={s.messages.findLast(message => message.toolStatus === 'running')?.toolName} />}
+        {s.ready && s.busy && !s.requests.length && <StepWorking className="antigravity-working" mark={<AntigravityMark />} label={t('claude.status.working')} startedAt={s.startedAt} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'Antigravity', t)}</div>}
