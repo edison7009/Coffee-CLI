@@ -63,10 +63,14 @@ try{
  assert.equal((await claudeCard.locator('.launchpad-card-path').innerText()).trim(),'D:/Older','the last folder survives a reload');
  await claudeCard.locator('.launchpad-card-path--button').click();assert.deepEqual(await page.locator('.folder-menu-item:not(.folder-menu-open) .folder-menu-name').allTextContents(),['Older','Recent']);
  await page.keyboard.press('Escape');await page.locator('.folder-menu').waitFor({state:'hidden'});assert.equal((await state(page)).tool,null);
+ // Choosing from the folder line only sets the card's folder; the card starts the tool there when it is clicked.
+ await claudeCard.locator('.launchpad-card-path--button').click();await page.locator('.folder-menu-item:not(.folder-menu-open)').filter({hasText:'Recent'}).click();
+ await page.locator('.folder-menu').waitFor({state:'hidden'});assert.equal((await state(page)).tool,null,'choosing a folder from the folder line does not launch');
+ assert.equal((await claudeCard.locator('.launchpad-card-path').innerText()).trim(),'D:/Recent','the card shows the folder just chosen');
  await claudeCard.locator('.launchpad-card-info').click();await page.waitForFunction(()=>!document.querySelector('.launchpad-mode-tabs'));
- launched=await state(page);assert.equal(launched.tool,'claude','clicking the card opens the tool directly');assert.equal(launched.folderPath,'D:/Older','in its last folder');
+ launched=await state(page);assert.equal(launched.tool,'claude','clicking the card opens the tool directly');assert.equal(launched.folderPath,'D:/Recent','in the folder its line shows');
  assert.equal(await page.locator('.folder-menu').count(),0,'without asking for a folder');await page.keyboard.press('Escape');
- assert.deepEqual(errors,[]);await page.close();console.log('OK explicit directory and current mode reach the session; most recent first, deduplication, per-tool last folder shown and reopened directly after reload');
+ assert.deepEqual(errors,[]);await page.close();console.log('OK explicit directory and current mode reach the session; most recent first, deduplication, per-tool last folder shown and reopened directly after reload; the folder line only chooses, the card launches');
  {
   // A double click on a card with a remembered folder launches once.
   const {page:dbl,errors:dblErrors}=await prepare(['D:/Recent']);

@@ -8,7 +8,7 @@ const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/lau
 const store = new Map();
 const localStorage = { getItem: key => store.has(key) ? store.get(key) : null, setItem: (key, value) => store.set(key, String(value)), removeItem: key => store.delete(key) };
 const module = { exports: {} };
-runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, localStorage, JSON });
+runInNewContext(result.outputFiles[0].text, { module, exports: module.exports, localStorage, JSON, Date });
 const { launchPermission, setLaunchPermission, launchToolData, markLaunchPermission, takeLaunchPermission, codexApproval, isLaunchTool } = module.exports;
 
 assert.equal(launchPermission('claude'), '', 'unset: the tool keeps its own default');
@@ -30,6 +30,11 @@ setLaunchPermission('codex', '');
 markLaunchPermission('tab-2', 'codex');
 assert.equal(takeLaunchPermission('tab-2'), undefined, 'the default applies nothing');
 
+setLaunchPermission('claude', 'plan');
+markLaunchPermission('tab-3', 'claude');
+const realNow = Date.now; Date.now = () => realNow() + 121_000;
+assert.equal(takeLaunchPermission('tab-3'), undefined, 'a launch that never got ready leaves nothing for a later conversation');
+Date.now = realNow;
 assert.equal(codexApproval('dangerFullAccess'), 'never');
 assert.equal(codexApproval('workspaceWrite'), 'on-request');
 assert.ok(isLaunchTool('claude') && isLaunchTool('codex') && !isLaunchTool('opencode') && !isLaunchTool(null));

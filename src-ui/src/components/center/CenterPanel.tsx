@@ -689,7 +689,9 @@ export function CenterPanel() {
   };
   // Shared recent project folders, most recently used first.
   const recentFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFolders, getProjectFolders);
-  const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
+  // `launch`: picking starts the tool (a card clicked with no folder yet, Work's folder button); otherwise picking only
+  // sets the card's folder, and a click on the card starts it there (Code's folder line).
+  const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType; launch: boolean } | null>(null);
   // Each tool's last project folder: clicking its card opens straight there.
   const [lastFolders, setLastFolders] = useState<Record<string, string>>(readLastFolders);
   // Chosen on the other side (the desktop, or a browser following it): read again, so the next save keeps it.
@@ -1154,28 +1156,30 @@ export function CenterPanel() {
       }
       // 工作式 never starts a terminal: every tool opens as its desktop conversation.
       const work = state.layoutMode === 'work';
-      // The permission the start page's card chose: launch flags for a terminal, applied once a conversation is ready.
-      const desktop = tool === 'claude' ? work || claudeLaunchMode === 'conversation' : tool === 'codex' ? work || codexLaunchMode === 'conversation' : false;
-      if (isLaunchTool(tool)) { if (desktop) markLaunchPermission(activeTerminalId, tool); else toolData ??= launchToolData(tool); }
+      // The permission Code's start-page card shows and chose: launch flags for a terminal, applied once a conversation
+      // is ready. Work has no such card, so its launches keep the tool's own default.
+      const desktop = tool === 'claude' ? claudeLaunchMode === 'conversation' : tool === 'codex' ? codexLaunchMode === 'conversation' : false;
+      if (isLaunchTool(tool) && !work) { if (desktop) markLaunchPermission(activeTerminalId, tool); else toolData ??= launchToolData(tool); }
       dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? (work ? 'conversation' : claudeLaunchMode) : undefined, codexMode: tool === 'codex' ? (work ? 'conversation' : codexLaunchMode) : undefined, opencodeMode: tool === 'opencode' ? (work ? 'conversation' : opencodeLaunchMode) : undefined, piMode: tool === 'pi' ? (work ? 'conversation' : piLaunchMode) : undefined, acpMode: isAcpTool(tool) ? (work ? 'conversation' : acpLaunchModes[tool]) : undefined });
     }
   };
 
-  const handlePickFolder = async (toolKey: ToolType) => {
+  const handlePickFolder = async (toolKey: ToolType, launch = true) => {
     if (!toolKey) return;
     // Coffee CLI's own picker: the same window in the desktop app, a browser or a phone.
     const selected = await pickFolder();
-    if (selected) selectTool(toolKey, undefined, selected);
+    if (!selected) return;
+    if (launch) selectTool(toolKey, undefined, selected); else rememberFolder(toolKey, selected);
   };
 
-  const openToolFolderMenu = (tool: ToolType, anchor: HTMLElement) => {
-    if (recentFolders.length === 0) { void handlePickFolder(tool); return; }
+  const openToolFolderMenu = (tool: ToolType, anchor: HTMLElement, launch = true) => {
+    if (recentFolders.length === 0) { void handlePickFolder(tool, launch); return; }
     // The list opens with its left edge on the folder button's: in Code right under the folder line itself (it follows
     // the line it came from), in Work below the card.
     const card = anchor.closest('.launchpad-card');
     const line = card?.querySelector<HTMLElement>('.launchpad-card-path--button');
     const button = line ?? card?.querySelector('.launchpad-folder') ?? anchor;
-    setFolderMenu({ x: button.getBoundingClientRect().left, y: line ? line.getBoundingClientRect().bottom + 6 : (card ?? anchor).getBoundingClientRect().bottom + 4, tool });
+    setFolderMenu({ x: button.getBoundingClientRect().left, y: line ? line.getBoundingClientRect().bottom + 6 : (card ?? anchor).getBoundingClientRect().bottom + 4, tool, launch });
     void commands.checkProjectDirectories(recentFolders).then(checks => {
       for (const check of checks) {
         if (check.status === 'missing' || check.status === 'not_directory') forgetMissingFolder(check.path);
@@ -1678,7 +1682,7 @@ export function CenterPanel() {
                                     </div>
                                     {tool.requiresCwd && (state.layoutMode !== 'work'
                                       // Code: the folder itself opens the recent folders (its own button, as 选择目录 was).
-                                      ? <button type="button" className={`launchpad-card-path launchpad-card-path--button${tool.key && lastFolders[tool.key] ? ' is-path' : ''}`} disabled={disabled} aria-label={t('launchpad.choose_folder')} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>
+                                      ? <button type="button" className={`launchpad-card-path launchpad-card-path--button${tool.key && lastFolders[tool.key] ? ' is-path' : ''}`} disabled={disabled} aria-label={t('launchpad.choose_folder')} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget, false); }}>
                                           <span className="launchpad-card-path-text"><bdi>{tool.key && lastFolders[tool.key] ? homeShortPath(lastFolders[tool.key], homeDir) : t('launchpad.pick_folder')}</bdi></span>
                                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
                                         </button>
@@ -1921,9 +1925,9 @@ export function CenterPanel() {
           y={folderMenu.y}
           recent={recentFolders}
           openLabel={t('launchpad.open_folder') || 'Open folder…'}
-          onPick={(f) => { selectTool(folderMenu.tool, undefined, f); setFolderMenu(null); }}
+          onPick={(f) => { if (folderMenu.launch) selectTool(folderMenu.tool, undefined, f); else rememberFolder(folderMenu.tool, f); setFolderMenu(null); }}
           onRemove={REMOTE ? undefined : (f) => removeRecentFolder(f)}
-          onOpenNew={() => { const tk = folderMenu.tool; setFolderMenu(null); handlePickFolder(tk); }}
+          onOpenNew={() => { const { tool: tk, launch } = folderMenu; setFolderMenu(null); void handlePickFolder(tk, launch); }}
           onClose={() => setFolderMenu(null)}
         />
       )}

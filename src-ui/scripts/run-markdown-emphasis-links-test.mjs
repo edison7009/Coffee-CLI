@@ -26,4 +26,7 @@ assert.equal(wrap('<https://a.dev/x>，再看'), '<https://a.dev/x>，再看', '
 assert.equal(wrap('**https://a.dev/x**，再看'), '**<https://a.dev/x>**，再看', 'emphasis still handled once');
 assert.equal(wrap('`https://a.dev/x，再看`'), '`https://a.dev/x，再看`', 'inline code untouched');
 assert.equal(wrap('plain https://a.dev/x. stays'), 'plain https://a.dev/x. stays');
+assert.equal(wrap('(详见 https://a.dev/x)。'), '(详见 <https://a.dev/x>)。', 'an unbalanced ) before CJK punctuation stays outside');
+assert.equal(wrap('看 https://a.dev/x.，然后'), '看 <https://a.dev/x>.，然后', 'trailing sentence punctuation stays outside');
+assert.equal(wrap('见 https://en.wikipedia.org/wiki/Rust_(language)，好'), '见 <https://en.wikipedia.org/wiki/Rust_(language)>，好', 'a balanced ) is part of the URL');
 console.log('OK: emphasis around a bare URL stays emphasis, a URL ends before CJK and Arabic punctuation, code untouched');

@@ -12,9 +12,24 @@ const STOP = '\u3000-\u303F\uFF01-\uFF0F\uFF1A-\uFF20\uFF3B-\uFF40\uFF5B-\uFF65\
 // Not right after `<` (already bracketed), `(` (a link's destination) or `[` (a link's text), nor inside a word.
 const URL_BEFORE_STOP = new RegExp(`(^|[^<(\\[\\w/])(https?:\\/\\/[\\x21-\\x3B\\x3D\\x3F-\\x7E]+?)(?=[${STOP}])`, 'g');
 
+/** As GFM does for a bare URL: trailing sentence punctuation, and a `)` with no `(` of its own in the URL, stay outside. */
+function bracketBeforeStop(_match: string, before: string, url: string): string {
+  let end = url.length;
+  for (;;) {
+    const last = url[end - 1];
+    if (/[.,:;!?'"*_~]/.test(last)) { end--; continue; }
+    if (last === ')') {
+      const body = url.slice(0, end);
+      if ((body.match(/\)/g)?.length ?? 0) > (body.match(/\(/g)?.length ?? 0)) { end--; continue; }
+    }
+    break;
+  }
+  return end > url.indexOf('://') + 3 ? `${before}<${url.slice(0, end)}>${url.slice(end)}` : `${before}${url}`;
+}
+
 function wrapLine(line: string): string {
   // Odd-numbered pieces are inside inline code spans.
-  return line.split(/(`+[^`]*`+)/).map((piece, index) => index % 2 ? piece : piece.replace(EMPHASIZED_URL, '$1<$2>$1').replace(URL_BEFORE_STOP, '$1<$2>')).join('');
+  return line.split(/(`+[^`]*`+)/).map((piece, index) => index % 2 ? piece : piece.replace(EMPHASIZED_URL, '$1<$2>$1').replace(URL_BEFORE_STOP, bracketBeforeStop)).join('');
 }
 
 export function wrapEmphasizedUrls(markdown: string): string {

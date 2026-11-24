@@ -1525,7 +1525,7 @@ body.session-split-dragging { cursor: grabbing; user-select: none; }
 [data-layout="code"] .launchpad-card-path-text > bdi { direction: ltr; unicode-bidi: isolate; }
 /* `.launchpad-card span` (the name's size) must not reach the small text: the folder line and the usage's labels keep
    their own size. */
-[data-layout="code"] .launchpad-card .launchpad-card-path-text, [data-layout="code"] .launchpad-card :is(.launchpad-card-hero-side, .launchpad-card-others) span { font-size: inherit; }
+[data-layout="code"] .launchpad-card .launchpad-card-path-text, [data-layout="code"] .launchpad-card :is(.launchpad-card-hero-side, .launchpad-card-others, .launchpad-permission) span { font-size: inherit; font-weight: inherit; color: inherit; }
 [data-layout="code"] .launchpad-card-path--button > svg { flex: none; opacity: .7; }
 /* Hover as the permission's pill: one translucent layer. */
 [data-layout="code"] .launchpad-card-path--button:hover:not(:disabled), [data-layout="code"] .launchpad-card-path--button:focus-visible { background: color-mix(in srgb, var(--text-1) 11%, transparent); color: var(--text-1); }

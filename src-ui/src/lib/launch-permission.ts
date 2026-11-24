@@ -40,16 +40,18 @@ export function launchToolData(tool: LaunchTool): string | undefined {
   return permission ? JSON.stringify({ permission }) : undefined;
 }
 
-// Desktop conversations: the choice waits for the tab's session to be ready, then is applied once.
-const pending = new Map<string, string>();
+// Desktop conversations: the choice waits for the tab's session to be ready, then is applied once. A launch that never
+// gets ready doesn't leave it behind for some later conversation in the same tab: it lapses after a while.
+const PENDING_MS = 120_000;
+const pending = new Map<string, { permission: string; at: number }>();
 export function markLaunchPermission(tabId: string, tool: LaunchTool) {
   const permission = launchPermission(tool);
-  if (permission) pending.set(tabId, permission); else pending.delete(tabId);
+  if (permission) pending.set(tabId, { permission, at: Date.now() }); else pending.delete(tabId);
 }
 export function takeLaunchPermission(tabId: string): string | undefined {
-  const permission = pending.get(tabId);
+  const entry = pending.get(tabId);
   pending.delete(tabId);
-  return permission;
+  return entry && Date.now() - entry.at < PENDING_MS ? entry.permission : undefined;
 }
 /** Codex's composer sets a sandbox together with its approval policy. */
 export const codexApproval = (sandbox: string) => sandbox === 'dangerFullAccess' ? 'never' : 'on-request';

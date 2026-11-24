@@ -88,8 +88,14 @@ export function LaunchPermissionPicker({ tool, disabled }: { tool: LaunchTool; d
     if (!open) return;
     const close = (event: MouseEvent) => { if (!menu.current?.contains(event.target as Node) && !button.current?.contains(event.target as Node)) setOpen(false); };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    // Placed once when opened: scrolling, resizing or leaving the window closes it rather than leave it adrift.
+    const dismiss = () => setOpen(false);
     document.addEventListener('mousedown', close); document.addEventListener('keydown', key);
-    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', key); };
+    window.addEventListener('scroll', dismiss, true); window.addEventListener('resize', dismiss); window.addEventListener('blur', dismiss);
+    return () => {
+      document.removeEventListener('mousedown', close); document.removeEventListener('keydown', key);
+      window.removeEventListener('scroll', dismiss, true); window.removeEventListener('resize', dismiss); window.removeEventListener('blur', dismiss);
+    };
   }, [open]);
   const options = LAUNCH_PERMISSIONS[tool];
   const current = options.find(option => option.value === value);
