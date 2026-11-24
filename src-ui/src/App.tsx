@@ -225,7 +225,8 @@ export function App() {
   const phone = usePhone();
   // 工作式: the icon rail stands in for the left sidebar; the right panel opens over the conversation.
   const work = state.layoutMode === 'work';
-  const leftPanel = useSlidingPanel(work || (compact ? state.drawer !== 'left' : state.leftPanelHidden));
+  // A phone has no rail: Work opens the sidebar as a drawer there, as Code does.
+  const leftPanel = useSlidingPanel((work && !phone) || (compact ? state.drawer !== 'left' : state.leftPanelHidden));
   // Clear: changes open from the rail, beside it, never as a right column or sheet.
   const rightPanel = useSlidingPanel(compact ? state.drawer !== 'right' : work || state.rightPanelHidden);
   // A drawer closes on Escape, when the window grows wide enough to dock, and once a tab is picked.

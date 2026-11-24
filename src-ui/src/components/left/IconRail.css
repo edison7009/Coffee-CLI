@@ -142,7 +142,10 @@
    carry a 1px line, meeting in one rounded corner. The darker ground is the page's own wide shadow, which paints
    the window's ground colour (styles/clear-palette.css) behind that corner. */
 :root[data-layout="work"] .titlebar { background-image: linear-gradient(var(--clear-ground), var(--clear-ground)); }
-:root[data-layout="work"] .app-layout.has-rail { overflow: hidden; }
+:root[data-layout="work"] .app-layout.has-rail:not(.is-compact) { overflow: hidden; }
+/* A narrow window keeps the rail beside the drawers: an open drawer and its dimmed backdrop sit above the rail. */
+.app-layout.is-compact.has-rail > .drawer-scrim { z-index: 260; }
+.app-layout.is-compact.has-rail > .panel-left, .app-layout.is-compact.has-rail > .panel-right { z-index: 270; }
 :root[data-layout="work"] .app-layout.has-rail > .panel-center {
   border: solid color-mix(in srgb, var(--text-1) 9%, transparent); border-width: 1px 0 0 1px; border-top-left-radius: 8px;
   overflow: hidden; background: var(--bg-app); box-shadow: 0 0 0 100vmax var(--clear-ground);
