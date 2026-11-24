@@ -110,6 +110,14 @@ export function IconRail() {
   // One side list at a time, opened by hovering its icon: the conversations, or the changes (修改记录).
   // 'new': the new-conversation menu (tools, then their folders) opened by hovering the + button.
   const [flyout, setFlyout] = useState<'conversations' | 'changes' | 'new' | null>(null);
+  // A file opened from elsewhere (a changed file in the conversation) shows its diff where changes live here.
+  const shownSelection = useRef(state.diffSelection);
+  const [revealSelection, setRevealSelection] = useState(false);
+  useEffect(() => {
+    if (state.diffSelection === shownSelection.current) return;
+    shownSelection.current = state.diffSelection;
+    if (state.diffSelection && state.diffMode === 'overlay') { setRevealSelection(true); setFlyout('changes'); }
+  }, [state.diffSelection, state.diffMode]);
   const newToggle = useRef<HTMLButtonElement>(null);
   // Opened from the keyboard (arrow on +): focus goes into the menu.
   const [newByKey, setNewByKey] = useState(false);
@@ -118,7 +126,7 @@ export function IconRail() {
   const list = useRef<HTMLDivElement>(null), toggle = useRef<HTMLButtonElement>(null), changesToggle = useRef<HTMLButtonElement>(null);
   // The list opens on hover and stays while the pointer is on the button or the list; leaving both closes it.
   const closeTimer = useRef<number | undefined>(undefined);
-  const holdList = (which?: 'conversations' | 'changes' | 'new') => { window.clearTimeout(closeTimer.current); if (which) setFlyout(which); };
+  const holdList = (which?: 'conversations' | 'changes' | 'new') => { window.clearTimeout(closeTimer.current); if (which) { if (which === 'changes' && flyout !== 'changes') setRevealSelection(false); setFlyout(which); } };
   const releaseList = () => { window.clearTimeout(closeTimer.current); closeTimer.current = window.setTimeout(() => setFlyout(null), 220); };
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
@@ -157,7 +165,7 @@ export function IconRail() {
     </button>
     {/* Changes open the same way, beside the rail: in Clear they belong with the conversation, not a right column. */}
     <button ref={changesToggle} type="button" className="icon-rail-button" aria-label={t('rail.changes')} aria-expanded={flyout === 'changes'} aria-haspopup="dialog"
-      onClick={() => setFlyout(open => open === 'changes' ? null : 'changes')} onMouseEnter={() => { hide(); holdList('changes'); }} onMouseLeave={releaseList}>
+      onClick={() => { setRevealSelection(false); setFlyout(open => open === 'changes' ? null : 'changes'); }} onMouseEnter={() => { hide(); holdList('changes'); }} onMouseLeave={releaseList}>
       {glyph('changes')}
     </button>
     {/* What is open. */}
@@ -186,7 +194,7 @@ export function IconRail() {
       <NewSessionMenu autoFocus={newByKey} onDone={() => setFlyout(null)} />
     </div>}
     {flyout === 'changes' && <div ref={list} className="icon-rail-list icon-rail-changes" role="dialog" aria-label={t('rail.changes')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
-      <RightPanel />
+      <RightPanel revealSelection={revealSelection} />
     </div>}
     {tip}
   </nav>;

@@ -1,6 +1,9 @@
 import { createContext, memo, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { shownMessageText } from '../../lib/worker-prompt';
-import { toolKind, toolResult, toolRuns, toolRunStatus, toolRunSummary, toolTarget, toolVerbKey } from '../../lib/tool-runs';
+import { toolKind, toolResult, toolRuns, toolRunStatus, toolTarget, toolVerbKey } from '../../lib/tool-runs';
+import { changedFiles } from '../../lib/turn-work';
+import { useOpenChangedFile, useTurnFolds } from '../../lib/use-turn-work';
+import { ChangedFilesCard, TurnFoldRow } from './TurnWork';
 import { startErrorText } from '../../lib/start-error';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { diffLines } from 'diff';
@@ -87,7 +90,8 @@ function MorphText({ text, faceClassName }: { text: string; faceClassName?: stri
   </span>;
 }
 
-function Working({ status, startedAt, title, tool }: { status: string; startedAt?: number; title?: string; tool?: string }) {
+/** The turn's one timer, under its steps: the mark, a word or Claude's title for the step, and the time so far. */
+function Working({ status, startedAt, title }: { status: string; startedAt?: number; title?: string }) {
   const t = useT();
   const now = useClock(true);
   const words = [t('claude.status.thinking'), t('claude.status.brewing'), t('claude.status.considering'), t('claude.status.working'), t('claude.status.crafting'), t('claude.status.pondering')];
@@ -96,7 +100,6 @@ function Working({ status, startedAt, title, tool }: { status: string; startedAt
   // Claude Code's own description of the current step titles the turn; the rotating words fill in until it gives one.
   const word = status === 'stopping' ? t('codex.stopping') : status === 'compacting' ? t('claude.status.compacting') : status === 'starting' ? t('claude.status.connecting') : title ?? (status === 'tool' ? t('claude.status.working') : words[wordIndex % words.length]);
   return <div className="claude-working" role="status"><span className="claude-working-mark" aria-hidden="true"><img src={CLAUDE_WORKING_MARK} alt="" /></span><MorphText faceClassName="claude-working-word" text={`${word}…`} />
-    {tool && status === 'tool' && <span className="conversation-working-detail" title={tool}>{orchestrationToolLabel(tool, t) ?? tool}</span>}
     {startedAt && <span className="claude-elapsed">{elapsed(age, t)}</span>}</div>;
 }
 
@@ -235,6 +238,8 @@ function EditDiff({ before, after, path }: { before: string; after: string; path
   </div>{long && <ExpandTab expanded={expanded} onToggle={toggle} />}</div>;
 }
 
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+
 export const ClaudeTool = memo(function ClaudeTool({ message }: { message: ClaudeMessage }) {
   const t = useT();
   const [bodyOpen, setBodyOpen] = useState(() => ['Bash', 'Edit', 'Write'].includes(message.toolName ?? ''));
@@ -247,10 +252,11 @@ export const ClaudeTool = memo(function ClaudeTool({ message }: { message: Claud
   const removed = changes.filter(c => c.removed).reduce((n, c) => n + c.count, 0), added = changes.filter(c => c.added).reduce((n, c) => n + c.count, 0);
   const showBody = bodyOpen;
   const output = message.output ?? '';
+  const openFile = useOpenChangedFile();
   return <ToolExpansionKey.Provider value={`${message.id}:${name}`}><section className={`claude-tool claude-tool--${message.toolStatus ?? 'running'}`}>
     <div className="claude-tool-heading">
       <button onClick={() => setBodyOpen(v => !v)} aria-expanded={showBody}><strong>{search?.title ?? orchestrationToolLabel(name, t) ?? name}</strong></button>
-      {path ? <button className="claude-file-path" onClick={() => void commands.showInFolder(path)}>{description}</button> : <span>{description}</span>}
+      {path ? <button className="claude-file-path" onClick={() => EDIT_TOOLS.has(name) && message.toolStatus === 'done' ? openFile(path) : void commands.showInFolder(path)}>{description}</button> : <span>{description}</span>}
       {!bash && !edit && !write && <button className="claude-chevron" aria-label={t('claude.tool_details')} onClick={() => setBodyOpen(v => !v)}><Chevron open={bodyOpen} /></button>}
     </div>
     {edit && <div className="claude-tool-subtitle">{removed || added ? [removed ? t('claude.lines_removed', { count: removed }) : '', added ? t('claude.lines_added', { count: added }) : ''].filter(Boolean).join(' · ') : t('claude.modified')}</div>}
@@ -276,55 +282,79 @@ const STEP_ICONS: Record<string, ReactNode> = {
   other: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
   group: <><path d="m12 2 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 17l9 5 9-5" /></>,
   done: <path d="M20 6 9 17l-5-5" />,
+  think: <><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" /><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" /><path d="M12 5v13" /></>,
+  failed: <path d="M18 6 6 18M6 6l12 12" />,
+  file: <><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /></>,
 };
 const stepIcon = (key: string) => <svg className="claude-step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{STEP_ICONS[key] ?? STEP_ICONS.other}</svg>;
 
-/** One call as one line: what it did, to what, and what came back; opens into the full call. */
+const firstLine = (value: string) => value.split('\n').map(line => line.trim()).find(Boolean) ?? '';
+const stepToggle = (key: string, set: (update: (open: boolean) => boolean) => void) => set(value => { if (value) openToolGroups.delete(key); else openToolGroups.add(key); return !value; });
+
+/** One call as one step on the line: its icon as the node, what it did to what, a short result; opens into the full
+ *  call. A changed file is a link of its own to its diff. The step under way pulses and is not a toggle yet. */
 function ToolStep({ message }: { message: ClaudeMessage }) {
   const t = useT();
   const [open, setOpen] = useState(() => openToolGroups.has(`step:${message.id}`));
+  const openFile = useOpenChangedFile();
   const input = message.input ?? {}, name = message.toolName;
   const kind = toolKind(name);
   const label = orchestrationToolLabel(name ?? '', t);
   const target = label ? '' : toolTarget(name, input);
-  const before = text(input.old_string), after = text(input.new_string);
-  const changes = name === 'Edit' ? diffLines(before, after, { timeout: 100 }) ?? [] : [];
-  const added = changes.filter(c => c.added).reduce((n, c) => n + c.count, 0), removed = changes.filter(c => c.removed).reduce((n, c) => n + c.count, 0);
-  const result = toolResult(name, message.output);
-  const toggle = () => setOpen(value => { const key = `step:${message.id}`; if (value) openToolGroups.delete(key); else openToolGroups.add(key); return !value; });
-  return <div className={`claude-step claude-step--${message.toolStatus ?? 'running'}`}>
-    <button type="button" className="claude-step-line" aria-expanded={open} onClick={toggle}>
-      {stepIcon(kind)}
-      <span className="claude-step-verb">{label ?? t(toolVerbKey(name))}</span>
-      {target && <span className="claude-step-target">{target}</span>}
+  const [{ added, removed } = { added: 0, removed: 0 }] = changedFiles([{ ...message, toolStatus: 'done' }]);
+  const changedPath = EDIT_TOOLS.has(name ?? '') && message.toolStatus === 'done' ? text(input.file_path) || text(input.notebook_path) : '';
+  const failed = message.toolStatus === 'failed' && !message.interrupted;
+  const now = !message.toolStatus || message.toolStatus === 'running';
+  const result = failed || now ? '' : toolResult(name, message.output);
+  const error = failed ? firstLine(message.output ?? '') : '';
+  const toggle = () => { if (!now) stepToggle(`step:${message.id}`, setOpen); };
+  return <div className={`claude-step claude-step-kind-${kind} claude-step--${message.interrupted ? 'interrupted' : message.toolStatus ?? 'running'}${now ? ' is-now' : ''}`}>
+    <div className="claude-step-line" onClick={event => { if (!(event.target as HTMLElement).closest('.claude-step-file')) toggle(); }}>
+      <button type="button" className="claude-step-toggle" disabled={now} aria-expanded={now ? undefined : open} aria-label={failed ? `${label ?? t(toolVerbKey(name))} ${target} — ${t('turn.tool_failed')}` : undefined} onClick={event => { event.stopPropagation(); toggle(); }}>
+        <span className="claude-step-node">{now ? <i className="claude-step-pulse" /> : stepIcon(kind)}</span><span className="claude-step-verb">{label ?? t(toolVerbKey(name))}</span>
+      </button>
+      {target && (changedPath ? <button type="button" className="claude-step-target claude-step-file" onClick={() => openFile(changedPath)}>{target}</button> : <span className="claude-step-target">{target}</span>)}
       {(added > 0 || removed > 0) && <span className="claude-step-diff"><i className="is-add">+{added}</i> <i className="is-del">−{removed}</i></span>}
-      {result && <span className="claude-step-result">{name === 'Grep' || name === 'Glob' ? t('tools.result.found', { count: result }) : `→ ${result}`}</span>}
-    </button>
+      {result && <span className="claude-step-result">{name === 'Grep' || name === 'Glob' ? t('tools.result.found', { count: result }) : result}</span>}
+      {!now && <Chevron open={open} />}
+    </div>
+    {error && <div className="claude-step-error">{error}</div>}
     {open && <div className="claude-step-detail"><ClaudeTool message={message} /></div>}
   </div>;
 }
 
-/** Tool calls in a row as one quiet card (toolcalls 方案 B): a sentence that sums them up, a check once
- *  done, and inside, one line per call. While running it names the step under way and its time. */
+/** A thought as a step on the same line: its first sentence, quiet and slanted; opens into the whole thought. */
+function ThinkStep({ message }: { message: ClaudeMessage }) {
+  const t = useT();
+  const [open, setOpen] = useState(() => openToolGroups.has(`step:${message.id}`));
+  const now = !!message.partial;
+  const line = firstLine(message.content).replace(/^[#>*\-\s]+/, '') || t(now ? 'conversation.thinking' : 'claude.status.thinking');
+  const canOpen = !now && !!message.content.trim();
+  const toggle = () => { if (canOpen) stepToggle(`step:${message.id}`, setOpen); };
+  return <div className={`claude-step claude-step-kind-think${now ? ' is-now' : ''}`}>
+    <div className="claude-step-line" onClick={toggle}>
+      <button type="button" className="claude-step-toggle claude-step-thought" disabled={!canOpen} aria-expanded={canOpen ? open : undefined} onClick={event => { event.stopPropagation(); toggle(); }}>
+        <span className="claude-step-node">{now ? <i className="claude-step-pulse" /> : stepIcon('think')}</span><span className="claude-step-verb">{line}</span>
+      </button>
+      {canOpen && <Chevron open={open} />}
+    </div>
+    {open && <div className="claude-step-detail claude-step-detail--thought"><MarkdownContent content={message.content} /></div>}
+  </div>;
+}
+
+/** Calls and thoughts in a row as steps on one thin line, each icon a node on it. While the turn runs the line grows
+ *  at its newest step, and past five steps the earlier ones wait behind 「已完成 N 步」. The turn's one timer is the
+ *  working line under the conversation. */
 export const ToolGroup = memo(function ToolGroup({ messages, extra }: { messages: ClaudeMessage[]; extra?: ReactNode }) {
   const t = useT();
   const key = messages[0].id;
-  const [open, setOpen] = useState(() => openToolGroups.has(key));
-  const status = toolRunStatus(messages);
-  const running = status === 'running' ? messages.find(message => message.toolStatus === 'running' || !message.toolStatus) : undefined;
-  const now = useClock(!!running);
-  const toggle = () => setOpen(value => { if (value) openToolGroups.delete(key); else openToolGroups.add(key); return !value; });
-  const step = running && (orchestrationToolLabel(running.toolName ?? '', t) ?? t(toolVerbKey(running.toolName)));
-  const stepTarget = running && toolTarget(running.toolName, running.input ?? {});
-  return <section className={`claude-tool-group claude-tool-group--${status}`}>
-    <button type="button" className="claude-tool-group-head" aria-expanded={open} onClick={toggle}>
-      {running ? <span className="claude-step-spinner" aria-hidden="true" /> : stepIcon('group')}
-      <span className="claude-tool-group-title">{running ? <>{t('tools.running', { step: step || '' })}{stepTarget && <span className="claude-tool-group-target">{stepTarget}</span>}</> : toolRunSummary(messages, t)}</span>
-      {running && <span className="claude-tool-group-time">{elapsed(Math.max(0, now - running.timestamp), t)}</span>}
-      {status === 'done' && <span className="claude-tool-group-done">{stepIcon('done')}</span>}
-      <Chevron open={open} />
-    </button>
-    {open && <div className="claude-tool-group-list">{extra}{messages.map(message => <ToolStep key={message.id} message={message} />)}</div>}
+  const [showAll, setShowAll] = useState(() => openToolGroups.has(key));
+  const live = messages.some(message => message.role === 'tool' ? !message.toolStatus || message.toolStatus === 'running' : !!message.partial);
+  const hidden = live && !showAll && messages.length > 5 ? messages.length - 4 : 0;
+  return <section className={`claude-tool-group claude-rail${live ? ' is-live' : ''}`}>
+    {extra}
+    {hidden > 0 && <button type="button" className="turn-fold claude-rail-more" aria-expanded={false} onClick={() => stepToggle(key, setShowAll)}><Chevron open={false} /><span>{t('turn.steps_done', { count: hidden })}</span></button>}
+    {messages.slice(hidden).map(message => message.role === 'reasoning' ? <ThinkStep key={message.id} message={message} /> : <ToolStep key={message.id} message={message} />)}
   </section>;
 });
 
@@ -405,6 +435,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
   // call's full card (its diff or command output open).
   const clear = useAppState().state?.layoutMode === 'work';
   const runs = useMemo(() => toolRuns(s.messages, clear ? 1 : 2), [s.messages, clear]);
+  const folds = useTurnFolds(s.messages, s.busy);
   const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => s.messages.flatMap((message, messageIndex) => message.role === 'user' ? [{ id: message.id, sourceMessageId: message.id, content: message.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null }] : []), [s.messages, virtual.offsets]);
   useEffect(() => retainClaudeSession(sessionId, cwd, initialToken.current), [sessionId, cwd]);
@@ -512,21 +543,22 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
       <div className={`claude-thread${empty ? ' is-empty' : ''}`}>
         {s.historyCursor > 0 && <button className="claude-expand" disabled={s.loadingHistory || !s.ready} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
-        {s.messages.slice(virtual.start, virtual.end).map((m, i) => runs.follower.has(virtual.start + i) ? <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>{null}</MeasuredRow> : <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
+        {s.messages.slice(virtual.start, virtual.end).map((m, i) => { const fold = folds.owner.get(virtual.start + i), folded = !!fold && !folds.isOpen(fold), foldLead = fold?.start === virtual.start + i; return runs.follower.has(virtual.start + i) || (folded && !foldLead) ? <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>{null}</MeasuredRow> : <MeasuredRow key={m.renderKey ?? m.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
           {new Date(m.timestamp).toDateString() !== new Date(s.messages[virtual.start + i - 1]?.timestamp ?? 0).toDateString() && <div className="claude-date">{new Date(m.timestamp).toLocaleDateString(language, { weekday: 'short', month: 'short', day: 'numeric' })}</div>}
-          <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? `claude-row--group claude-row--${toolRunStatus(s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1))}` : m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''} ${m.parentId ? 'claude-row--nested' : ''}`}>
+          {fold && foldLead && <TurnFoldRow fold={fold} open={!folded} onToggle={() => folds.toggle(fold)} />}
+          {!folded && <article data-message-id={m.id} className={`claude-row claude-row--${m.role} ${runs.lead.has(virtual.start + i) ? `claude-row--group claude-row--${toolRunStatus(s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1))}` : m.toolStatus ? `claude-row--${m.interrupted ? 'interrupted' : m.toolStatus}` : ''} ${m.parentId ? 'claude-row--nested' : ''}`}>
             {m.role === 'user' ? <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><CollapsibleUserMessage sentAt={m.timestamp} text={m.content} expanded={!!expandedMessages[m.id]} onToggle={() => setExpandedMessages(old => ({ ...old, [m.id]: !old[m.id] }))}><MarkdownContent content={m.content} /></CollapsibleUserMessage></> : m.role === 'tool' ? (runs.lead.has(virtual.start + i) ? <ToolGroup messages={s.messages.slice(virtual.start + i, runs.lead.get(virtual.start + i)! + 1)} /> : <ClaudeTool message={m} />) : m.role === 'reasoning' ? <ClaudeThinking message={m} expanded={thinkingExpansion[m.id] ?? expandedThinking} tokens={s.thinkingTokens} onToggle={open => setThinkingExpansion(previous => (previous[m.id] ?? expandedThinking) === open ? previous : { ...previous, [m.id]: open })} /> : <><time>{new Date(m.timestamp).toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })}</time><MarkdownContent content={m.content} /></>}
             {(m.role === 'user' || m.role === 'assistant') && !m.partial && <MessageCopyButton copied={copied === m.id} onCopy={() => copy(m)} />}
+            {folds.byReply.has(virtual.start + i) && <ChangedFilesCard files={folds.byReply.get(virtual.start + i)!} />}
             {m.turnStats && !(s.busy && virtual.start + i === s.messages.length - 1) && <TurnSummary stats={m.turnStats} sessionKey={s.nativeId} messageId={m.id} />}
-          </article>
-        </MeasuredRow>)}
+          </article>}
+        </MeasuredRow>; })}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.requests.map(p => <Question key={p.id} id={sessionId} pending={p} />)}
         {s.coldReturn && <ClaudeColdReturn id={sessionId} idleMinutes={s.coldReturn.idleMinutes} tokens={s.coldReturn.tokens} />}
         {restoring && s.messages.length > 0 && <div className="claude-working" role="status">{restoringMark}<span className="claude-working-word">{t('conversation.restoring')}</span></div>}
         {s.ready && s.busy && !s.requests.length && <Working status={s.interruptRequested ? 'stopping' : s.status} startedAt={s.startedAt}
-          title={turnTitle(s.messages, s.startedAt)}
-          tool={s.messages.findLast(message => message.toolStatus === 'running' && !message.parentId)?.toolName} />}
+          title={turnTitle(s.messages, s.startedAt)} />}
         {s.interrupted && !s.busy && !s.error && <div className="claude-interrupted" role="status">{t('claude.interrupted')}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && (s.ready || !directoryIssue || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : startErrorText(s.error, 'Claude Code', t)}</div>}

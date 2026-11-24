@@ -5,14 +5,17 @@ import type { I18nKey } from '../i18n/en';
 
 export interface ToolRunMessage { role: string; toolName?: string; toolStatus?: 'running' | 'done' | 'failed'; parentId?: string }
 
-/** Runs of `minimum` (default two) or more adjacent tool calls under the same parent: first index → last index, and the rest. */
+/** Runs of adjacent calls under the same parent that hold `minimum` (default two) or more calls: first index → last
+ *  index, and the rest. Thinking between and around the calls joins the run, as a step on the same line. */
 export function toolRuns(messages: readonly ToolRunMessage[], minimum = 2): { lead: Map<number, number>; follower: Set<number> } {
   const lead = new Map<number, number>(), follower = new Set<number>();
+  const step = (message: ToolRunMessage) => message.role === 'tool' || message.role === 'reasoning';
   for (let i = 0; i < messages.length;) {
-    if (messages[i].role !== 'tool') { i++; continue; }
+    if (!step(messages[i])) { i++; continue; }
     let end = i;
-    while (end + 1 < messages.length && messages[end + 1].role === 'tool' && messages[end + 1].parentId === messages[i].parentId) end++;
-    if (end - i + 1 >= minimum) {
+    while (end + 1 < messages.length && step(messages[end + 1]) && messages[end + 1].parentId === messages[i].parentId) end++;
+    const calls = messages.slice(i, end + 1).filter(message => message.role === 'tool').length;
+    if (calls >= minimum) {
       lead.set(i, end);
       for (let k = i + 1; k <= end; k++) follower.add(k);
     }
@@ -44,13 +47,14 @@ const KEYS: Record<Kind, I18nKey> = {
 /** 「读取 2 个文件、运行 1 条命令」 for a run of calls, in the order a reader expects. */
 export function toolRunSummary(messages: readonly ToolRunMessage[], t: (key: I18nKey, vars?: Record<string, string | number>) => string): string {
   const counts = new Map<Kind, number>();
-  for (const message of messages) { const kind = toolKind(message.toolName); counts.set(kind, (counts.get(kind) ?? 0) + 1); }
+  for (const message of messages) { if (message.role !== 'tool') continue; const kind = toolKind(message.toolName); counts.set(kind, (counts.get(kind) ?? 0) + 1); }
   const text = ORDER.filter(kind => counts.has(kind)).map(kind => t(KEYS[kind], { count: counts.get(kind)! })).join(t('tools.group.join'));
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** The group's state: running while any call runs, failed if any failed, else done. */
-export function toolRunStatus(messages: readonly ToolRunMessage[]): 'running' | 'failed' | 'done' {
+export function toolRunStatus(all: readonly ToolRunMessage[]): 'running' | 'failed' | 'done' {
+  const messages = all.filter(message => message.role === 'tool');
   if (messages.some(message => message.toolStatus === 'running' || !message.toolStatus)) return 'running';
   return messages.some(message => message.toolStatus === 'failed') ? 'failed' : 'done';
 }
