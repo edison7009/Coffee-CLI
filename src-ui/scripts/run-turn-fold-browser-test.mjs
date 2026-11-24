@@ -113,7 +113,7 @@ try {
   // Finished: one quiet line with the time and a failure mark; the reply and its changed files stay in sight.
   await page.evaluate(messages => window.setSession({ busy: false, status: 'idle', messages }), turn);
   await page.locator('.turn-fold').waitFor();
-  assert.equal((await page.locator('.turn-fold-label').innerText()).trim(), '4 steps · 45s');
+  assert.equal((await page.locator('.turn-fold-label').innerText()).trim(), 'Steps: 4 · 45s');
   assert.deepEqual(await page.locator('.turn-fold-dots i').evaluateAll(dots => dots.map(dot => dot.className)), ['is-think', 'is-tool', 'is-edit', 'is-fail'], 'a dot per step: thought, call, changed file, failure');
   assert.equal(await page.locator('.turn-fold-warn').innerText(), 'Last step failed');
   assert.equal(await page.locator('.claude-tool-group, .claude-reasoning').count(), 0, 'the work hides behind the fold');
@@ -138,10 +138,18 @@ try {
   await page.waitForFunction(() => (window.actions ?? []).filter(action => action.type === 'SET_DIFF_SELECTION').length === 2);
   assert.equal(await page.locator('.claude-step-detail').count(), 0, 'opening the file does not toggle the row');
   assert.equal(await page.locator('.claude-step--failed .claude-step-error').innerText(), 'error', 'a failed call shows its first error line without opening');
+  assert.equal(await page.locator('.claude-step--failed .claude-step-result.is-failed').innerText(), 'Failed', 'and a short red note after it when the output gives no exit code or count');
   if (process.env.COFFEE_TURN_SHOT) await page.screenshot({ path: `${process.env.COFFEE_TURN_SHOT}-open.png` });
   await page.locator('.turn-fold').click();
   await page.waitForFunction(() => !document.body.textContent.includes('Reading the script.'));
 
+  // A run that starts with a thought keeps the thought and the calls on one line.
+  await page.evaluate(messages => window.setSession({ messages }), [turn[0], turn[1], turn[3], turn[4], turn[6]]);
+  await page.locator('.turn-fold').click();
+  await page.locator('.claude-rail .claude-step-kind-think').waitFor();
+  assert.equal(await page.locator('.claude-rail .claude-step').count(), 3, 'the thought, the read and the edit');
+  assert.equal(await page.locator('.claude-reasoning').count(), 0, 'no stray thinking row in place of the line');
+  await page.locator('.turn-fold').click();
   // An interrupted turn with no reply reads as stopped.
   await page.evaluate(messages => window.setSession({ messages }), [turn[0], turn[1], turn[3], { ...turn[5], interrupted: true }]);
   await page.waitForFunction(() => document.querySelector('.turn-fold-label')?.textContent.startsWith('Stopped'));

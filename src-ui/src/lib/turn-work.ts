@@ -57,7 +57,10 @@ export function turnFolds(messages: readonly TurnWorkMessage[], busy: boolean): 
       const message = messages[i];
       if (message.role === 'assistant' && !message.parentId && message.content?.trim()) { reply = i; break; }
     }
-    const start = prompt + 1, end = (reply ?? next) - 1;
+    const start = prompt + 1;
+    // A status line closing the turn (interrupted, failed, its time) stays in sight under the fold.
+    let end = (reply ?? next) - 1;
+    while (end >= start && messages[end].role === 'notice') end--;
     if (end < start) return;
     const covered = messages.slice(start, end + 1);
     if (!covered.some(isWork)) return;

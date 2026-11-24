@@ -832,6 +832,7 @@ export const ru = {
   'turn.steps': 'Шагов: {count}',
   'turn.fixed_after': 'Исправлено после ошибок: {count}',
   'turn.last_failed': 'Последний шаг с ошибкой',
+  'turn.errors': 'Ошибок: {count}',
   'turn.steps_done': 'Выполнено шагов: {count}',
   'turn.more_files': 'Ещё файлов: {count}',
   'turn.tool_failed': 'Вызов инструмента завершился ошибкой',

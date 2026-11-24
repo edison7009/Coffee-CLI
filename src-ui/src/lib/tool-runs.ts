@@ -88,3 +88,13 @@ export function toolResult(name: string | undefined, output: string | undefined)
   if (name === 'Grep' || name === 'Glob') return String(lines.length);
   return '';
 }
+
+/** What a failed call's output says about the failure, for a short red note after it: its exit code (Claude Code
+ *  writes "Exit code 1"), else how many errors it reported (a linter's "3 errors"). */
+export function toolFailure(output: string | undefined): { exit?: number; errors?: number } {
+  const text = output ?? '';
+  const exit = /\bexit(?:ed with)?(?: code| status)?[:\s]+(-?\d+)\b/i.exec(text);
+  if (exit) return { exit: Number(exit[1]) };
+  const errors = /\b(\d+)\s+(?:errors?|problems?)\b/i.exec(text);
+  return errors ? { errors: Number(errors[1]) } : {};
+}

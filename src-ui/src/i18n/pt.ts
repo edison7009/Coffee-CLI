@@ -832,6 +832,7 @@ export const pt = {
   'turn.steps': '{count} etapas',
   'turn.fixed_after': 'Corrigido após {count} falhas',
   'turn.last_failed': 'A última etapa falhou',
+  'turn.errors': '{count} erros',
   'turn.steps_done': '{count} etapas concluídas',
   'turn.more_files': 'Mais {count} arquivos',
   'turn.tool_failed': 'Uma chamada de ferramenta falhou',

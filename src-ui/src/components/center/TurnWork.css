@@ -42,7 +42,7 @@
 .claude-step-line > .conversation-chevron { margin-left:auto; width:12px; height:12px; opacity:0; color:var(--text-3); transition:opacity .15s, transform .15s ease; }
 .claude-step-line:hover > .conversation-chevron, .claude-step-line > .conversation-chevron[data-open="true"] { opacity:.8; }
 /* A thought: its first sentence, quiet and slanted. */
-.claude-step-kind-think .claude-step-thought { flex:1; }
+.claude-step-kind-think .claude-step-thought { flex:1; min-width:0; justify-content:flex-start; text-align:left; }
 .claude-step-kind-think .claude-step-verb { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-style:italic; }
 /* Opened, under the step: the call's own view on a faint fill. */
 .claude-step-detail { margin:2px 0 6px 34px; padding:8px 12px; border-radius:8px; background:color-mix(in srgb,var(--text-1) 4%,transparent); }
@@ -52,6 +52,8 @@
 .claude-step--failed .claude-step-node { color:var(--red); }
 .claude-step--failed .claude-step-verb { color:var(--text-3); }
 .claude-step-error { margin:0 0 4px 34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:'JetBrainsMono',var(--font-mono,ui-monospace),monospace; font-size:12px; color:color-mix(in srgb,var(--red) 85%,var(--text-2)); }
+
+.claude-step-result.is-failed { color:var(--red); }
 
 /* ⑤ The step under way: a solid dot with a breathing ring, its words under a slow light; not a toggle yet. */
 .claude-step.is-now .claude-step-line { cursor:default; }
@@ -92,3 +94,6 @@
 .turn-files-more .conversation-chevron { width:12px; height:12px; }
 
 @media (prefers-reduced-motion:reduce) { .turn-fold, .claude-step-line, .turn-file, .turn-files-view { transition:none; } }
+.step-working-mark { display:inline-grid; place-items:center; flex:none; width:16px; height:16px; color:var(--text-3); }
+.step-working-mark > * { max-width:16px; max-height:16px; }
+.step-working-word { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

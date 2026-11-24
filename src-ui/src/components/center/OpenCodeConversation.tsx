@@ -5,8 +5,7 @@ import { TurnSummary } from './TurnSummary';
 import { useWorktreePending } from '../../lib/worktree-pending';
 import { useAppState } from '../../store/app-state';
 import { useT } from '../../i18n/useT';
-import { orchestrationToolLabel } from '../../lib/orchestration-label';
-import { arr, obj, str, num, pretty, openCodeRows, type Json, type OpenCodeRow } from '../../lib/opencode-protocol';
+import { arr, obj, str, num, openCodeRows, type Json, type OpenCodeRow } from '../../lib/opencode-protocol';
 import { interruptOpenCode, loadOpenCodeHistory, replyOpenCodeForm, replyOpenCodePermission, retainOpenCodeSession, useOpenCodeSession } from '../../lib/opencode-session';
 import { clipboardWrite } from '../../lib/clipboard';
 import { directoryFailure, directoryFailureMessage } from '../../lib/session-directory';
@@ -17,12 +16,17 @@ import { WelcomeGreeting, WelcomeRestoring, WelcomeSessionMeta } from './Welcome
 import { ToolSwarm } from './ToolSwarm';
 import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
-import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, Chevron } from './ConversationControls';
+import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import './ConversationView.css';
 import './ClaudeConversation.css';
 import './CodexConversation.css';
 import './OpenCodeConversation.css';
 import { ScrollLatestIcon } from './ScrollLatestIcon';
+import { ClaudeThinking, ToolGroup } from './ToolSteps';
+import { ChangedFilesCard, StepWorking, TurnFoldRow } from './TurnWork';
+import { openCodeStepCard } from '../../lib/step-cards';
+import { toolRuns } from '../../lib/tool-runs';
+import { useTurnFolds } from '../../lib/use-turn-work';
 
 function OpenCodeActivityMark() {
   return <svg className="opencode-activity-mark" viewBox="0 0 15 15" fill="currentColor" aria-hidden="true">
@@ -35,10 +39,6 @@ function Measured({ id, measure, children }: { id: string; measure: (id: string,
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { const node = ref.current; if (!node) return; const update = () => measure(id, node.getBoundingClientRect().height); update(); const observer = new ResizeObserver(update); observer.observe(node); return () => observer.disconnect(); }, [id, measure]);
   return <div ref={ref}>{children}</div>;
-}
-function title(row: OpenCodeRow): string {
-  if (row.role === 'reasoning') return row.content.split('\n').find(line => line.trim())?.trim() ?? '';
-  return [row.toolName, row.title].filter(Boolean).join(' · ');
 }
 function PermissionCard({ sessionId, request }: { sessionId: string; request: Json }) {
   const t = useT(), [pending, setPending] = useState(false), [error, setError] = useState('');
@@ -110,7 +110,6 @@ function FormCard({ sessionId, form }: { sessionId: string; form: Json }) {
     </div>
   </section>;
 }
-type Row = OpenCodeRow & { members?: OpenCodeRow[] };
 export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, isVisible = isActive, hasBg, bgUrl, bgType }: { sessionId: string; cwd: string | null; resumeToken?: string; isActive: boolean; isVisible?: boolean; hasBg?: boolean; bgUrl?: string; bgType?: string }) {
   const s = useOpenCodeSession(sessionId), t = useT(), { dispatch } = useAppState();
   const creatingWorktree = useWorktreePending(sessionId, s.ready || !!s.error);
@@ -132,21 +131,11 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   useEffect(() => { if (openCodeTitle) dispatch({ type: 'SET_TAB_TITLE', id: sessionId, title: openCodeTitle }); }, [openCodeTitle, sessionId, dispatch]);
   const waiting = s.permissions.length + s.forms.length;
   useEffect(() => { dispatch({ type: 'SET_AGENT_STATUS', id: sessionId, status: waiting ? 'wait_input' : s.busy ? 'working' : 'idle' }); }, [waiting, s.busy, sessionId, dispatch]);
-  // Coffee CLI's own tools read in the user's language (lib/orchestration-label.ts); others keep their names.
-  const messages = useMemo(() => openCodeRows(s.native).map(row => { const label = row.toolName && orchestrationToolLabel(row.toolName, t); return label ? { ...row, toolName: label } : row; }), [s.native, t]);
-  const runningTool = s.busy && !s.interrupting && !waiting
-    ? messages.findLast(message => message.toolStatus === 'running') : undefined;
-  const rows = useMemo<Row[]>(() => {
-    const result: Row[] = [];
-    for (const message of messages) {
-      const activity = (message.role === 'tool' || message.role === 'reasoning') && !message.kind;
-      const previous = result.at(-1);
-      if (activity && previous?.members && previous.turn === message.turn) {
-        previous.members.push(message); previous.partial ||= message.partial; previous.content += `\n${title(message)}`;
-      } else result.push(activity ? { ...message, id: `group:${message.id}`, content: title(message), members: [message] } : message);
-    }
-    return result;
-  }, [messages]);
+  // Every tool draws its steps alike (lib/step-cards.ts): calls and thoughts on one line, a finished turn folded.
+  const rows = useMemo(() => openCodeRows(s.native).map(openCodeStepCard), [s.native]);
+  const runs = useMemo(() => toolRuns(rows, 1), [rows]);
+  const folds = useTurnFolds(rows, s.busy);
+  const turnStart = s.busy ? rows.findLast(row => row.role === 'user')?.timestamp : undefined;
   const virtual = useConversationVirtualizer(rows, scroll);
   const navigationItems = useMemo<ConversationNavigationItem[]>(() => rows.flatMap((row, messageIndex) => row.role === 'user' ? [{
     id: row.id, sourceMessageId: row.id, content: row.content, messageIndex, top: (virtual.offsets[messageIndex] ?? 0) + 32, cursor: null,
@@ -207,14 +196,7 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
   };
   const toggle = (id: string) => setExpanded(old => ({ ...old, [id]: !old[id] }));
   const copy = (id: string, content: string) => { void clipboardWrite(shownMessageText(content)).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
-  const tool = (message: OpenCodeRow) => {
-    const body = message.role === 'reasoning' ? message.content : [message.input !== undefined && Object.keys(obj(message.input)).length ? pretty(message.input) : typeof message.input === 'string' ? message.input : '', message.content].filter(Boolean).join('\n\n');
-    return <div className={`codex-tool is-${message.toolStatus ?? 'reasoning'}`} key={message.id}>
-      <div className="codex-tool-heading"><button type="button" className="claude-tool-heading" aria-expanded={!!expanded[message.id]} onClick={() => toggle(message.id)}><span className="codex-chevron" aria-hidden="true"><Chevron open={expanded[message.id]} /></span><strong>{message.role === 'reasoning' ? t('conversation.reasoning') : message.toolName}</strong><span>{message.role === 'reasoning' ? title(message) : message.title}</span></button><MessageCopyButton copied={copied === message.id} onCopy={() => copy(message.id, [title(message), body].join('\n'))} /></div>
-      {expanded[message.id] && (message.role === 'reasoning' ? <MarkdownContent content={message.content} /> : <pre className="codex-tool-body">{body}</pre>)}
-    </div>;
-  };
-  const turnStatus = (row: Row) => {
+  const turnStatus = (row: OpenCodeRow) => {
     if (row.kind === 'idle') {
       const label = t(row.outcome === 'interrupted' ? 'claude.interrupted' : row.outcome === 'failed' ? 'codex.failed' : 'codex.completed');
       return row.turnStats ? <TurnSummary stats={row.turnStats} sessionKey={s.nativeId} messageId={row.id} prefix={label} />
@@ -241,28 +223,27 @@ export function OpenCodeConversation({ sessionId, cwd, resumeToken, isActive, is
       <div className={`claude-thread${!rows.length ? ' is-empty' : ''}`}>
         {s.cursor && <button className="claude-expand" disabled={s.loadingHistory} onClick={loadEarlier}>{t(s.loadingHistory ? 'diff.loading' : 'claude.history_earlier')}</button>}
         <div style={{ height: virtual.topSpacer }} aria-hidden="true" />
-        {rows.slice(virtual.start, virtual.end).map((row, i) => <Measured key={row.id} id={virtual.measurementKeys[virtual.start + i]} measure={virtual.measureRow}>
-          <article className={`claude-row claude-row--${row.kind === 'idle' ? (row.outcome === 'succeeded' ? 'completed' : row.outcome) : row.partial && row.role !== 'user' ? 'running' : row.role} codex-row`} data-message-id={row.id}>
-            {row.members ? <>
-              <button type="button" className="codex-group-heading" aria-expanded={!!expanded[row.id]} onClick={() => toggle(row.id)}><span aria-hidden="true"><Chevron open={expanded[row.id]} /></span><span>{t('codex.activity', { count: row.members.length })}</span>{row.partial && <span className="codex-spinner" aria-hidden="true" />}<small>{title(row.members.at(-1)!)}</small></button>
-              {expanded[row.id] && <div className="codex-activity-list">{row.members.map(tool)}</div>}
-            </> : row.kind ? turnStatus(row) : <>
+        {rows.slice(virtual.start, virtual.end).map((card, i) => {
+          const index = virtual.start + i, row = card.source, fold = folds.owner.get(index), folded = !!fold && !folds.isOpen(fold), foldLead = fold?.start === index;
+          return <Measured key={card.id} id={virtual.measurementKeys[index]} measure={virtual.measureRow}>
+          {fold && foldLead && <TurnFoldRow fold={fold} open={!folded} onToggle={() => folds.toggle(fold)} />}
+          {!(runs.follower.has(index) || folded) && <article className={`claude-row claude-row--${row.kind === 'idle' ? (row.outcome === 'succeeded' ? 'completed' : row.outcome) : row.partial && row.role !== 'user' ? 'running' : row.role}${runs.lead.has(index) ? ' claude-row--group' : ''} codex-row`} data-message-id={card.id}>
+            {runs.lead.has(index) ? <ToolGroup messages={rows.slice(index, runs.lead.get(index)! + 1)} />
+            : card.role === 'reasoning' ? <ClaudeThinking message={card} expanded={!!expanded[card.id]} onToggle={open => setExpanded(old => ({ ...old, [card.id]: open }))} />
+            : row.kind ? turnStatus(row) : <>
               {row.role === 'user'
                 ? <CollapsibleUserMessage sentAt={row.timestamp} text={row.content} expanded={!!expanded[row.id]} onToggle={() => toggle(row.id)}><MarkdownContent content={row.content} />{!!row.files?.length && <div className="opencode-files">{row.files.map(file => <span key={file}>{file.split(/[\\/]/).pop()}</span>)}</div>}</CollapsibleUserMessage>
                 : <div><MarkdownContent content={row.content} /></div>}
               <MessageCopyButton copied={copied === row.id} onCopy={() => copy(row.id, row.content)} />
+              {folds.byReply.has(index) && <ChangedFilesCard files={folds.byReply.get(index)!} />}
             </>}
-          </article>
-        </Measured>)}
+          </article>}
+        </Measured>; })}
         <div style={{ height: virtual.bottomSpacer }} aria-hidden="true" />
         {s.permissions.map(request => <PermissionCard key={str(request.id)} sessionId={sessionId} request={request} />)}
         {s.forms.map(form => <FormCard key={str(form.id)} sessionId={sessionId} form={form} />)}
-        {s.ready && s.busy && <div className="codex-working opencode-working" role="status"
-          data-paused={s.interrupting || !!waiting || !isVisible || undefined}>
-          <OpenCodeActivityMark />
-          <span>{t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')}…</span>
-          {runningTool && <span className="conversation-working-detail" title={title(runningTool)}>{title(runningTool)}</span>}
-        </div>}
+        {s.ready && s.busy && <StepWorking className="opencode-working" mark={<OpenCodeActivityMark />} startedAt={turnStart}
+          label={t(s.interrupting ? 'codex.stopping' : waiting ? 'codex.waiting' : 'claude.status.working')} />}
         {s.error && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'OpenCode', t)}</div>}
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {!directoryIssue && !rows.length && <div className="claude-empty"><ToolSwarm tool="opencode" isActive={isVisible} /><WelcomeGreeting />{(creatingWorktree || resumed && !s.ready && !s.error) && <WelcomeRestoring label={creatingWorktree ? t('gambit.worktree_creating') : undefined} className="codex-working" mark={<span className="codex-spinner" aria-hidden="true" />} />}<WelcomeSessionMeta cwd={cwd} model={s.models.find(m => m.id === s.model?.id && m.providerID === s.model?.providerID)?.name ?? s.model?.id ?? ''} /></div>}

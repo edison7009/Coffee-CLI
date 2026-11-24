@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const result = await build({ entryPoints: [fileURLToPath(new URL('../src/lib/tool-runs.ts', import.meta.url))], bundle: true, platform: 'node', format: 'cjs', write: false });
 const module = { exports: {} };
 runInNewContext(result.outputFiles[0].text, { module, exports: module.exports });
-const { toolRuns, toolRunSummary, toolRunStatus, toolKind } = module.exports;
+const { toolRuns, toolRunSummary, toolRunStatus, toolKind, toolFailure } = module.exports;
 
 const tool = (toolName, toolStatus = 'done', parentId) => ({ role: 'tool', toolName, toolStatus, parentId });
 const text = { role: 'assistant' };
@@ -38,4 +38,7 @@ assert.equal(toolRunStatus([tool('Read'), tool('Grep')]), 'done');
 assert.equal(toolKind('Task'), 'team');
 assert.equal(toolRunStatus([{ role: 'reasoning' }, tool('Read')]), 'done', 'thinking in a run is not a call still running');
 assert.equal(toolRunSummary([{ role: 'reasoning' }, tool('Read')], t), '读取 1 个文件');
+assert.deepEqual(JSON.parse(JSON.stringify(toolFailure('npm ERR!\nExit code 1'))), { exit: 1 }, 'Claude Code\'s exit code');
+assert.deepEqual(JSON.parse(JSON.stringify(toolFailure("a.ts:44  'mode' is assigned a value but never used\n✖ 3 problems (3 errors, 0 warnings)"))), { errors: 3 });
+assert.deepEqual(JSON.parse(JSON.stringify(toolFailure('Permission denied'))), {}, 'nothing countable: a plain failure');
 console.log('tool runs: ok');

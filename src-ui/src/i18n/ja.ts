@@ -835,6 +835,7 @@ export const ja = {
   'turn.steps': '{count} ステップ',
   'turn.fixed_after': '{count} 回の失敗の後に修正済み',
   'turn.last_failed': '最後のステップが失敗',
+  'turn.errors': '{count} 件のエラー',
   'turn.steps_done': '{count} ステップ完了',
   'turn.more_files': 'ほか {count} 個のファイル',
   'turn.tool_failed': 'ツールの呼び出しが失敗しました',

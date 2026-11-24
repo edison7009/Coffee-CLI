@@ -2,7 +2,6 @@
 .opencode-files span { padding:1px 8px; color:var(--text-2); background:var(--bg-hover); border-radius:var(--shape-radius-btn,6px); font-size:12px; }
 .opencode-activity-mark { width:15px; height:15px; flex:none; }
 .opencode-activity-mark rect { opacity:.55; }
-.opencode-working > span:not(.conversation-working-detail) { flex:none; }
 @media (prefers-reduced-motion:no-preference) {
   .opencode-working:not([data-paused]) .opencode-activity-mark rect { animation:opencode-activity-pulse 1.5s ease-in-out infinite; }
 }

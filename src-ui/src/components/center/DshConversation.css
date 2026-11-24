@@ -11,4 +11,3 @@
 @media(prefers-reduced-motion:reduce),(forced-colors:active) { .dsh-shimmer { animation:none; background:none; -webkit-text-fill-color:currentColor; } }
 .dsh-running-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 /* An opened activity row lists its steps as full tool cards and reasoning blocks. */
-.dsh-activity-steps { display:flex; flex-direction:column; gap:14px; margin-top:12px; min-width:0; }

@@ -36,6 +36,7 @@ assert.equal(folds.lead.get(1).end, 2);
 assert.deepEqual(plain(folds.lead.get(1).steps), ['tool'], 'a sub-agent\'s own steps are not the turn\'s');
 assert.deepEqual(plain(turnFolds([user(0), tool('Edit'), tool('Write', {}, 'failed'), say('ok', 1)], false).lead.get(1).steps), ['edit', 'fail']);
 assert.equal(turnFolds([], false).lead.size, 0);
+assert.equal(turnFolds([user(0), tool('Bash', {}, 'failed', { interrupted: true }), { role: 'notice', content: 'interrupted', timestamp: 9 }], false).lead.get(1).end, 1, 'the closing status line stays outside the fold');
 assert.equal(turnFolds([user(0), tool('Read'), tool('Task', {}, 'running')], false).lead.size, 0, 'a call still running keeps the turn open');
 assert.deepEqual(plain([...turnFolds([user(0), tool('Read'), say('等子任务回报。', 5), tool('Task', {}, 'running')], false).lead.keys()]), [1], 'work after the reply stays in sight');
 assert.equal(turnFolds([user(0), say('答案', 5), { ...think }], false).lead.size, 0, 'a thought after the reply folds nothing away from it');
