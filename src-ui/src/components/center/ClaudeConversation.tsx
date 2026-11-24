@@ -23,27 +23,14 @@ import { ConversationDirectory } from '../../lib/conversation-links';
 import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem, ColdReturnCard, Chevron } from './ConversationControls';
 import { commands } from '../../tauri';
-import CLAWD_SVG from '../../icons-inline/clawd.svg?raw';
 import CLAUDE_WORKING_MARK from '../../icons-inline/claude-working-mark.webp';
 import { turnTitle } from '../../lib/turn-title';
-import { IS_MACOS } from '../../lib/platform';
-import CLAUDE_WELCOME from '../../icons-inline/claude-welcome.webm';
-import CLAUDE_WELCOME_HEVC from '../../icons-inline/claude-welcome.mov';
-// The laptop clip keeps its transparency in an alpha channel, which each engine reads from a different codec:
-// Chromium from VP9 WebM, macOS WebKit from HEVC QuickTime. Claude Desktop ships the same pair. Only macOS WebKit
-// takes the HEVC clip: Linux WebKitGTK cannot count on an HEVC decoder, and Chromium's identifier may read HeadlessChrome.
-const CLAUDE_WELCOME_CLIP = IS_MACOS && !/(Chrome|Chromium|Edg)\//.test(navigator.userAgent) ? CLAUDE_WELCOME_HEVC : CLAUDE_WELCOME;
-import CLAUDE_WAVING from '../../icons-inline/claude-waving.gif';
-import CLAUDE_JUMPING from '../../icons-inline/claude-jumping.gif';
-import CLAUDE_WALKING from '../../icons-inline/claude-walking.gif';
-import CLAUDE_LURKING from '../../icons-inline/claude-lurking.gif';
-import CLAUDE_RACING from '../../icons-inline/claude-racing.gif';
-import CLAUDE_CLOUD from '../../icons-inline/claude-cloud.gif';
 import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
 import { pasteImageIntoAnswer } from '../../lib/answer-image-paste';
 import { ScrollLatestIcon } from './ScrollLatestIcon';
+import { ToolSwarm } from './ToolSwarm';
 
 function useClock(active: boolean, ms = 1000) {
   const [now, setNow] = useState(Date.now);
@@ -51,42 +38,6 @@ function useClock(active: boolean, ms = 1000) {
   return now;
 }
 const count = formatTokens, elapsed = formatElapsed;
-
-const CLAUDE_WELCOME_ICONS = [
-  { id: 'laptop', src: CLAUDE_WELCOME_CLIP },
-  { id: 'waving', src: CLAUDE_WAVING },
-  { id: 'jumping', src: CLAUDE_JUMPING },
-  { id: 'walking', src: CLAUDE_WALKING },
-  { id: 'lurking', src: CLAUDE_LURKING },
-  { id: 'racing', src: CLAUDE_RACING },
-  { id: 'cloud', src: CLAUDE_CLOUD },
-];
-
-function ClaudeWelcomeIcon({ isActive }: { isActive: boolean }) {
-  const [icon] = useState(() => CLAUDE_WELCOME_ICONS[Math.floor(Math.random() * CLAUDE_WELCOME_ICONS.length)]);
-  const ref = useRef<HTMLVideoElement>(null);
-  const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [motionAllowed, setMotionAllowed] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches && !document.hidden);
-  useEffect(() => {
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setMotionAllowed(!motion.matches && !document.hidden);
-    motion.addEventListener('change', update); document.addEventListener('visibilitychange', update);
-    return () => { motion.removeEventListener('change', update); document.removeEventListener('visibilitychange', update); };
-  }, []);
-  useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    if (!isActive || !motionAllowed) video.pause(); else void video.play().catch(() => {});
-    return () => video.pause();
-  }, [isActive, motionAllowed, failed]);
-  return <span className={`claude-empty-icon is-${icon.id}${ready && !failed && isActive && motionAllowed ? ' is-animated' : ''}`} aria-hidden="true" data-welcome-icon={icon.id}>
-    <span className="claude-empty-still" dangerouslySetInnerHTML={{ __html: CLAWD_SVG }} />
-    {!failed && (icon.id === 'laptop'
-      ? <video ref={ref} src={icon.src} autoPlay muted loop playsInline onLoadedData={() => setReady(true)} onError={() => setFailed(true)} />
-      : isActive && motionAllowed && <img src={icon.src} alt="" onLoad={() => setReady(true)} onError={() => setFailed(true)} />)}
-  </span>;
-}
 
 function ThinkingTokens({ value }: { value?: number }) {
   const t = useT();
@@ -580,7 +531,7 @@ export function ClaudeConversation({ sessionId, cwd, resumeToken, isActive, isVi
         {directoryIssue && <div className="claude-session-error" role="alert">{directoryError}</div>}
         {s.error && (s.ready || !directoryIssue || s.errorKey === 'claude.error.settings_readback' || s.errorKey === 'claude.error.restart') && <div className="claude-session-error" role="alert">{s.errorKey ? t(s.errorKey, { detail: s.error }) : startErrorText(s.error, 'Claude Code', t)}</div>}
         {empty && <div className="claude-empty">
-          <ClaudeWelcomeIcon isActive={isVisible} />
+          <ToolSwarm tool="claude" isActive={isVisible} />
           <WelcomeGreeting />
           {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={restoringMark} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={model?.resolvedModel || s.model} />

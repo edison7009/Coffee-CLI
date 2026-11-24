@@ -106,46 +106,11 @@ try {
   await page.waitForFunction(()=>document.querySelector('.host .claude-empty-model')?.textContent==='gpt-test');
   const input=page.locator('.gambit-textarea');
   const welcome=page.locator('.host:visible .claude-empty-title');await page.waitForFunction(()=>document.querySelector('.host .claude-empty-title')?.textContent==='Good morning, TEST-DESKTOP');
-  const mascot=page.locator('.host').first().locator('.codex-welcome-icon');
-  const loaded=await mascot.evaluate(async el=>{const url=getComputedStyle(el).backgroundImage.slice(5,-2),image=new Image();image.src=url;await image.decode();return {width:image.naturalWidth,height:image.naturalHeight}});assert.deepEqual(loaded,{width:1536,height:2288});
-  for(const shape of ['carbon','glass','monogram']){await page.evaluate(shape=>document.body.dataset.shape=shape,shape);assert.notEqual(await mascot.evaluate(el=>getComputedStyle(el).backgroundImage),'none',shape+' preserves the mascot');}
-  await page.evaluate(()=>document.body.dataset.shape='soft');
-  const bounds=await mascot.boundingBox();
-  assert.equal(await mascot.evaluate(el=>el.getAnimations()[0].effect.getTiming().duration),6600,'idle uses the native slow cadence rather than the fast action timing');
-  // Native idle holds: 1680, 660, 660, 840, 840, 1920 ms. Sample each boundary.
-  for(const [time,column] of [[0,0],[1679,0],[1681,1],[2339,1],[2341,2],[2999,2],[3001,3],[3839,3],[3841,4],[4679,4],[4681,5],[6599,5],[6601,0]]){
-    const position=await mascot.evaluate((el,time)=>{const animation=el.getAnimations()[0];animation.pause();animation.currentTime=time;return getComputedStyle(el).backgroundPosition},time);
-    const [x,y]=position.split(' ').map(parseFloat);assert.ok(Math.abs(x-column/7*100)<.001,`native idle frame at ${time}ms: ${position}`);assert.equal(y,0,'idle stays in its own atlas row');
-    assert.deepEqual(await mascot.boundingBox(),bounds,'frame changes never move the welcome layout');
-  }
-  await mascot.evaluate(el=>el.getAnimations()[0].play());
-  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('.host .codex-welcome-icon').getAnimations().length===0);
-  await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>window.setActive('b'));await page.waitForFunction(()=>document.querySelector('.host .codex-welcome-icon')?.dataset.paused==='true');assert.equal(await mascot.evaluate(el=>el.getAnimations().length),0);await page.evaluate(()=>window.setActive('a'));
-  const variants=[['idle',0,[1680,660,660,840,840,1920]],['walking-right',1,[120,120,120,120,120,120,120,220]],['walking-left',2,[120,120,120,120,120,120,120,220]],['waving',3,[140,140,140,280]],['jumping',4,[140,140,140,140,280]],['waiting',6,[150,150,150,150,150,260]],['running',7,[120,120,120,120,120,220]],['review',8,[150,150,150,150,150,280]]];
-  for(const [index,[id,row,holds]] of variants.entries()){
-    await page.evaluate(index=>{Math.random=()=>(index+.5)/8;window.rerollWelcome()},index);
-    await page.waitForFunction(id=>{const el=document.querySelector('.host .codex-welcome-icon');return el?.dataset.welcomeIcon===id&&el.getAnimations().length===1},id);
-    const duration=holds.reduce((total,hold)=>total+hold,0);
-    assert.equal(await mascot.evaluate(el=>el.getAnimations()[0].effect.getTiming().duration),duration,`${id} keeps its original speed`);
-    assert.equal(await mascot.evaluate(el=>el.getAnimations()[0].effect.getTiming().iterations),id==='idle'?Infinity:3,`${id} follows the native repetition limit`);
-    let elapsed=0;
-    for(const [column,hold] of holds.entries()){
-      const [x,y]=await mascot.evaluate((el,time)=>{const animation=el.getAnimations()[0];animation.pause();animation.currentTime=time;return getComputedStyle(el).backgroundPosition.split(' ').map(parseFloat)},elapsed+hold/2);
-      assert.ok(Math.abs(x-column/7*100)<.001);assert.equal(y,row*10,`${id} stays on the intended atlas row`);elapsed+=hold;
-    }
-    assert.deepEqual(await mascot.boundingBox(),bounds,`${id} does not shift the layout`);
-    if(id!=='idle'){
-      await mascot.evaluate(el=>el.getAnimations()[0].finish());
-      await page.waitForFunction(()=>document.querySelector('.host .codex-welcome-icon')?.getAnimations()[0]?.effect.getTiming().duration===6600);
-      assert.equal(await mascot.evaluate(el=>el.getAnimations()[0].effect.getTiming().iterations),Infinity,'finished actions settle into slow idle');
-      const y=await mascot.evaluate(el=>{const a=el.getAnimations()[0];a.pause();a.currentTime=3000;return parseFloat(getComputedStyle(el).backgroundPosition.split(' ')[1])});
-      assert.equal(y,0,'idle uses its own atlas row after every random action');
-      assert.deepEqual(await mascot.boundingBox(),bounds,'settling into idle does not move the layout');
-    }
-    await mascot.evaluate(el=>el.getAnimations()[0].play());
-    await page.evaluate(()=>{Math.random=()=>.99});await input.fill('rerender');await input.fill('');
-    assert.equal(await mascot.getAttribute('data-welcome-icon'),id,'composer rerenders do not reroll the current mascot');
-  }
+  const swarm=page.locator('.host').first().locator('canvas.tool-swarm');
+  assert.equal(await swarm.getAttribute('data-tool'),'codex','the welcome swarm forms the Codex icon');
+  await page.waitForFunction(()=>{const c=document.querySelector('.host canvas.tool-swarm');const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i])n++;return n>200});
+  await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('.host canvas.tool-swarm')?.dataset.paused==='true');
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.evaluate(()=>window.setActive('b'));await page.waitForFunction(()=>document.querySelector('.host canvas.tool-swarm')?.dataset.paused==='true');await page.evaluate(()=>window.setActive('a'));
   await page.evaluate(()=>{Math.random=window.originalRandom});
   await page.clock.setFixedTime(new Date(2026,9,24,12,0));await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.waitForFunction(()=>document.querySelector('.host .claude-empty-title')?.textContent==='Good afternoon, TEST-DESKTOP');
   await page.clock.setFixedTime(new Date(2026,9,24,18,0));await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.waitForFunction(()=>document.querySelector('.host .claude-empty-title')?.textContent==='Good evening, TEST-DESKTOP');

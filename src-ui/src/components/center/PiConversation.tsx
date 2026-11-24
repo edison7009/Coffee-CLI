@@ -20,7 +20,8 @@ import { useConversationMenu } from '../../lib/use-conversation-menu';
 import { CollapsibleUserMessage, ConversationNavigation, MessageCopyButton, type ConversationNavigationItem } from './ConversationControls';
 import { ClaudeThinking, ClaudeTool, ToolGroup } from './ClaudeConversation';
 import { toolRuns } from '../../lib/tool-runs';
-import { PiMark, PiWelcomeLogo } from './PiWelcomeLogo';
+import { PiMark } from './PiWelcomeLogo';
+import { ToolSwarm } from './ToolSwarm';
 import './ConversationView.css';
 import './Gambit.css';
 import './ClaudeConversation.css';
@@ -195,7 +196,7 @@ export function PiConversation({ sessionId, cwd, resumeToken, isActive, isVisibl
         {noModel && <div className="claude-session-error" role="alert">{t('pi.no_model')}</div>}
         {s.error && !noModel && !directoryIssue && <div className="claude-session-error" role="alert">{startErrorText(s.error, 'Pi', t)}</div>}
         {empty && <div className="claude-empty">
-          <PiWelcomeLogo isActive={isVisible} />
+          <ToolSwarm tool="pi" isActive={isVisible} />
           <WelcomeGreeting />
           {(creatingWorktree || restoring) && <WelcomeRestoring labelClassName="claude-working-word" mark={<PiMark />} label={creatingWorktree ? t('gambit.worktree_creating') : undefined} />}
           <WelcomeSessionMeta cwd={cwd} model={s.model?.name ?? ''} />

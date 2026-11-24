@@ -1,0 +1,2 @@
+/* Shared welcome animation: a star nebula that gathers into the tool's icon. */
+.tool-swarm { display:block; width:168px; height:168px; margin:-24px auto -4px; color:var(--text-1); pointer-events:none; }

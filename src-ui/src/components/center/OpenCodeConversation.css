@@ -1,6 +1,3 @@
-/* OpenCode's block wordmark, in terminal cells, where the other welcome marks sit. */
-.opencode-welcome-icon { display:flex; align-items:flex-end; justify-content:center; height:100px; margin:0 auto 20px; }
-.opencode-welcome-logo { display:block; touch-action:none; user-select:none; }
 .opencode-files { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .opencode-files span { padding:1px 8px; color:var(--text-2); background:var(--bg-hover); border-radius:var(--shape-radius-btn,6px); font-size:12px; }
 .opencode-activity-mark { width:15px; height:15px; flex:none; }

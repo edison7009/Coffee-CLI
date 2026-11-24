@@ -372,62 +372,20 @@ try {
   assert.ok(await page.locator('.claude-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth),'a long model does not overflow a narrow split pane');
   await page.setViewportSize({width:1100,height:800});
   await page.evaluate(resolvedModel=>window.setSession({models:[{value:'selected',resolvedModel}]}),resolvedModel);
-  const welcome = page.locator('.claude-empty-icon'), mascot = welcome.locator('video');
-  await page.waitForFunction(() => { const video = document.querySelector('.claude-empty-icon video'); return video?.readyState >= 2 && !video.paused; });
-  assert.ok(await mascot.evaluate(video => video.muted && video.loop && video.playsInline), 'welcome mascot plays silently and loops inline');
-  const laptopPixels = await mascot.evaluate(async video => {
-    video.pause(); await new Promise(resolve => { video.addEventListener('seeked', resolve, { once: true }); video.currentTime = 1.5; });
-    const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d'); ctx.drawImage(video, 0, 0); const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let gray = 0, transparent = 0;
-    for (let i = 0; i < pixels.length; i += 4) { if (pixels[i + 3] === 0) transparent++; else if (pixels[i + 3] > 240 && pixels[i] > 80 && pixels[i] < 180 && Math.abs(pixels[i] - pixels[i + 1]) < 6 && Math.abs(pixels[i] - pixels[i + 2]) < 6) gray++; }
-    await video.play(); return { gray, transparent };
-  });
-  assert.ok(laptopPixels.gray > 20, 'desktop laptop stays gray and visible on a dark background');
-  assert.ok(laptopPixels.transparent > 1000, 'desktop laptop retains its transparent background');
-  const bounds = await welcome.boundingBox(), frames = new Set();
-  for (let frame = 0; frame < 4; frame++) {
-    await page.waitForTimeout(350);
-    frames.add(await mascot.evaluate(video => { const canvas = document.createElement('canvas'); canvas.width = 136; canvas.height = 100; const ctx = canvas.getContext('2d'); ctx.drawImage(video, -10, -8, 160, 160 * video.videoHeight / video.videoWidth); return canvas.toDataURL(); }));
-    assert.deepEqual(await welcome.boundingBox(), bounds, 'mascot animation never shifts the welcome layout');
-  }
-  assert.ok(frames.size > 1, 'decoded mascot frames actually animate');
-  await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(150);
-  assert.equal(await mascot.evaluate(video => video.paused), true);
-  assert.equal(await welcome.locator('.claude-empty-still').evaluate(el => getComputedStyle(el).visibility), 'visible');
-  await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.waitForTimeout(150);
-  assert.equal(await mascot.evaluate(video => video.paused), false);
-  await page.evaluate(() => window.setActive(false)); await page.waitForTimeout(100);
-  assert.equal(await mascot.evaluate(video => video.paused), true, 'inactive tabs pause the welcome animation');
-  await page.evaluate(() => window.setActive(true)); await page.waitForTimeout(150);
-  assert.equal(await mascot.evaluate(video => video.paused), false);
-  await mascot.dispatchEvent('error');
-  assert.equal(await mascot.count(), 0);
-  assert.equal(await welcome.locator('.claude-empty-still').evaluate(el => getComputedStyle(el).visibility), 'visible', 'unsupported video falls back to the existing static icon');
-  for (const [index, id] of ['laptop', 'waving', 'jumping', 'walking', 'lurking', 'racing', 'cloud'].entries()) {
-    await page.evaluate(() => window.setSession({ messages: [{ id: 'hide-welcome', role: 'user', content: 'A new turn', timestamp: Date.now() }] }));
-    await page.waitForFunction(() => !document.querySelector('.claude-empty-icon'));
-    await page.evaluate(index => { Math.random = () => (index + .5) / 7; window.setSession({ messages: [] }); }, index);
-    await page.waitForFunction(() => document.querySelector('.claude-empty-icon')?.classList.contains('is-animated'));
-    assert.equal(await welcome.getAttribute('data-welcome-icon'), id, 'every bundled animation can be selected');
-    const asset = await welcome.locator('video,img').getAttribute('src');
-    assert.ok(asset.startsWith('data:'), 'test fixture loads the bundled asset without a remote request');
-    await page.evaluate(() => { Math.random = () => .99; window.setSession({ contextTokens: 42 }); });
-    assert.equal(await welcome.getAttribute('data-welcome-icon'), id, 'rerenders do not reroll the current animation');
-    if (id !== 'laptop') {
-      await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForTimeout(100);
-      assert.equal(await welcome.locator('img').count(), 0, 'reduced motion unmounts animated GIFs');
-      await page.emulateMedia({ reducedMotion: 'no-preference' });
-      await page.waitForFunction(() => document.querySelector('.claude-empty-icon img')?.naturalWidth > 0);
-      await page.evaluate(() => window.setActive(false)); await page.waitForTimeout(100);
-      assert.equal(await welcome.locator('img').count(), 0, 'inactive tabs stop GIF playback');
-      await page.evaluate(() => window.setActive(true));
-      await page.waitForFunction(() => document.querySelector('.claude-empty-icon img')?.naturalWidth > 0);
-      assert.equal(await welcome.getAttribute('data-welcome-icon'), id);
-    }
-  }
+  const swarm = page.locator('canvas.tool-swarm');
+  await swarm.waitFor();
+  assert.equal(await swarm.getAttribute('data-tool'), 'claude', 'the welcome swarm forms the Claude icon');
+  assert.equal(await swarm.getAttribute('data-paused'), null, 'the welcome swarm plays in an active tab');
+  await page.waitForFunction(() => { const c = document.querySelector('canvas.tool-swarm'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 200; });
+  const bounds = await swarm.boundingBox(), frames = new Set();
+  for (let frame = 0; frame < 3; frame++) { await page.waitForTimeout(300); frames.add(await swarm.evaluate(c => c.toDataURL())); assert.deepEqual(await swarm.boundingBox(), bounds, 'the swarm never shifts the welcome layout'); }
+  assert.ok(frames.size > 1, 'the swarm actually animates');
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await page.waitForFunction(() => document.querySelector('canvas.tool-swarm')?.dataset.paused === 'true');
+  await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.waitForFunction(() => !document.querySelector('canvas.tool-swarm')?.dataset.paused);
+  await page.evaluate(() => window.setActive(false)); await page.waitForFunction(() => document.querySelector('canvas.tool-swarm')?.dataset.paused === 'true');
+  await page.evaluate(() => window.setActive(true)); await page.waitForFunction(() => !document.querySelector('canvas.tool-swarm')?.dataset.paused);
   await page.evaluate(() => { Math.random = window.originalRandom; });
-  console.log('ok welcome animation frames, stable layout, reduced motion, inactive tab pause and static fallback');
+  console.log('ok welcome swarm animates, keeps the layout still, and pauses for reduced motion and inactive tabs');
   await page.clock.setFixedTime(new Date(2026,9,24,12,0));await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.waitForFunction(()=>document.querySelector('.claude-empty-title')?.textContent==='Good afternoon, TEST-DESKTOP');assert.equal(await page.locator('.claude-empty-title').getAttribute('lang'),'en');
   console.log('ok Claude shares the English time greeting and native computer name');
 

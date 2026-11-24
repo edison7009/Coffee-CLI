@@ -84,7 +84,7 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
   await page.waitForFunction(() => window.currentState?.ready);
   assert.equal(await page.locator('.claude-empty-model').textContent(), 'DeepSeek Flash', 'welcome shows the session model');
-  assert.equal(await page.locator('.opencode-welcome-icon canvas').count(), 1, 'the welcome shows the OpenCode wordmark');
+  assert.equal(await page.locator('canvas.tool-swarm[data-tool="opencode"]').count(), 1, 'the welcome swarm forms the OpenCode icon');
   await shot('welcome');
 
   // Composer: model, variant and agent go to the session's own endpoints.
