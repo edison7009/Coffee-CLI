@@ -23,6 +23,8 @@ export interface SessionCtxMenuState {
   workerParent?: SavedSession;
   x: number;
   y: number;
+  /** `x` is where the menu's right edge goes (a menu opened from a control's end, like the title's chevron). */
+  alignRight?: boolean;
 }
 
 const ICON_PROPS = {
@@ -78,7 +80,7 @@ export function SessionContextMenu({ menu, onClose, onRename, onDelete, onOpenSp
   const MENU_WIDTH = 220;
   const MENU_HEIGHT = 290;
   const isBottomOverflow = menu.y + MENU_HEIGHT > window.innerHeight;
-  const isRightOverflow = menu.x + MENU_WIDTH > window.innerWidth;
+  const isRightOverflow = menu.alignRight ? menu.x - MENU_WIDTH >= 0 : menu.x + MENU_WIDTH > window.innerWidth;
   const style: React.CSSProperties = {
     position: 'fixed',
     ...(isBottomOverflow ? { bottom: Math.max(0, window.innerHeight - menu.y) } : { top: menu.y }),

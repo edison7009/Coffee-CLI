@@ -45,7 +45,7 @@ export function WorkTitle({ tab }: { tab: TerminalSession }) {
     cancelled.current = false;
     setEditing(null);
   };
-  const toggleMenu = (event: React.MouseEvent<HTMLElement>) => { const r = event.currentTarget.getBoundingClientRect(); setMenu(menu ? null : { session: saved, x: r.left, y: r.bottom + 4 }); };
+  const toggleMenu = (event: React.MouseEvent<HTMLElement>) => { const r = event.currentTarget.getBoundingClientRect(); setMenu(menu ? null : { session: saved, x: r.right, y: r.bottom + 4, alignRight: true }); };
   return <div className="titlebar-work-title">
     {editing !== null ? <>
       {folder && <span className="titlebar-work-folder">{folder}</span>}
