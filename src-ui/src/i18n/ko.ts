@@ -876,6 +876,7 @@ export const ko = {
   "codex.reconnect": "Codex 다시 연결",
   "dsh.reconnect": "DeepSeek Harness 다시 연결",
   "pi.reconnect": "Pi 다시 연결",
+  "antigravity.reconnect": "Antigravity 다시 연결",
   "pi.no_model": "Pi에 아직 모델이 없습니다. 터미널 탭에서 Pi를 한 번 열어 /login을 실행하거나 공급자 API 키를 설정한 뒤 다시 연결하세요.",
   "pi.compacted": "대화를 압축했습니다",
   "pi.retrying": "다시 시도 중 ({attempt}/{max})",

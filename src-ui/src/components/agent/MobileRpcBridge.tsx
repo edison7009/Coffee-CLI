@@ -32,7 +32,7 @@ export function MobileRpcBridge() {
   // Browsers re-read the list when what it shows changes; bursts (restoring tabs) collapse into one notice.
   const { state, dispatch } = useAppState();
   const listed = useMemo(() => inTabOrder(state.terminals, state.tabOrder).filter(tab => tab.tool && !tab.isHidden)
-    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', tab.claudeMode, tab.codexMode, tab.opencodeMode, tab.piMode, tab.worktree && JSON.stringify(tab.worktree), tab.parentId].map(value => value ?? '').join('\u0000')).join('\u0001'), [state.terminals, state.tabOrder]);
+    .map(tab => [tab.id, tab.tool, tab.pinnedTitle || tab.toolTitle || '', tab.folderPath ?? '', tab.agentStatus ?? '', tab.claudeMode, tab.codexMode, tab.opencodeMode, tab.piMode, tab.antigravityMode, tab.worktree && JSON.stringify(tab.worktree), tab.parentId].map(value => value ?? '').join('\u0000')).join('\u0001'), [state.terminals, state.tabOrder]);
   const firstList = useRef(true);
   useEffect(() => {
     if (!isTauri) return;
@@ -84,7 +84,7 @@ export function MobileRpcBridge() {
         let next: Action = action.type === 'SET_GAMBIT_DRAFT' ? { ...action, fromOtherScreen: true } : action;
         // Choosing a tool on the browser's blank launch page opens a new desktop tab.
         if (action.type === 'SET_TERMINAL_TOOL' && !stateRef.current.terminals.some(tab => tab.id === action.id)) {
-          next = { type: 'LAUNCH_TERMINAL_TOOL', id: action.id, tool: action.tool, cwd: action.cwd, toolData: action.toolData, resumeToken: action.resumeToken, claudeMode: action.claudeMode, codexMode: action.codexMode, opencodeMode: action.opencodeMode, piMode: action.piMode };
+          next = { type: 'LAUNCH_TERMINAL_TOOL', id: action.id, tool: action.tool, cwd: action.cwd, toolData: action.toolData, resumeToken: action.resumeToken, claudeMode: action.claudeMode, codexMode: action.codexMode, opencodeMode: action.opencodeMode, piMode: action.piMode , antigravityMode: action.antigravityMode };
         }
         if (next.type === 'LAUNCH_TERMINAL_TOOL') next = { ...next, background: true };
         dispatchRef.current(next);
@@ -114,7 +114,7 @@ export function MobileRpcBridge() {
         // The desktop's tabs in its order, with what a browser needs to show them the same way.
         return { sessions: inTabOrder(stateRef.current.terminals, stateRef.current.tabOrder).filter(tab => tab.tool && !tab.isHidden).map(tab => ({
           id: tab.id, tool: tab.tool,
-          claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode, piMode: tab.piMode, worktree: tab.worktree, parentId: tab.parentId,
+          claudeMode: tab.claudeMode, codexMode: tab.codexMode, opencodeMode: tab.opencodeMode, piMode: tab.piMode, antigravityMode: tab.antigravityMode, worktree: tab.worktree, parentId: tab.parentId,
           title: tab.pinnedTitle || tab.toolTitle || '', cwd: tab.folderPath ?? '',
           status: tab.agentStatus ?? null,
         })) };

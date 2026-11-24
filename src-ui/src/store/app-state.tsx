@@ -135,6 +135,7 @@ export interface TerminalSession {
   codexMode?: ClaudeMode;
   opencodeMode?: ClaudeMode;
   piMode?: ClaudeMode;
+  antigravityMode?: ClaudeMode;
   folderPath: string | null;
   /// Live terminal title set by the tool via OSC 0/2 (e.g. Claude Code's
   /// conversation summary). When set, the tab shows this instead of the cwd
@@ -178,7 +179,7 @@ export function pickMirroredSettings(state: AppState): MirroredSettings {
 export const SETTINGS_ACTIONS = new Set<Action['type']>(['SET_LAYOUT_MODE', 'SET_THEME', 'SET_THEME_MODE', 'SET_SHAPE', 'SET_ICON_THEME', 'SET_LANG', 'SET_BG', 'CLEAR_BG', 'SET_WALLPAPER_OPACITY', 'SET_TERM_SCHEME', 'SET_TERM_FONT', 'SET_DEFAULT_SHELL', 'SET_GAMBIT_ENTER_TO_SEND', 'SET_HOTKEY_SCHEME', 'SET_TITLEBAR_TOGGLE_DISPLAY', 'SET_PRE_INPUT_BUTTON', 'SET_DIFF_MODE']);
 
 /** A desktop terminal a browser mirrors (see SYNC_MIRROR_TABS). */
-export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string; status?: AgentStatus }
+export interface MirrorTab { id: string; tool: ToolType; cwd: string | null; title: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; antigravityMode?: ClaudeMode; worktree?: TerminalSession['worktree']; parentId?: string; status?: AgentStatus }
 
 // ─── State Shape ─────────────────────────────────────────────────────────────
 
@@ -336,13 +337,13 @@ export type Action =
   | { type: 'RESIZE_SESSION_SPLIT'; path: string; ratio: number }
   | { type: 'SYNC_MIRROR_TABS'; tabs: MirrorTab[] }
   | { type: 'MIRROR_SETTINGS'; settings: Partial<MirroredSettings> }
-  | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; parentId?: string; background?: boolean }
+  | { type: 'LAUNCH_TERMINAL_TOOL'; id: string; tool: ToolType; cwd?: string; toolData?: string; resumeToken?: string; strictCwd?: boolean; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; antigravityMode?: ClaudeMode; parentId?: string; background?: boolean }
   | { type: 'REMOVE_TERMINAL'; id: string }
   | { type: 'CLOSE_TERMINAL_GROUP'; id: string; childIds: string[]; keepChildren: boolean }
   | { type: 'RESTORE_WORKER_SESSION'; parent?: TerminalSession; child: TerminalSession }
   | { type: 'REORDER_TAB'; tabId: string; beforeId: string | null }
   | { type: 'SET_ACTIVE_TERMINAL'; id: string | null }
-  | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode }
+  | { type: 'SET_TERMINAL_TOOL'; id: string; tool: ToolType; toolData?: string; resumeToken?: string; claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; antigravityMode?: ClaudeMode }
   | { type: 'SET_TERMINAL_HIDDEN'; id: string; isHidden: boolean }
   | { type: 'RESTART_TERMINAL'; id: string; newId: string; fresh?: boolean }
   | { type: 'SET_TERMINAL_WORKTREE'; id: string; newId: string; cwd: string; worktree?: import('../lib/worktree').Worktree; origin?: string }
@@ -509,11 +510,11 @@ function reducer(state: AppState, action: Action): AppState {
       const wanted = new Map(action.tabs.map(tab => [tab.id, tab]));
       const fromDesktop = (desk: MirrorTab, base?: TerminalSession): TerminalSession => ({
         ...base, id: desk.id, tool: desk.tool, folderPath: desk.cwd, toolTitle: desk.title || base?.toolTitle, mirror: true,
-        claudeMode: desk.claudeMode, codexMode: desk.codexMode, opencodeMode: desk.opencodeMode, piMode: desk.piMode, worktree: desk.worktree, parentId: desk.parentId,
+        claudeMode: desk.claudeMode, codexMode: desk.codexMode, opencodeMode: desk.opencodeMode, piMode: desk.piMode, antigravityMode: desk.antigravityMode, worktree: desk.worktree, parentId: desk.parentId,
         agentStatus: desk.status,
       });
       const same = (tab: TerminalSession, desk: MirrorTab) => tab.mirror && tab.tool === desk.tool && tab.folderPath === desk.cwd && (desk.title || tab.toolTitle) === tab.toolTitle
-        && tab.claudeMode === desk.claudeMode && tab.codexMode === desk.codexMode && tab.opencodeMode === desk.opencodeMode && tab.piMode === desk.piMode
+        && tab.claudeMode === desk.claudeMode && tab.codexMode === desk.codexMode && tab.opencodeMode === desk.opencodeMode && tab.piMode === desk.piMode && tab.antigravityMode === desk.antigravityMode
         && tab.worktree?.path === desk.worktree?.path && tab.parentId === desk.parentId && tab.agentStatus === desk.status;
       // A blank launch page whose tool was just started on the desktop becomes that desktop tab.
       const kept = state.terminals.filter(tab => !tab.mirror || wanted.has(tab.id)).map(tab => {
@@ -552,6 +553,7 @@ function reducer(state: AppState, action: Action): AppState {
         codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined,
         opencodeMode: action.tool === 'opencode' ? action.opencodeMode ?? 'terminal' : undefined,
         piMode: action.tool === 'pi' ? action.piMode ?? 'terminal' : undefined,
+        antigravityMode: action.tool === 'antigravity' ? action.antigravityMode ?? 'terminal' : undefined,
         toolTitle: undefined, agentStatus: undefined, startedAt: Date.now(),
       };
       if (action.cwd) {
@@ -634,7 +636,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_TERMINAL_TOOL':
       return {
         ...state,
-        terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool, claudeMode: action.tool === 'claude' ? action.claudeMode ?? 'conversation' : undefined, codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined, opencodeMode: action.tool === 'opencode' ? action.opencodeMode ?? 'terminal' : undefined, piMode: action.tool === 'pi' ? action.piMode ?? 'terminal' : undefined, toolData: action.toolData, resumeToken: action.resumeToken, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now() } : t)
+        terminals: state.terminals.map(t => t.id === action.id ? { ...t, tool: action.tool, claudeMode: action.tool === 'claude' ? action.claudeMode ?? 'conversation' : undefined, codexMode: action.tool === 'codex' ? action.codexMode ?? 'terminal' : undefined, opencodeMode: action.tool === 'opencode' ? action.opencodeMode ?? 'terminal' : undefined, piMode: action.tool === 'pi' ? action.piMode ?? 'terminal' : undefined, antigravityMode: action.tool === 'antigravity' ? action.antigravityMode ?? 'terminal' : undefined, toolData: action.toolData, resumeToken: action.resumeToken, toolTitle: undefined, agentStatus: undefined, startedAt: Date.now() } : t)
       };
     case 'SET_TERMINAL_HIDDEN':
       return {

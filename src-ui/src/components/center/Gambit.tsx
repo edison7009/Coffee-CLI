@@ -1,3 +1,4 @@
+import { AntigravityComposerControls } from './AntigravityComposerControls';
 // Gambit.tsx — docked compose panel anchored at the bottom of the center panel.
 //
 // Named for the chess "gambit": a calculated opening move after careful thought.
@@ -62,6 +63,7 @@ interface GambitProps {
   opencode?: boolean;
   /** Pi desktop conversation. */
   pi?: boolean;
+  antigravity?: boolean;
   /** Local file paths are meaningful to this target (false for SSH tabs). */
   attachable?: boolean;
   onCancel?: () => void;
@@ -204,6 +206,7 @@ function GambitImpl({
   dsh = false,
   opencode = false,
   pi = false,
+  antigravity = false,
   attachable = false,
   onCancel,
   sendFailedHint,
@@ -223,13 +226,13 @@ function GambitImpl({
 }: GambitProps) {
   const t = useT();
   // Desktop conversations own their composer controls and send prompts verbatim.
-  const desktop = claude || codex || dsh || opencode || pi;
+  const desktop = claude || codex || dsh || opencode || pi || antigravity;
   // 纯净: the one-line box for every conversation, and for the new-conversation page before a tool is picked.
   // 方案 A's card: every desktop conversation in both layouts, and Clear's new conversation before a tool is picked.
   const workLayout = useAppState().state.layoutMode === 'work';
   const cardShell = !!desktop || (workLayout && !tool);
   // Every desktop conversation accepts prompts during a running turn.
-  const steerable = claude || codex || dsh || opencode || pi;
+  const steerable = claude || codex || dsh || opencode || pi || antigravity;
   const usage = useUsageQuota(sessionId, tool, cwd, claude ? 'claude' : codex ? 'codex' : dsh ? 'dsh' : null);
   // A selected dictation source can fill any tool's composer.
   const voiceTool = claude ? 'claude' : codex ? 'codex' : tool;
@@ -822,7 +825,7 @@ function GambitImpl({
       setSendEmpty(true);
       return;
     }
-    if ((codex || dsh || opencode || pi) && codexSubmitHandler.current?.(text)) return;
+    if ((codex || dsh || opencode || pi || antigravity) && codexSubmitHandler.current?.(text)) return;
     const body = desktop ? text : wrapImagePathsForSend(text);
     if (sendingRef.current) return;
     sendingRef.current = true;
@@ -841,7 +844,7 @@ function GambitImpl({
     // the newest entry (which is the one we just pushed).
     historyCursorRef.current = null;
     if (latestDraftRef.current === draft) onDraftChange('');
-  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, pi, desktop, sessionId]);
+  }, [draft, onSend, onDraftChange, running, steerable, codex, dsh, opencode, pi, antigravity, desktop, sessionId]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME composition in progress — let the IME keep Enter for confirming
@@ -1068,6 +1071,7 @@ function GambitImpl({
 
         {opencode && <OpenCodeComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</OpenCodeComposerControls>}
         {pi && <PiComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</PiComposerControls>}
+        {antigravity && <AntigravityComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</AntigravityComposerControls>}
         {dsh && <DshComposerControls key={sessionId} sessionId={sessionId} draft={draft} onDraftChange={onDraftChange} keyHandler={claudeKeyHandler} submitHandler={codexSubmitHandler} quota={usageMeter}>{capabilitiesStatus}</DshComposerControls>}
         </span>
         {!desktop && attachable && !card && <button type="button" className="gambit-attach" aria-label={t('claude.attach')} onClick={() => { void attachFiles(); }}><AttachIcon /></button>}

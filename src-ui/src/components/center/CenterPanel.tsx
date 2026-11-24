@@ -1,3 +1,4 @@
+import { AntigravityConversation } from './AntigravityConversation';
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useSyncExternalStore } from 'react';
 import { InstallChip } from './InstallChip';
 import { AutomationsPage } from './AutomationsPage';
@@ -33,7 +34,7 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { DiffPanel } from '../right/DiffPanel';
 import { getTabOrder, supportsAgentStatus, useAppState, type ClaudeMode, type ToolType } from '../../store/app-state';
 import { isFrostShape } from '../../lib/personalization';
-import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation } from '../../lib/chat-tools';
+import { isClaudeConversation, isCodexConversation, isDshConversation, isOpenCodeConversation, isPiConversation, isAntigravityConversation } from '../../lib/chat-tools';
 
 /** Each tool's last project folder; a damaged entry is dropped rather than allowed to break the launch page. */
 function readLastFolders(): Record<string, string> {
@@ -674,6 +675,13 @@ export function CenterPanel() {
     setPiLaunchMode(mode);
     try { localStorage.setItem('coffee:pi-launch-mode', mode); } catch { /* optional preference */ }
   };
+  const [antigravityLaunchMode, setAntigravityLaunchMode] = useState<ClaudeMode>(() => {
+    try { return localStorage.getItem('coffee:antigravity-launch-mode') === 'terminal' ? 'terminal' : 'conversation'; } catch { return 'conversation'; }
+  });
+  const changeAntigravityLaunchMode = (mode: ClaudeMode) => {
+    setAntigravityLaunchMode(mode);
+    try { localStorage.setItem('coffee:antigravity-launch-mode', mode); } catch { /* optional preference */ }
+  };
   // Shared recent project folders, most recently used first.
   const recentFolders = useSyncExternalStore(subscribeProjectFolders, getProjectFolders, getProjectFolders);
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; tool: ToolType } | null>(null);
@@ -688,6 +696,7 @@ export function CenterPanel() {
       onSharedStorage('coffee:codex-launch-mode', () => setCodexLaunchMode(mode('codex'))),
       onSharedStorage('coffee:opencode-launch-mode', () => setOpencodeLaunchMode(mode('opencode'))),
       onSharedStorage('coffee:pi-launch-mode', () => setPiLaunchMode(mode('pi'))),
+      onSharedStorage('coffee:antigravity-launch-mode', () => setAntigravityLaunchMode(mode('antigravity'))),
     ];
     return () => stops.forEach(stop => stop());
   }, []);
@@ -1140,7 +1149,7 @@ export function CenterPanel() {
       }
       // 工作式 never starts a terminal: every tool opens as its desktop conversation.
       const work = state.layoutMode === 'work';
-      dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? (work ? 'conversation' : claudeLaunchMode) : undefined, codexMode: tool === 'codex' ? (work ? 'conversation' : codexLaunchMode) : undefined, opencodeMode: tool === 'opencode' ? (work ? 'conversation' : opencodeLaunchMode) : undefined, piMode: tool === 'pi' ? (work ? 'conversation' : piLaunchMode) : undefined });
+      dispatch({ type: 'LAUNCH_TERMINAL_TOOL', id: activeTerminalId, tool, toolData, cwd, claudeMode: tool === 'claude' ? (work ? 'conversation' : claudeLaunchMode) : undefined, codexMode: tool === 'codex' ? (work ? 'conversation' : codexLaunchMode) : undefined, opencodeMode: tool === 'opencode' ? (work ? 'conversation' : opencodeLaunchMode) : undefined, piMode: tool === 'pi' ? (work ? 'conversation' : piLaunchMode) : undefined, antigravityMode: tool === 'antigravity' ? (work ? 'conversation' : antigravityLaunchMode) : undefined });
     }
   };
 
@@ -1489,6 +1498,8 @@ export function CenterPanel() {
           >
             {isDshConversation(t) ? (
               <DshConversation key={`dsh-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
+            ) : isAntigravityConversation(t) ? (
+              <AntigravityConversation key={`antigravity-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
             ) : isPiConversation(t) ? (
               <PiConversation key={`pi-${t.id}-${t.restartKey ?? 0}`} sessionId={t.id} cwd={t.folderPath} resumeToken={t.resumeToken} isActive={t.id === activeTerminalId && contentActive} isVisible={contentActive && (splitVisible ? splitIds.includes(t.id) : t.id === activeTerminalId)} hasBg={hasBg} bgUrl={bgUrl} bgType={bgType} />
             ) : isOpenCodeConversation(t) ? (
@@ -1666,7 +1677,7 @@ export function CenterPanel() {
                                     </button>}
                                   </> : <div className="launchpad-card-side">
                                     {tool.requiresCwd && <button type="button" className="launchpad-folder launchpad-folder--text" disabled={disabled} onClick={event => { event.stopPropagation(); openToolFolderMenu(tool.key, event.currentTarget); }}>{t('launchpad.choose_folder')}</button>}
-                                    {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
+                                    {tool.type === 'ai-cli' && <LaunchModeControl value={tool.key === 'claude' ? claudeLaunchMode : tool.key === 'codex' ? codexLaunchMode : tool.key === 'opencode' ? opencodeLaunchMode : tool.key === 'antigravity' ? antigravityLaunchMode : tool.key === 'pi' ? piLaunchMode : tool.key === 'dsh' ? 'conversation' : 'terminal'} disabled={disabled} label={tool.key === 'codex' ? 'Codex' : tool.key === 'opencode' ? 'OpenCode' : tool.key === 'antigravity' ? 'Antigravity' : tool.key === 'pi' ? 'Pi' : tool.key === 'dsh' ? 'DeepSeek Harness' : undefined} modes={tool.key === 'dsh' ? ['conversation'] : undefined} onChange={tool.key === 'claude' ? changeClaudeLaunchMode : tool.key === 'codex' ? changeCodexLaunchMode : tool.key === 'opencode' ? changeOpencodeLaunchMode : tool.key === 'antigravity' ? changeAntigravityLaunchMode : tool.key === 'pi' ? changePiLaunchMode : tool.key === 'dsh' ? () => {} : undefined} />}
                                   </div>}
                                 </div>
                               </div>

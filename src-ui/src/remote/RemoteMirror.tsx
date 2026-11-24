@@ -9,7 +9,7 @@ import { onRemoteEvent, onRemoteStatus, remoteRequest, remoteStatus } from './br
 
 interface ListedSession {
   id: string; tool: ToolType; title: string; cwd: string;
-  claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode;
+  claudeMode?: ClaudeMode; codexMode?: ClaudeMode; opencodeMode?: ClaudeMode; piMode?: ClaudeMode; antigravityMode?: ClaudeMode;
   worktree?: TerminalSession['worktree']; parentId?: string; status?: AgentStatus | null;
 }
 
@@ -28,8 +28,8 @@ export function RemoteMirror() {
       try {
         const { sessions } = await remoteRequest<{ sessions: ListedSession[] }>('session.list');
         if (disposed) return;
-        const tabs: MirrorTab[] = sessions.map(({ id, tool, title, cwd, claudeMode, codexMode, opencodeMode, piMode, worktree, parentId, status }) =>
-          ({ id, tool, title, cwd: cwd || null, claudeMode, codexMode, opencodeMode, piMode, worktree, parentId, status: status ?? undefined }));
+        const tabs: MirrorTab[] = sessions.map(({ id, tool, title, cwd, claudeMode, codexMode, opencodeMode, piMode, antigravityMode, worktree, parentId, status }) =>
+          ({ id, tool, title, cwd: cwd || null, claudeMode, codexMode, opencodeMode, piMode, antigravityMode, worktree, parentId, status: status ?? undefined }));
         dispatch({ type: 'SYNC_MIRROR_TABS', tabs });
       } catch { /* Offline: the next connection refreshes. */ }
       finally {

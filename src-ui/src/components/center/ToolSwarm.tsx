@@ -3,6 +3,7 @@ import CLAUDE_SVG from '../../icons-inline/claude.svg?raw';
 import CODEX_SVG from '../../icons-inline/codex.svg?raw';
 import DSH_SVG from '../../icons-inline/deepseek-color.svg?raw';
 import OPENCODE_SVG from '../../icons-inline/opencode-mark.svg?raw';
+import ANTIGRAVITY_SVG from '../../icons-inline/antigravity.svg?raw';
 import PI_SVG from '../../icons-inline/pi.svg?raw';
 import './ToolSwarm.css';
 
@@ -16,7 +17,7 @@ import './ToolSwarm.css';
  *  1.6, 2.1 or 2.7, and there are 1,800 of them. Colour follows the demo's render pipeline: each star
  *  is the base colour times 1.6–2.86 (HDR, brighter than white), tonemapped back to the screen, then a
  *  bloom pass adds a soft glow of the base colour around and between the stars. */
-export type SwarmTool = 'claude' | 'codex' | 'dsh' | 'opencode' | 'pi';
+export type SwarmTool = 'claude' | 'codex' | 'dsh' | 'opencode' | 'pi' | 'antigravity';
 
 // `null` = a one-colour mark in the theme's text colour (light on dark, dark on light).
 const ICONS: Record<SwarmTool, { svg: string; color: string | null; own?: boolean }> = {
@@ -24,6 +25,7 @@ const ICONS: Record<SwarmTool, { svg: string; color: string | null; own?: boolea
   codex: { svg: CODEX_SVG, color: null },
   dsh: { svg: DSH_SVG, color: null, own: true },
   opencode: { svg: OPENCODE_SVG, color: null },
+  antigravity: { svg: ANTIGRAVITY_SVG, color: null, own: true },
   pi: { svg: PI_SVG, color: null, own: true },
 };
 

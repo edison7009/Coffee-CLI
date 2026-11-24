@@ -879,6 +879,7 @@ export const en = {
   "codex.reconnect": "Reconnect Codex",
   "dsh.reconnect": "Reconnect DeepSeek Harness",
   "pi.reconnect": "Reconnect Pi",
+  "antigravity.reconnect": "Reconnect Antigravity",
   "pi.no_model": "Pi has no model yet. Open Pi in a terminal tab once and run /login, or set your provider's API key, then reconnect.",
   "pi.compacted": "Conversation compacted",
   "pi.retrying": "Retrying ({attempt}/{max})",

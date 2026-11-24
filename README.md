@@ -52,16 +52,18 @@ Coffee CLI can launch **any** command-line agent — but the ones below get deep
 
 | Tier | What you get | CLIs |
 |---|---|---|
-| **T1** | **Desktop mode + Terminal mode · Usage statistics** · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **DeepSeek Harness** · **Codex CLI** · **OpenCode** · **Pi** |
+| **T1** | **Desktop mode + Terminal mode · Usage statistics** · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | **Claude Code** · **DeepSeek Harness** · **Codex CLI** · **OpenCode** · **Pi** · **Antigravity CLI** |
 | **T2** | Native terminal · History · Heatmap · Changes · Brand icon · One-click launch · Custom launch args | Kimi Code · mimocode · Grok Build · OpenClaw · Hermes Agent · Qwen Code · Kilo Code · Oh-My-Pi · CodeBuddy |
-| **T3** | Brand icon · One-click launch | Crush · Aider · Goose · Copilot CLI · Cursor · Cline · Antigravity · Muse Code |
+| **T3** | Brand icon · One-click launch | Crush · Aider · Goose · Copilot CLI · Cursor · Cline · Muse Code |
 | **T4** | Open a terminal tab and type the command to launch | any other CLI |
 
-*Desktop mode and usage statistics are currently available for Claude Code, DeepSeek Harness, Codex CLI, OpenCode, and Pi. Other tools stay in their native terminal UI even when Coffee CLI can read their history.*
+*Desktop mode and usage statistics are currently available for Claude Code, DeepSeek Harness, Codex CLI, OpenCode, Pi, and Antigravity CLI. Other tools stay in their native terminal UI even when Coffee CLI can read their history.*
 
 *T1 and T2 CLIs ship today; T3 integrations are rolling in.*
 
 Muse Code launches `muse` in your selected directory. Its session history and heatmap are not integrated into Coffee CLI yet.
+
+Antigravity IDE mode uses the official `agy acp` interface for model, thinking-level and permission controls, streamed tool calls, cancellation and history restoration. See [Google's ACP documentation](https://antigravity.google/docs/ide/extensions/acp/).
 
 ### Desktop & Terminal Modes
 
@@ -195,7 +197,7 @@ Coffee CLI 是专为 AI CLI Agent 打造的**原生桌面工作台**，支持 Cl
 
 ### AI CLI 支持级别
 
-**T1 支持桌面式与终端式两种模式，并提供用量统计**，目前包括 **Claude Code、DeepSeek Harness、Codex CLI、OpenCode 和 Pi** 共 5 个。Kimi Code、mimocode、Grok Build 等其他工具保持原生终端界面；可读取历史记录不代表支持桌面式模式。
+**T1 支持桌面式与终端式两种模式，并提供用量统计**，目前包括 **Claude Code、DeepSeek Harness、Codex CLI、OpenCode、Pi 和 Antigravity CLI** 共 6 个。Kimi Code、mimocode、Grok Build 等其他工具保持原生终端界面；可读取历史记录不代表支持桌面式模式。
 
 Muse Code 目前支持在所选目录启动 `muse`，暂未接入 Coffee CLI 的会话记录和热力图。
 

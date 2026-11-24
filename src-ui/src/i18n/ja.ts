@@ -876,6 +876,7 @@ export const ja = {
   "codex.reconnect": "Codex に再接続",
   "dsh.reconnect": "DeepSeek Harness に再接続",
   "pi.reconnect": "Pi に再接続",
+  "antigravity.reconnect": "Antigravity に再接続",
   "pi.no_model": "Pi にはまだモデルがありません。ターミナルタブで Pi を一度開いて /login を実行するか、プロバイダーの API キーを設定してから再接続してください。",
   "pi.compacted": "会話を圧縮しました",
   "pi.retrying": "再試行中（{attempt}/{max}）",

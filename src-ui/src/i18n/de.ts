@@ -873,6 +873,7 @@ export const de = {
   "codex.reconnect": "Codex erneut verbinden",
   "dsh.reconnect": "DeepSeek Harness neu verbinden",
   "pi.reconnect": "Pi neu verbinden",
+  "antigravity.reconnect": "Antigravity neu verbinden",
   "pi.no_model": "Pi hat noch kein Modell. Öffne Pi einmal in einem Terminal-Tab und führe /login aus oder setze den API-Schlüssel deines Anbieters, dann verbinde neu.",
   "pi.compacted": "Unterhaltung komprimiert",
   "pi.retrying": "Neuer Versuch ({attempt}/{max})",

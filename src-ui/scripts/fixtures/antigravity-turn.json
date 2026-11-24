@@ -1,0 +1,213 @@
+{
+  "version": "1.5.16",
+  "session": {
+    "sessionId": "coffee-acp-fixture-session",
+    "models": {
+      "availableModels": [
+        {
+          "modelId": "gemini-3.8-flash-high",
+          "name": "Gemini 3.8 Flash (High)"
+        },
+        {
+          "modelId": "gemini-3.8-flash-medium",
+          "name": "Gemini 3.8 Flash (Medium)"
+        },
+        {
+          "modelId": "gemini-3.8-flash-low",
+          "name": "Gemini 3.8 Flash (Low)"
+        },
+        {
+          "modelId": "claude-sonnet-4-6",
+          "name": "Claude Sonnet 4.6 (Thinking)"
+        },
+        {
+          "modelId": "claude-opus-4-6-thinking",
+          "name": "Claude Opus 4.6 (Thinking)"
+        },
+        {
+          "modelId": "gpt-oss-120b-medium",
+          "name": "GPT-OSS 120B (Medium)"
+        }
+      ],
+      "currentModelId": "gemini-3.8-flash-high"
+    },
+    "modes": {
+      "currentModeId": "default",
+      "availableModes": [
+        {
+          "id": "default",
+          "name": "Default",
+          "description": "Ask before edits and commands, per your permission settings."
+        },
+        {
+          "id": "accept-edits",
+          "name": "Accept edits",
+          "description": "Approve file edits in the workspace without asking."
+        },
+        {
+          "id": "auto",
+          "name": "Auto",
+          "description": "Approve edits and safe commands; ask before irreversible actions."
+        },
+        {
+          "id": "plan",
+          "name": "Plan",
+          "description": "Plan carefully before executing a task."
+        }
+      ]
+    },
+    "configOptions": [
+      {
+        "id": "model",
+        "name": "Model",
+        "category": "model",
+        "type": "select",
+        "currentValue": "gemini-3.8-flash",
+        "options": [
+          {
+            "value": "gemini-3.8-flash",
+            "name": "Gemini 3.8 Flash"
+          },
+          {
+            "value": "claude-sonnet-4-6",
+            "name": "Claude Sonnet 4.6 (Thinking)"
+          },
+          {
+            "value": "claude-opus-4-6-thinking",
+            "name": "Claude Opus 4.6 (Thinking)"
+          },
+          {
+            "value": "gpt-oss-120b-medium",
+            "name": "GPT-OSS 120B (Medium)"
+          }
+        ]
+      },
+      {
+        "id": "thought_level",
+        "name": "Thinking Level",
+        "category": "thought_level",
+        "type": "select",
+        "currentValue": "high",
+        "options": [
+          {
+            "value": "low",
+            "name": "Low"
+          },
+          {
+            "value": "medium",
+            "name": "Medium"
+          },
+          {
+            "value": "high",
+            "name": "High"
+          }
+        ]
+      },
+      {
+        "id": "mode",
+        "name": "Mode",
+        "category": "mode",
+        "type": "select",
+        "currentValue": "default",
+        "options": [
+          {
+            "value": "default",
+            "name": "Default",
+            "description": "Ask before edits and commands, per your permission settings."
+          },
+          {
+            "value": "accept-edits",
+            "name": "Accept edits",
+            "description": "Approve file edits in the workspace without asking."
+          },
+          {
+            "value": "auto",
+            "name": "Auto",
+            "description": "Approve edits and safe commands; ask before irreversible actions."
+          },
+          {
+            "value": "plan",
+            "name": "Plan",
+            "description": "Plan carefully before executing a task."
+          }
+        ]
+      }
+    ]
+  },
+  "events": [
+    {
+      "jsonrpc": "2.0",
+      "method": "session/update",
+      "params": {
+        "sessionId": "coffee-acp-fixture-session",
+        "update": {
+          "sessionUpdate": "usage_update",
+          "used": 0,
+          "size": 1048576
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "session/update",
+      "params": {
+        "sessionId": "coffee-acp-fixture-session",
+        "update": {
+          "sessionUpdate": "session_info_update",
+          "title": "Literal String Reply Command"
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "session/update",
+      "params": {
+        "sessionId": "coffee-acp-fixture-session",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": "COFFEE"
+          }
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "session/update",
+      "params": {
+        "sessionId": "coffee-acp-fixture-session",
+        "update": {
+          "sessionUpdate": "agent_message_chunk",
+          "content": {
+            "type": "text",
+            "text": "_ACP_OK"
+          }
+        }
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "session/update",
+      "params": {
+        "sessionId": "coffee-acp-fixture-session",
+        "update": {
+          "sessionUpdate": "usage_update",
+          "used": 12976,
+          "size": 1048576
+        }
+      }
+    }
+  ],
+  "result": {
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 12970,
+      "outputTokens": 6,
+      "cachedReadTokens": 0,
+      "cachedWriteTokens": 0,
+      "thoughtTokens": 0,
+      "totalTokens": 12976
+    }
+  }
+}

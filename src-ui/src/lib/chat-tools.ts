@@ -8,6 +8,10 @@ export function isCodexConversation(session: Pick<TerminalSession, 'tool' | 'cod
   return session?.tool === 'codex' && session.codexMode === 'conversation';
 }
 
+export function isAntigravityConversation(session: Pick<TerminalSession, 'tool' | 'antigravityMode'> | undefined): boolean {
+  return session?.tool === 'antigravity' && session.antigravityMode === 'conversation';
+}
+
 export function isPiConversation(session: Pick<TerminalSession, 'tool' | 'piMode'> | undefined): boolean {
   return session?.tool === 'pi' && session.piMode === 'conversation';
 }
@@ -22,7 +26,7 @@ export function isDshConversation(session: Pick<TerminalSession, 'tool'> | undef
 }
 
 export function isConversationSession(session: TerminalSession | undefined): boolean {
-  return isClaudeConversation(session) || isCodexConversation(session) || isOpenCodeConversation(session) || isPiConversation(session) || isDshConversation(session);
+  return isAntigravityConversation(session) || isClaudeConversation(session) || isCodexConversation(session) || isOpenCodeConversation(session) || isPiConversation(session) || isDshConversation(session);
 }
 
 const ENHANCED_TOOLS = new Set<ToolType>([
