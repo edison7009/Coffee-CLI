@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AutomationRunner } from './components/center/AutomationRunner';
 import { SettingsModal } from './components/common/SettingsModal';
 import { useAppState } from './store/app-state';
-import { isCompact, useCompact } from './lib/viewport';
+import { isCompact, useCompact, usePhone } from './lib/viewport';
 import { retryInvoke } from './tauri';
 import { initNotifySound } from './lib/notify-sound';
 import { useOrchestration } from './lib/orchestration';
@@ -221,6 +221,8 @@ export function App() {
 
   // Narrow windows and phones: both panels become drawers over the center, opened one at a time.
   const compact = useCompact();
+  // Work's rail is narrow enough to stay on a narrow window; only a phone's width hands navigation to the drawers.
+  const phone = usePhone();
   // 工作式: the icon rail stands in for the left sidebar; the right panel opens over the conversation.
   const work = state.layoutMode === 'work';
   const leftPanel = useSlidingPanel(work || (compact ? state.drawer !== 'left' : state.leftPanelHidden));
@@ -550,8 +552,8 @@ export function App() {
           subs while hidden; on show, we mount in the collapsed state
           and let CSS animate it back open. */}
       <GitStatusProvider>
-        <div className={`app-layout${compact ? ' is-compact' : ''}`}>
-          {work && !compact && <IconRail />}
+        <div className={`app-layout${compact ? ' is-compact' : ''}${work && !phone ? ' has-rail' : ''}`}>
+          {work && !phone && <IconRail />}
           {/* Behind an open drawer: a tap anywhere outside it closes it. */}
           {compact && state.drawer && <div className="drawer-scrim" aria-hidden="true" onClick={() => dispatch({ type: 'CLOSE_DRAWER' })} />}
           {leftPanel.mounted && (

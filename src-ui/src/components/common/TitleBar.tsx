@@ -58,7 +58,8 @@ export function TitleBar() {
   // Only a phone's bar is too narrow for the Work / Code switch; a narrow desktop window keeps it.
   const phone = usePhone();
   // 工作式 has no tab strip or sidebar: the bar shows the conversation's name, and the rail holds the rest.
-  const work = state.layoutMode === 'work' && !compact;
+  // Work keeps its rail on a narrow window (App.tsx); only a phone's width hands navigation to the drawers.
+  const work = state.layoutMode === 'work' && !phone;
   const leftShown = !work && (compact ? state.drawer === 'left' : !state.leftPanelHidden);
   const rightShown = compact ? state.drawer === 'right' : !state.rightPanelHidden;
   const toggleLeft  = () => dispatch({ type: 'TOGGLE_LEFT_PANEL' });

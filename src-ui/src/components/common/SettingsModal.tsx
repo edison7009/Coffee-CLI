@@ -13,7 +13,7 @@
 // is unchanged; only the presentation moved.
 
 import { Changelog } from './Changelog';
-import { useCompact } from '../../lib/viewport';
+import { usePhone } from '../../lib/viewport';
 import { useEffect, useState, type ReactNode } from 'react';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useAppState, useAppDispatch, HOTKEY_SCHEMES, type HotkeyScheme, type ThemeColor, type ThemeMode, type ThemeShape, type IconTheme } from '../../store/app-state';
@@ -106,7 +106,7 @@ const ICONS: Record<Section, ReactNode> = {
 
 export function SettingsModal() {
   const { state } = useAppState();
-  const compactWindow = useCompact();
+  const phone = usePhone();
   const closeBehavior = useCloseBehavior();
   const dispatch = useAppDispatch();
   const t = useT();
@@ -290,8 +290,8 @@ export function SettingsModal() {
     { id: 'language',   label: t('settings.language') },
   ];
   const currentLabel = SECTIONS.find(s => s.id === section)?.label ?? '';
-  // A dialog over the window in Clean and Code alike; a narrow window (a phone) keeps the full page.
-  const dialog = !compactWindow;
+  // A dialog over the window in Clean and Code alike, a narrow desktop window included; a phone keeps the full page.
+  const dialog = !phone;
 
   return (
     // A click on the dimmed backdrop closes the dialog.

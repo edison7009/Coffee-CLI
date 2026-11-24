@@ -15,7 +15,7 @@ import { AcpComposerControls } from './AcpComposerControls';
 // Claude Code) will read the file; agents that don't just see the raw path.
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useCompact, usePhone } from '../../lib/viewport';
+import { usePhone } from '../../lib/viewport';
 import { isWorktreePending } from '../../lib/worktree-pending';
 import { createPortal } from 'react-dom';
 import { clipboardRead, clipboardWrite } from '../../lib/clipboard';
@@ -529,7 +529,6 @@ function GambitImpl({
   }, [sendEmpty]);
 
   const { state: appState, dispatch: appDispatch } = useAppState();
-  const compactLayout = useCompact();
   // The card's control row: when it cannot hold every control, the less used ones step behind 「⋯」.
   const footerRef = useRef<HTMLDivElement>(null);
   const [footerTight, setFooterTight] = useState(false);
@@ -943,7 +942,8 @@ function GambitImpl({
   // breathing room on left/right/bottom — sits between, never under, the
   // Explorer / right pane. Native chrome (rounded corners, soft glow,
   // backdrop-filter) is preserved.
-  const workShell = appState.layoutMode === 'work' && !compactLayout;
+  // Work's rail stays on a narrow window (App.tsx); only a phone's width drops it.
+  const workShell = appState.layoutMode === 'work' && !phone;
   const dockStyle: React.CSSProperties = {
     transform: 'none',
     // Clear: inside the content panel (rail 48px, panel inset 6px on the right), 16px from either panel edge.
