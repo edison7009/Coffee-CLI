@@ -19,7 +19,7 @@ const calls = [], starts = [], prompts = [], configs = [], timers = new Map();
 let timerId = 0;
 const bridge = { listener: null, invoke(name, args) {
   calls.push({ name, ...args });
-  if (name === 'acp_session_start') return new Promise(resolve => starts.push({ ...args, resolve }));
+  if (name === 'acp_session_start') return new Promise((resolve, reject) => starts.push({ ...args, resolve, reject }));
   if (name === 'acp_session_request' && args.method === 'session/prompt') return new Promise(resolve => prompts.push(resolve));
   if (name === 'acp_session_request' && args.method === 'session/set_config_option') return new Promise(resolve => configs.push({ ...args.params, resolve }));
   return Promise.resolve(null);
@@ -86,4 +86,12 @@ releaseQueued(); fireClose(); await tick();
 configs.shift().resolve({ configOptions: fixture.session.configOptions }); await queuedSetting;
 assert.equal(await queuedSend, false);
 assert.equal(calls.some(c => c.id === 'queued' && c.method === 'session/prompt'), false);
+
+// A start that fails keeps its own reason: the process exit the failure causes follows it and must not replace it.
+const releaseFailed = api.retainAcpSession('failed', 'cursor', '/project', 'saved'); await tick();
+const failed = starts.at(-1);
+failed.reject('cursor cannot reopen a conversation in the desktop view; open it as a terminal instead'); await tick();
+event(failed, { type: 'coffee_exit', code: null, detail: '' }); await tick();
+assert.equal(api.getAcpConnection('failed').state.error, 'cursor cannot reopen a conversation in the desktop view; open it as a terminal instead', 'the exit after a failed start keeps the start\'s reason');
+releaseFailed(); fireClose(); await tick();
 console.log('Antigravity lifecycle: remount ownership, early cancel, steering, close during startup, late replies, generation and exit isolation passed');

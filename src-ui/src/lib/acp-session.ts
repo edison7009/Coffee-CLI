@@ -6,7 +6,7 @@ import { markPromptSubmitted } from './notify-prompts';
 import { recordSessionReply } from './session-replies';
 import { emptyAcpState, initializeAcp, reduceAcpEvent, settleAcp, obj, type AcpState, type Json } from './acp-protocol';
 
-interface Client { state: AcpState; tool: string; generation: string; listeners: Set<() => void>; owners: number; starting?: Promise<void>; configuring?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout>; pendingTurns: number; observed?: boolean; cancelPending?: boolean; cancelSent?: boolean; earlyCancelSent?: boolean; exited?: boolean }
+interface Client { state: AcpState; tool: string; generation: string; listeners: Set<() => void>; owners: number; starting?: Promise<void>; configuring?: Promise<void>; closeTimer?: ReturnType<typeof setTimeout>; publishTimer?: ReturnType<typeof setTimeout>; pendingTurns: number; observed?: boolean; cancelPending?: boolean; cancelSent?: boolean; earlyCancelSent?: boolean; exited?: boolean; startFailed?: boolean }
 const clients = new Map<string, Client>(), EMPTY = emptyAcpState();
 let listening: Promise<unknown> | undefined;
 function client(id: string): Client {
@@ -27,8 +27,11 @@ function request(id: string, method: string, params: Json = {}) {
 function listen() {
   return listening ??= import('@tauri-apps/api/event').then(({ listen }) => listen<{ id: string; generation: string; event: Json }>('acp-session-event', ({ payload }) => {
     const c = clients.get(payload.id); if (!c || c.generation !== payload.generation) return;
+    const exit = payload.event.type === 'coffee_exit';
+    // A start that failed stops its process: the exit that follows says less than the reason already shown.
+    if (exit && c.startFailed) { c.exited = true; return; }
     c.state = reduceAcpEvent(c.state, payload.event); publish(c);
-    if (payload.event.type === 'coffee_exit') c.exited = true;
+    if (exit) c.exited = true;
     // ACP has no prompt-accepted reply: its response arrives only when the turn ends.
     // Cancelling before the server creates the turn is ignored by agy 1.5.16.
     const update = obj(obj(payload.event.params).update);
@@ -55,7 +58,7 @@ export function retainAcpSession(id: string, tool: string, cwd: string | null, r
       await listen();
       const result = await invoke<Json>('acp_session_start', { id, generation: c.generation, tool, cwd, resumeToken: resumeToken ?? null });
       if (current(id, c) && !c.exited) { c.state = initializeAcp(c.state, result); publish(c, true); }
-    } catch (error) { if (current(id, c)) { c.state = { ...c.state, ready: false, error: String(error) }; publish(c, true); } }
+    } catch (error) { if (current(id, c)) { c.startFailed = true; c.state = { ...c.state, ready: false, error: String(error) }; publish(c, true); } }
   })();
   return () => {
     if (--c.owners) return;

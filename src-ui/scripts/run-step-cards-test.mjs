@@ -17,6 +17,8 @@ const plain = value => JSON.parse(JSON.stringify(value));
 const pick = (card, ...keys) => plain(Object.fromEntries(keys.map(key => [key, card[key]])));
 
 assert.deepEqual(plain(diffSides('--- a/x\n+++ b/x\n@@ -1,2 +1,2 @@\n keep\n-old\n+new\n+more')), { old_string: 'keep\nold\n', new_string: 'keep\nnew\nmore\n' });
+assert.deepEqual(plain(diffSides('--- a/q.sql\n+++ b/q.sql\n@@ -1,2 +1,2 @@\n select 1;\n--- legacy\n+++ counter')), { old_string: 'select 1;\n-- legacy\n', new_string: 'select 1;\n++ counter\n' }, 'a removed `-- comment` and an added `++` line inside a hunk are content, not headers');
+assert.deepEqual(plain(diffSides('diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/y b/y\nindex 1..2\n--- a/y\n+++ b/y\n@@ -1 +1 @@\n-c\n+d')), { old_string: 'a\nc\n', new_string: 'b\nd\n' }, 'a second file\'s header still is one');
 
 const codex = (item, extra = {}) => ({ id: 't:' + (item.id ?? 'x'), turnId: 't', item, role: item.type === 'reasoning' ? 'reasoning' : item.type === 'agentMessage' ? 'assistant' : 'tool', content: extra.content ?? '', partial: false, timestamp: 1, toolStatus: 'done', ...extra });
 assert.deepEqual(pick(codexStepCards(codex({ type: 'commandExecution', command: 'npm test', commandActions: [{ type: 'unknown' }] }, { content: '24 passed' }))[0], 'role', 'toolName', 'input', 'output', 'toolStatus'),

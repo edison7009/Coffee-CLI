@@ -17,11 +17,18 @@ export type StepCard<T> = ClaudeMessage & { source: T };
 /** A unified diff's two sides, hunk after hunk: what the change replaced and what it wrote. */
 export function diffSides(diff: string): { old_string: string; new_string: string } {
   const before: string[] = [], after: string[] = [];
+  // A hunk's header counts its lines, so `--- x` inside it is a removed line that began `-- x`, not a file header.
+  // Without counts (a bare `@@`), lines run to the next header as before.
+  let oldLeft = 0, newLeft = 0, counted = false, inHunk = false;
   for (const line of diff.split('\n')) {
-    if (/^(?:---|\+\+\+|@@|diff |index |new file|deleted file|\\ No newline)/.test(line)) continue;
-    if (line.startsWith('-')) before.push(line.slice(1));
-    else if (line.startsWith('+')) after.push(line.slice(1));
-    else { const text = line.startsWith(' ') ? line.slice(1) : line; before.push(text); after.push(text); }
+    const hunk = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/.exec(line);
+    if (line.startsWith('@@')) { inHunk = true; counted = !!hunk; oldLeft = hunk ? Number(hunk[1] ?? 1) : 0; newLeft = hunk ? Number(hunk[2] ?? 1) : 0; continue; }
+    if (line.startsWith('\\ No newline')) continue;
+    if (inHunk && counted && oldLeft <= 0 && newLeft <= 0) inHunk = false;
+    if ((!inHunk || !counted) && /^(?:---|\+\+\+|diff |index |new file|deleted file|similarity |rename |old mode|new mode)/.test(line)) { inHunk = false; continue; }
+    if (line.startsWith('-')) { before.push(line.slice(1)); oldLeft--; }
+    else if (line.startsWith('+')) { after.push(line.slice(1)); newLeft--; }
+    else { const text = line.startsWith(' ') ? line.slice(1) : line; before.push(text); after.push(text); oldLeft--; newLeft--; }
   }
   const join = (lines: string[]) => lines.length ? `${lines.join('\n')}\n` : '';
   return { old_string: join(before), new_string: join(after) };

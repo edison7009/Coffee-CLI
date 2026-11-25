@@ -3,7 +3,7 @@
 // angle-bracket autolink ends where its bracket does, so wrapping such a URL in <…> keeps the emphasis intact.
 // Bare URLs run on through CJK and Arabic punctuation too (「http://a.dev/x，总览」 linked the whole sentence): an ASCII
 // URL followed by such punctuation is wrapped the same way, so it ends before it. A URL with non-ASCII in it (a wiki
-// page's Chinese title) is left to GFM. Fenced and inline code are left as written.
+// page's Chinese title) is left to GFM. Fenced, indented and inline code, and a link's own text, are left as written.
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const EMPHASIZED_URL = /(\*\*|__|\*|_)(https?:\/\/[^\s<>*_`]+?)\1/g;
@@ -28,17 +28,21 @@ function bracketBeforeStop(_match: string, before: string, url: string): string 
 }
 
 function wrapLine(line: string): string {
-  // Odd-numbered pieces are inside inline code spans.
-  return line.split(/(`+[^`]*`+)/).map((piece, index) => index % 2 ? piece : piece.replace(EMPHASIZED_URL, '$1<$2>$1').replace(URL_BEFORE_STOP, bracketBeforeStop)).join('');
+  // Odd-numbered pieces are inline code spans, or a whole `[text](destination)` link, which may not hold another.
+  return line.split(/(`+[^`]*`+|\[[^\]]*\]\([^)\s]*\))/).map((piece, index) => index % 2 ? piece : piece.replace(EMPHASIZED_URL, '$1<$2>$1').replace(URL_BEFORE_STOP, bracketBeforeStop)).join('');
 }
 
 export function wrapEmphasizedUrls(markdown: string): string {
   if (!markdown.includes('://')) return markdown;
-  let fence = '';
+  let fence = '', previous = '', indented = false;
   return markdown.split('\n').map(line => {
     const open = FENCE.exec(line)?.[1];
+    const blank = !line.trim();
+    // An indented code block starts after a blank line (or the start) and runs while its lines stay indented.
+    indented = !fence && !open && !blank && /^(?: {4}|\t)/.test(line) && (indented || !previous.trim());
+    if (!blank) previous = line; else previous = '';
     if (fence) { if (open && open[0] === fence[0] && open.length >= fence.length) fence = ''; return line; }
     if (open) { fence = open; return line; }
-    return wrapLine(line);
+    return indented ? line : wrapLine(line);
   }).join('\n');
 }

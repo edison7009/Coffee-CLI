@@ -29,4 +29,7 @@ assert.equal(wrap('plain https://a.dev/x. stays'), 'plain https://a.dev/x. stays
 assert.equal(wrap('(详见 https://a.dev/x)。'), '(详见 <https://a.dev/x>)。', 'an unbalanced ) before CJK punctuation stays outside');
 assert.equal(wrap('看 https://a.dev/x.，然后'), '看 <https://a.dev/x>.，然后', 'trailing sentence punctuation stays outside');
 assert.equal(wrap('见 https://en.wikipedia.org/wiki/Rust_(language)，好'), '见 <https://en.wikipedia.org/wiki/Rust_(language)>，好', 'a balanced ) is part of the URL');
+assert.equal(wrap('示例：\n\n    curl http://a.dev/x，\n    curl http://b.dev/y，'), '示例：\n\n    curl http://a.dev/x，\n    curl http://b.dev/y，', 'an indented code block is left as written');
+assert.equal(wrap('段落\n    续行 https://a.dev/x，好'), '段落\n    续行 <https://a.dev/x>，好', 'an indented line continuing a paragraph is not code');
+assert.equal(wrap('[见 https://a.dev/x，说明](https://a.dev/doc)'), '[见 https://a.dev/x，说明](https://a.dev/doc)', 'no autolink is put inside a link\'s text');
 console.log('OK: emphasis around a bare URL stays emphasis, a URL ends before CJK and Arabic punctuation, code untouched');

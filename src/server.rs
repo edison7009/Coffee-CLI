@@ -573,6 +573,24 @@ fn expand_home(path: String) -> String {
 
 /// Launch flags for the permission a start-page card chose, from the tab's tool data `{"permission": …}`. Only the
 /// values the card offers are accepted; anything else starts the tool with its own default.
+/// The binary a terminal tab runs. An ACP tool counts as installed where its desktop tab finds it, which includes
+/// ~/.local/bin off PATH (src/acp_session.rs): its terminal tab runs that same file rather than fail to find it.
+fn terminal_binary(tool: &str, cmd: String) -> String {
+    let registered = crate::tools::find(tool).is_some_and(|descriptor| descriptor.binary_name == cmd);
+    if !registered || binary_on_path(&cmd) { return cmd; }
+    crate::acp_session::executable(tool).map(|(path, _)| path).unwrap_or(cmd)
+}
+
+/// A history tab's resume command line. A tab started with the card's permission keeps it when it comes back
+/// with its session.
+fn resume_args(preset: &terminal::AgentPreset, tool: &str, token: &str, tool_data: Option<&str>) -> Vec<String> {
+    let mut args: Vec<String> = preset.resume_args_before.iter().map(|s| s.to_string()).collect();
+    args.push(token.to_string());
+    args.extend(preset.resume_args_after.iter().map(|s| s.to_string()));
+    args.extend(launch_permission_args(tool, tool_data));
+    args
+}
+
 fn launch_permission_args(tool: &str, tool_data: Option<&str>) -> Vec<String> {
     let permission = tool_data.and_then(|data| serde_json::from_str::<serde_json::Value>(data).ok())
         .and_then(|data| data.get("permission").and_then(|p| p.as_str()).map(str::to_owned));
@@ -969,10 +987,7 @@ fn tier_terminal_start_blocking(
 
         // Token is a separate vec element — never string-interpolated into a
         // command line that gets whitespace-split.
-        let mut resume_args: Vec<String> = preset.resume_args_before.iter().map(|s| s.to_string()).collect();
-        resume_args.push(token.to_string());
-        resume_args.extend(preset.resume_args_after.iter().map(|s| s.to_string()));
-        (resume_program.to_string(), resume_args)
+        (resume_program.to_string(), resume_args(preset, tool_name, token, tool_data.as_deref()))
     } else {
         (cmd, args)
     };
@@ -1001,7 +1016,7 @@ fn tier_terminal_start_blocking(
                 new_args.append(&mut args);
                 (crate::tool_config::command_binary(name, &bin).to_owned(), new_args)
             } else {
-                (cmd, args)
+                (terminal_binary(name, cmd), args)
             };
             // Append user's extra_args after the built-in flags so
             // they take precedence (e.g. user can override --approval-
@@ -2920,6 +2935,8 @@ mod launch_permission_tests {
         assert!(launch_permission_args("claude", Some(r#"{"permission":"readOnly"}"#)).is_empty(), "another tool's value");
         assert!(launch_permission_args("opencode", Some(r#"{"permission":"plan"}"#)).is_empty());
         assert!(launch_permission_args("claude", None).is_empty());
+        let claude = crate::terminal::find_preset("claude").unwrap();
+        assert_eq!(super::resume_args(claude, "claude", "abc", Some(r#"{"permission":"plan"}"#)), ["--resume", "abc", "--permission-mode", "plan"], "a resumed tab keeps the card's permission");
         assert!(launch_permission_args("claude", Some("not json")).is_empty());
     }
 }

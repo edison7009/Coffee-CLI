@@ -5,7 +5,7 @@ import { useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalS
 import { createPortal } from 'react-dom';
 import { InlineSvgIcon } from '../InlineSvgIcon';
 import { useT } from '../../i18n/useT';
-import { useAppState, useAppStateRef, type TerminalSession, type ToolType } from '../../store/app-state';
+import { useAppState, useAppStateRef, type ToolType } from '../../store/app-state';
 import { useSessionSplitDrag, type SessionSplitPlacement } from '../../lib/use-session-split-drag';
 import { splitSessionIds } from '../../lib/session-split-layout';
 import { commands, invoke, isTauri } from '../../tauri';
@@ -26,6 +26,7 @@ import { SessionContextMenu, type SessionCtxMenuState } from './SessionContextMe
 import { useTextContextMenu } from '../../lib/use-text-context-menu';
 import { gitFolderKey, gitStatusKey, useProjectGitStatuses, type GitStatusTarget } from '../../lib/project-git-status';
 import { HistoryGitMark } from './HistoryGitMark';
+import { restoredWorkerSession } from '../../lib/restored-worker';
 import { receiveOrchestration, useOrchestration, workerState, type OrchestrationTask } from '../../lib/orchestration';
 import { RemoveWorkerDialog } from '../center/RemoveWorkerDialog';
 import '../../styles/orchestration.css';
@@ -577,7 +578,7 @@ export function HistoryBoard({ searchRequested = false, onSearchOpened }: { sear
       if (!independent && !parent && !parentToken) throw new Error(t('orchestration.history_unavailable'));
       const parentId = parent?.id ?? task.parentId;
       const snapshot = await commands.orchestrationRestoreWorker(task.id, parentId, task.sessionId);
-      const restored: TerminalSession = { id: task.sessionId, tool: task.tool, folderPath: task.cwd, resumeToken: task.nativeId, toolTitle: task.title, strictCwd: true, claudeMode: task.tool === 'claude' ? 'conversation' : undefined, codexMode: task.tool === 'codex' ? 'conversation' : undefined, opencodeMode: task.tool === 'opencode' ? 'conversation' : undefined, piMode: task.tool === 'pi' ? 'conversation' : undefined };
+      const restored = restoredWorkerSession(task);
       dispatch({ type: 'RESTORE_WORKER_SESSION', parent: independent ? undefined : parent ?? { id: parentId, tool: task.parentTool as ToolType, folderPath: savedParent.cwd || task.cwd, resumeToken: parentToken ?? undefined, toolTitle: savedParent.name, strictCwd: true, claudeMode: 'conversation' }, child: restored });
       receiveOrchestration(snapshot);
     } catch (error) { setAgentError(String(error)); }

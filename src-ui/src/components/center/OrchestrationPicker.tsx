@@ -24,10 +24,12 @@ const CHECK = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeW
 export function CollaborationPicker({ sessionId, coordinator, remote, onRemote }: { sessionId: string; coordinator: boolean; remote?: WindowControlState; onRemote?: (state: WindowControlState) => void }) {
   const t = useT();
   const { agents = [], picks = {}, remote: computers = [] } = useOrchestration();
-  const remoteHelpers = computers.flatMap(computer => computer.agents.map(tool => `${tool}@${computer.computer}`));
-  const helpers = [...agents, ...remoteHelpers];
-  // A pick naming only helpers that are gone counts as automatic, the same as the backend.
-  const pick = (picks[sessionId] ?? []).filter(tool => helpers.includes(tool));
+  // Helpers on other computers only for a conversation that may operate remote windows (`remote`), as the backend offers them.
+  const connected = computers.flatMap(computer => computer.agents.map(tool => `${tool}@${computer.computer}`));
+  const remoteHelpers = remote ? connected : [];
+  // A pick naming only helpers that are gone counts as automatic, the same as the backend; one on a computer that is
+  // still here stays shown even where it may not be used, as the backend then offers no helper rather than every one.
+  const pick = (picks[sessionId] ?? []).filter(tool => agents.includes(tool) || connected.includes(tool));
   const [open, setOpen] = useState(false), [pending, setPending] = useState(false);
   const [position, setPosition] = useState<CSSProperties>({});
   // The open windows' addresses, for the line under each computer's name (src/remote_window.rs).

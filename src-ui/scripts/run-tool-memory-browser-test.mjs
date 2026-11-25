@@ -54,7 +54,7 @@ try{
     const marker=document.querySelector('.tool-settings-indicator')?.getBoundingClientRect(),selected=document.querySelector('[role="tab"][aria-selected="true"]')?.getBoundingClientRect();
     return marker&&selected&&Math.abs(marker.x-selected.x)<1&&Math.abs(marker.width-selected.width)<1;
   });
-  assert.equal(await page.getByRole('tab').count(),6);
+  assert.equal(await page.getByRole('tab').count(),7);
   await page.locator('.tool-settings-indicator[data-ready]').waitFor({state:'attached'});await aligned();
   assert.equal(await page.getByRole('tab',{selected:true}).evaluate(el=>getComputedStyle(el).borderTopWidth),'0px');
   await tab('技能').click();
@@ -154,6 +154,6 @@ try{
     assert.equal(await page.locator('.tool-settings-panel:not([hidden]) .tool-control-summary strong').innerText(),'Computer Use','the page title retains the English technical term');
   }
   assert.deepEqual(errors,[]);
-  console.log('OK: six themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
+  console.log('OK: seven themed tabs, Skills/memory isolation, actual editor/selector, lazy reads, late response isolation, per-tool drafts, page navigation, exact save payloads, conflict/failure retention, discard confirmation, missing/unsupported files, keyboard saving, themes and narrow layout');
   console.log('Screenshots: '+directory);
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}

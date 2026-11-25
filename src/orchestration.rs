@@ -476,7 +476,11 @@ fn orchestration_pending_blocking(request_id: String) -> bool {
 fn pending_allowed(state: &State, pending: &Pending) -> bool {
     let device = pending.token.starts_with(DEVICE);
     pending.deadline > Instant::now() && owner_id(state, &pending.token).is_ok() && (device || pending.worker.as_ref().is_none_or(|tool| state.snapshot.agents.contains(tool)))
-        && pending.session_id.as_ref().is_none_or(|id| state.snapshot.tasks.iter().any(|task| task.session_id == *id && task.parent_id == pending.parent && !task.hidden && !task.detached))
+        && pending.session_id.as_ref().is_none_or(|id| state.snapshot.tasks.iter().any(|task| task.session_id == *id && !task.hidden && !task.detached && reaches(state, &pending.parent, task)))
+}
+/// The coordinator owns the task, or it is a paired computer with full access, which reaches any (as `task_for`).
+fn reaches(state: &State, parent: &str, task: &Task) -> bool {
+    task.parent_id == parent || parent.starts_with(DEVICE) && state.snapshot.device_access == "full"
 }
 #[tauri::command]
 pub async fn orchestration_resolve(request_id: String, result: Value) -> Result<(), String> {
@@ -593,14 +597,16 @@ fn available(state: &State, parent_id: &str) -> Vec<String> {
     // A pick naming only remote helpers narrows to them; otherwise the local pick (or every local helper) stays.
     let local_picked = pick.is_some_and(|pick| state.snapshot.agents.iter().any(|agent| pick.contains(agent)));
     if !picked.is_empty() && !local_picked { return picked; }
+    // A pick of helpers on a computer that is still here, but that this coordinator may not use, leaves it none:
+    // never every local helper instead. (One whose computer has gone counts as automatic, as before.)
+    let connected = |name: &String| state.helpers.values().any(|helpers| helpers.agents.iter().any(|tool| *name == format!("{tool}@{}", helpers.computer)));
+    if picked.is_empty() && !local_picked && pick.is_some_and(|pick| pick.iter().any(connected)) { return vec![]; }
     local.into_iter().chain(if picked.is_empty() { remote } else { picked }).collect()
 }
 fn task_for(state: &State, parent_id: &str, task_id: &str) -> Result<Task, String> {
     // A paired computer with full access reaches any coordination work here; otherwise only its own.
-    if parent_id.starts_with(DEVICE) && state.snapshot.device_access == "full" {
-        return state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden).cloned().ok_or("Task not found".into());
-    }
-    state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden && task.parent_id == parent_id).cloned().ok_or("Task does not belong to this coordinator".into())
+    state.snapshot.tasks.iter().find(|task| task.id == task_id && !task.detached && !task.hidden && reaches(state, parent_id, task)).cloned()
+        .ok_or(if parent_id.starts_with(DEVICE) && state.snapshot.device_access == "full" { "Task not found" } else { "Task does not belong to this coordinator" }.into())
 }
 fn fingerprint(tool: &str, prompt: &str) -> String {
     format!("{:x}", Sha256::digest(serde_json::to_vec(&(tool, prompt.trim())).unwrap()))
@@ -1002,7 +1008,7 @@ fn start_remote_worker(token: &str, helper: &str, args: &Value) -> Result<Value,
     };
     // With no folder named, the other computer picks the project with the same repository as this conversation's.
     let repo = if cwd.is_none() { crate::git_project_status::repo_key(&parent_cwd) } else { None };
-    let result = crate::window_control::ask_window(&app, &window, "team_delegate", json!({"tool":tool,"title":title,"prompt":prompt,"cwd":cwd,"repo":repo}));
+    let result = crate::window_control::ask_window(&app, &window, "team_delegate", json!({"tool":tool,"title":title,"prompt":prompt,"cwd":cwd,"repo":repo,"ref":task.id}));
     let mut state = hub().state.lock().unwrap();
     if let Some(record) = state.snapshot.tasks.iter_mut().find(|record| record.id == task.id) {
         match &result {
@@ -1040,7 +1046,9 @@ pub fn device_delegate(device: &str, args: &Value) -> Result<Value, String> {
             let removed = state.snapshot.tasks.remove(index); state.workers.retain(|_, id| *id != removed.id); state.runs.remove(&removed.session_id);
         }
         let port = state.port.ok_or("Coordinator not running")?;
-        let dispatch = Dispatch { ids: vec![], source_turn: String::new(), fingerprint: fingerprint(&tool, &prompt) };
+        // The delegating computer's own record of this work, so its reports find it even if this reply never arrives.
+        let reference = args["ref"].as_str().filter(|id| id.len() <= 64 && !id.is_empty() && id.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'-'));
+        let dispatch = Dispatch { ids: reference.into_iter().map(str::to_owned).collect(), source_turn: String::new(), fingerprint: fingerprint(&tool, &prompt) };
         let task = Task { id: uuid::Uuid::new_v4().to_string(), parent_id: token.clone(), parent_native_id: None, parent_tool: "device".into(), session_id: uuid::Uuid::new_v4().to_string(), native_id: None, tool, title, cwd, phase: "starting".into(), summary: None, question: None, generation: None, activity: None, dispatch: Some(dispatch), result_delivery: None, detached: false, hidden: false, worktree: None, restart_note: false, remote: None };
         state.snapshot.tasks.push(task.clone()); save(&state.snapshot)?;
         state.workers.insert(worker_token.clone(), task.id.clone()); publish(&mut state);
@@ -1081,18 +1089,35 @@ fn remote_update(label: &str, computer: &str, agents: Vec<String>, tasks: &[Valu
     let mut state = hub().state.lock().unwrap();
     // Only a folder path and its repository key, at most 40 of them.
     let projects: Vec<Value> = projects.into_iter().filter_map(|project| Some(json!({"path":project["path"].as_str().filter(|path| path.len() <= 4096)?,"repo":project["repo"].as_str()}))).take(40).collect();
+    // Two open windows may control computers of the same name: helpers are named by computer (`codex@name`), so the
+    // later one is told apart with a number rather than replacing the other. (A closed window's entry has already
+    // gone, so a computer back under a new window keeps its own name.)
+    let computer = distinct_name(&state.helpers, label, &computer);
     let mut changed = state.helpers.get(label).is_none_or(|known| known.computer != computer || known.agents != agents || known.projects != projects);
-    // A computer's window may come back under a new label: the work over there is the same.
-    state.helpers.retain(|other, helpers| other == label || helpers.computer != computer);
     state.helpers.insert(label.into(), RemoteHelpers { computer: computer.clone(), agents, projects });
     changed |= apply_remote(&mut state.snapshot, label, &computer, tasks);
     if changed { save(&state.snapshot)?; publish(&mut state); }
     Ok(())
 }
+fn distinct_name(helpers: &HashMap<String, RemoteHelpers>, label: &str, computer: &str) -> String {
+    let taken = |name: &str| helpers.iter().any(|(other, known)| other != label && known.computer == name);
+    let mut name = computer.to_string();
+    let mut n = 2;
+    while taken(&name) { name = format!("{computer} {n}"); n += 1; }
+    name
+}
 /// Brings this computer's records of remote work up to date with what the other computer reports.
 fn apply_remote(snapshot: &mut Snapshot, label: &str, computer: &str, tasks: &[Value]) -> bool {
     let mut changed = false;
     for task in snapshot.tasks.iter_mut().filter(|task| task.remote.as_ref().is_some_and(|remote| remote.computer == computer)) {
+        // A delegation whose reply was lost is found by the record the other computer keeps of this one's id.
+        if task.remote.as_ref().is_some_and(|remote| remote.task_id.is_none()) {
+            let found = tasks.iter().find(|report| report["dispatch"]["ids"].as_array().is_some_and(|ids| ids.iter().any(|id| id.as_str() == Some(task.id.as_str()))));
+            if let (Some(id), Some(remote)) = (found.and_then(|report| report["id"].as_str()), task.remote.as_mut()) {
+                remote.task_id = Some(id.to_owned()); changed = true;
+                if task.phase == "uncertain" { task.phase = "running".into(); task.summary = None; }
+            }
+        }
         let Some(id) = task.remote.as_ref().and_then(|remote| remote.task_id.clone()) else { continue };
         let Some(report) = tasks.iter().find(|report| report["id"].as_str() == Some(id.as_str())) else { continue };
         if let Some(remote) = task.remote.as_mut() {
@@ -2085,6 +2110,18 @@ mod tests {
         pending.worker = None; assert!(pending_allowed(&state, &pending));
     }
     #[test]
+    fn a_paired_computer_with_full_access_can_operate_another_coordinators_worker() {
+        let mut state = fixture(); sync_live(&mut state, vec![live("parent", "claude", "g1"), live("child", "codex", "g1")]);
+        let device = format!("{DEVICE}studio"); state.devices.insert(device.clone());
+        let (sender, _) = mpsc::channel();
+        let pending = Pending { parent: device.clone(), token: device.clone(), worker: None, session_id: Some("child".into()), deadline: Instant::now() + Duration::from_secs(80), sender };
+        assert!(!pending_allowed(&state, &pending), "restricted access reaches only its own work");
+        assert!(task_for(&state, &device, "task").is_err());
+        state.snapshot.device_access = "full".into();
+        assert!(task_for(&state, &device, "task").is_ok());
+        assert!(pending_allowed(&state, &pending), "full access reads, sends to and interrupts what it can list");
+    }
+    #[test]
     fn startup_registry_lag_does_not_close_child_and_uncertain_missing_child_eventually_closes() {
         let mut state = fixture(); state.snapshot.tasks[0].phase = "starting".into();
         sync_live(&mut state, vec![]); assert_eq!(state.snapshot.tasks[0].phase, "starting");
@@ -2166,10 +2203,43 @@ mod tests {
         assert_eq!(available(&state, "parent").contains(&"codex@Studio".to_string()), remote);
         state.snapshot.picks.insert("parent".into(), vec!["codex@Studio".into()]);
         if remote { assert_eq!(available(&state, "parent"), vec!["codex@Studio".to_string()]); }
+        // Without remote windows, that pick leaves no helper rather than every local one.
+        else { assert!(available(&state, "parent").is_empty(), "a pick this coordinator may not use never widens"); }
+        state.helpers.clear();
+        assert_eq!(available(&state, "parent"), allowed_agents(&state.snapshot, "parent"), "a computer that has gone leaves the pick automatic");
         // A device is known only once it has delegated work here.
         assert!(owner_id(&state, &device_token("abc")).is_err());
         state.devices.insert(device_token("abc"));
         assert_eq!(owner_id(&state, &device_token("abc")).unwrap(), device_token("abc"));
+    }
+
+    #[test]
+    fn a_delegation_whose_reply_was_lost_is_found_by_its_reference() {
+        let mut state = fixture();
+        let task = &mut state.snapshot.tasks[0];
+        task.tool = "codex@Studio".into(); task.phase = "uncertain".into(); task.summary = Some("timed out".into());
+        task.remote = Some(RemoteRef { window: "remote-a".into(), computer: "Studio".into(), task_id: None, session_id: None });
+        let reports = json!([{"id":"far","phase":"running","dispatch":{"ids":["task"]}}]).as_array().unwrap().clone();
+        assert!(apply_remote(&mut state.snapshot, "remote-a", "Studio", &reports));
+        assert_eq!(state.snapshot.tasks[0].remote.as_ref().unwrap().task_id.as_deref(), Some("far"));
+        assert_eq!(state.snapshot.tasks[0].phase, "running", "the work found over there is no longer uncertain");
+        let finished = json!([{"id":"far","phase":"completed","summary":"done there","dispatch":{"ids":["task"]}}]).as_array().unwrap().clone();
+        assert!(apply_remote(&mut state.snapshot, "remote-a", "Studio", &finished));
+        assert_eq!(state.snapshot.tasks[0].summary.as_deref(), Some("done there"), "and its result reaches this computer");
+    }
+
+    #[test]
+    fn two_computers_of_the_same_name_keep_their_own_helpers() {
+        let mut helpers = HashMap::new();
+        let first = distinct_name(&helpers, "remote-a", "MacBook-Pro");
+        helpers.insert("remote-a".to_string(), RemoteHelpers { computer: first.clone(), agents: vec!["codex".into()], projects: vec![] });
+        let second = distinct_name(&helpers, "remote-b", "MacBook-Pro");
+        helpers.insert("remote-b".to_string(), RemoteHelpers { computer: second.clone(), agents: vec!["codex".into()], projects: vec![] });
+        assert_eq!((first.as_str(), second.as_str()), ("MacBook-Pro", "MacBook-Pro 2"), "the later one is numbered, not evicting the first");
+        assert_eq!(distinct_name(&helpers, "remote-a", "MacBook-Pro"), "MacBook-Pro", "each keeps its name on its next report");
+        assert_eq!(distinct_name(&helpers, "remote-b", "MacBook-Pro"), "MacBook-Pro 2");
+        helpers.remove("remote-a");
+        assert_eq!(distinct_name(&helpers, "remote-c", "MacBook-Pro"), "MacBook-Pro", "a window that closed frees its name");
     }
 
     #[test]
