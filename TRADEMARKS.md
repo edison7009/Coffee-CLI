@@ -1,7 +1,7 @@
 # Coffee CLI Trademark Policy / 商标政策
 
 > **Plain-English summary / 一句话**: The code is fully open source under
-> AGPL-3.0; the **names and logos are protected as trademarks**. Forks are
+> AGPL-3.0 up to v4.1.1; the **names and logos are protected as trademarks**. Forks are
 > welcome — what we object to is **passing off our code as your own
 > from-scratch original work**. If your fork honestly credits Coffee CLI
 > as upstream (in README, About screen, or product page), you may keep our
@@ -11,7 +11,7 @@
 > without permission. Genuinely original code you add on top of a fork
 > belongs to you — name it whatever you like.
 >
-> 代码完全开源 (AGPL-3.0),**名称与图标受商标保护**。Fork 欢迎 —— 我们真正
+> v4.1.1 及之前的代码开源 (AGPL-3.0),**名称与图标受商标保护**。Fork 欢迎 —— 我们真正
 > 反对的是:**把我们的代码当作你从零写的原创**。
 > 如果你的 fork **诚实地标注 Coffee CLI 为上游**(在 README、About 页面或
 > 产品页显著位置),你可以保留我们的名字和 Logo;如果你坚持完全重新品牌化

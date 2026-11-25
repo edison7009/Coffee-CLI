@@ -4,17 +4,17 @@ Copyright (c) 2025 edison7009 and Coffee CLI contributors
 This product includes software developed by the Coffee CLI project
 (https://github.com/edison7009/Coffee-CLI).
 
-Licensed under the GNU Affero General Public License, Version 3.0 or later
-(AGPL-3.0-or-later). See the LICENSE file for the full license text, or
-visit https://www.gnu.org/licenses/agpl-3.0.html.
+Versions up to and including v4.1.1 were released under the GNU Affero
+General Public License, Version 3.0 or later (AGPL-3.0-or-later); see the
+LICENSE file at tag v4.1.1. Later versions are released under no license.
+Provided as is: no promise, no warranty, no liability.
 
 ================================================================================
 ORIGINAL DESIGNS AND CONCEPTS
 ================================================================================
 
 The following designs, protocols, and interaction paradigms were originated
-by the Coffee CLI project. The source code that implements them is governed
-by the AGPL-3.0 license; the underlying ideas are documented here so that
+by the Coffee CLI project. The underlying ideas are documented here so that
 downstream forks and reimplementations can credit prior art appropriately.
 
   1. Gambit — A floating-island input surface that routes a single keyboard
@@ -62,11 +62,11 @@ THIRD-PARTY ASSETS (ICONS / ARTWORK)
                glyph. No trademark rights are claimed in the icon itself
                — see TRADEMARKS.md for the scope of brand rights claimed.
 
-  - File-icon themes under src-ui/public/icons/themes/
+  - File-icon themes under the app bundle's icons/themes/
       Six upstream icon sets (material, vscode-icons, catppuccin-mocha,
       devicon/Phosphor, fluent, symbols) are used under their MIT licenses.
       Per-theme attribution is documented in:
-          src-ui/public/icons/themes/LICENSES.md
+          icons/themes/LICENSES.md (bundled with the app)
 
 ================================================================================
 THIRD-PARTY TRADEMARKS (NOMINATIVE FAIR USE)
@@ -108,6 +108,6 @@ list of major upstream projects:
   - rmcp (MIT)                       https://github.com/modelcontextprotocol/rust-sdk
   - Rust crates listed in Cargo.toml — see each crate's own license
 
-Each component remains under its own license. The AGPL-3.0 license that
-governs Coffee CLI as a whole does not override the terms of these bundled
+Each component remains under its own license. Nothing about Coffee CLI's
+own terms overrides the terms of these bundled
 or linked components.

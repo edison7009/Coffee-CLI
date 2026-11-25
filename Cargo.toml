@@ -3,7 +3,6 @@ name = "coffee-cli"
 version = "4.1.1"
 edition = "2021"
 description = "Lightweight Multi-layer AI CLI Terminal"
-license = "AGPL-3.0-or-later"
 repository = "https://github.com/edison7009/Coffee-CLI"
 keywords = ["ai", "prompt", "coding", "llm", "tree-sitter"]
 categories = ["command-line-utilities", "development-tools"]

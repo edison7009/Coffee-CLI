@@ -25,7 +25,6 @@
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" />
   <img src="https://img.shields.io/badge/languages-10-orange" />
   <img src="https://img.shields.io/badge/built%20with-Tauri%20%2B%20Rust-brown" />
-  <img src="https://img.shields.io/github/license/edison7009/Coffee-CLI" />
 </p>
 
 <p align="center">
@@ -399,11 +398,10 @@ Claude Code и Codex CLI поддерживают режимы `Desktop / Termin
 
 ## License & Trademarks
 
-**Code** — Coffee CLI is licensed under the
-[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE).
-Any fork, modification, or hosted service derived from this code must also be
-released under AGPL-3.0 — including SaaS deployments. See [LICENSE](LICENSE)
-for the full text and [NOTICE](NOTICE) for attribution requirements.
+**Code** — Versions up to and including v4.1.1 are licensed under the
+[GNU Affero General Public License v3.0 or later](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE).
+Later versions are released under no license. Provided as is: no promise,
+no warranty, no liability.
 
 **Brand** — *Coffee CLI*, *Gambit*, *Pitch*, *VibeID*, *Vibetype* (and
 the 16 individual Vibetype names), *Coffee-CLI MCP*, *Sentinel Protocol*,

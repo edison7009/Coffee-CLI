@@ -1,7 +1,6 @@
 #!/bin/sh
 # Coffee CLI — macOS / Linux Installer / Updater
 # Usage:   curl -fsSL https://coffeecli.com/install.sh | sh
-# License: AGPL-3.0-or-later (https://github.com/edison7009/Coffee-CLI/blob/main/LICENSE)
 
 set -e
 
