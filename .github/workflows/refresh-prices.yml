@@ -40,7 +40,7 @@ jobs:
       - name: Commit when prices changed
         run: |
           set -e
-          git add Web-Home/prices.json src-ui/src/lib/model-prices.json
+          git add Web-Home/prices.json
           if git diff --cached --quiet; then
             echo "Prices unchanged; nothing to commit."
             exit 0

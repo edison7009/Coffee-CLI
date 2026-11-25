@@ -13,13 +13,15 @@
 // Exit code 0 always means the files were written (possibly unchanged); a
 // fetch or shape failure exits non-zero and writes nothing.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SOURCE = 'https://models.dev/api.json';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUTPUTS = [join(root, 'Web-Home', 'prices.json'), join(root, 'pro', 'ui', 'src', 'lib', 'model-prices.json')];
+// The website's table, and the app's own copy when the private Pro checkout is here (./pro).
+const OUTPUTS = [join(root, 'Web-Home', 'prices.json'), join(root, 'pro', 'ui', 'src', 'lib', 'model-prices.json')]
+  .filter(output => existsSync(dirname(output)));
 
 // First-party providers, most authoritative first: when two list the same id,
 // the earlier one's price wins.
