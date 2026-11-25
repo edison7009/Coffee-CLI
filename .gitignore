@@ -100,3 +100,6 @@ binaries/
 
 # Local agent/tool plan scratch (e.g. .zcode/plans — session-scoped, not for the repo)
 /.zcode/
+
+# Coffee CLI Pro: the private repository edison7009/Coffee-CLI-secret-, cloned here for Pro builds.
+/pro/

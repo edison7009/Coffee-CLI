@@ -1,6 +1,0 @@
-/* Pi brand colors from its installer; they stay fixed across themes, like Pi's own logo. */
-.pi-mark { display: inline-grid; grid-template-columns: repeat(4, 3px); grid-auto-rows: 3px; flex-shrink: 0; }
-.pi-mark > span { transition: background-color 0.15s ease; }
-.pi-mark > span.is-coral { background: rgb(240 144 130); }
-.pi-mark > span.is-blue { background: rgb(77 154 191); }
-.pi-mark > span.is-gold { background: rgb(241 190 88); }
