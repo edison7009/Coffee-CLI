@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const SOURCE = 'https://models.dev/api.json';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const OUTPUTS = [join(root, 'Web-Home', 'prices.json'), join(root, 'src-ui', 'src', 'lib', 'model-prices.json')];
+const OUTPUTS = [join(root, 'Web-Home', 'prices.json'), join(root, 'pro', 'ui', 'src', 'lib', 'model-prices.json')];
 
 // First-party providers, most authoritative first: when two list the same id,
 // the earlier one's price wins.

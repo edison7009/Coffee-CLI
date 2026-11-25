@@ -18,32 +18,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # The private Pro modules (tool integrations and the interface), at the tag of the same name.
+      - name: Check out Pro
+        uses: actions/checkout@v5
+        with:
+          repository: edison7009/Coffee-CLI-secret-
+          ref: ${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
+          path: pro
+          ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
+          persist-credentials: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: src-ui/package-lock.json
+          cache-dependency-path: pro/ui/package-lock.json
 
       - name: Install frontend deps
         run: |
-          cd src-ui
+          cd pro/ui
           npm ci
 
       - name: Frontend build, lint, and regression tests
         run: |
-          cd src-ui
+          cd pro/ui
           npm run build
           npm run lint
           npm test
           npm audit --audit-level=high --omit=dev
 
       - name: Install test browser
-        working-directory: src-ui
+        working-directory: pro/ui
         run: npx playwright install --with-deps --only-shell chromium
 
       - name: Browser interaction regression tests
-        working-directory: src-ui
+        working-directory: pro/ui
         run: npm run test:browser
 
       - name: Setup Rust
@@ -67,20 +77,20 @@ jobs:
           key: quality
 
       - name: Rust static analysis
-        run: cargo clippy --locked --all-targets --all-features -- -D clippy::correctness -D clippy::suspicious
+        run: cargo clippy --locked --all-targets --features pro -- -D clippy::correctness -D clippy::suspicious
 
       # Unit tests — includes the shell_probe detection / fallback-chain
       # suite. On Linux this also exercises the Unix cfg branches that
       # Windows-hosted dev never runs locally (#[cfg(not(target_os =
       # "windows"))] tests are filtered out on Windows).
       - name: Cargo test
-        run: cargo test --locked --no-fail-fast
+        run: cargo test --locked --no-fail-fast --features pro
 
       - name: Build native test host
-        run: cargo build --locked
+        run: cargo build --locked --features pro
 
       - name: Native orchestration protocol regression
-        working-directory: src-ui
+        working-directory: pro/ui
         env:
           COFFEE_TEST_EXE: ${{ github.workspace }}/target/debug/coffee-cli
         run: npm run test:native
@@ -119,6 +129,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # The private Pro modules (tool integrations and the interface), at the tag of the same name.
+      - name: Check out Pro
+        uses: actions/checkout@v5
+        with:
+          repository: edison7009/Coffee-CLI-secret-
+          ref: ${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
+          path: pro
+          ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
+          persist-credentials: false
+
       - name: Resolve release tag
         id: tag
         shell: bash
@@ -146,11 +166,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: src-ui/package-lock.json
+          cache-dependency-path: pro/ui/package-lock.json
 
       - name: Install frontend deps
         run: |
-          cd src-ui
+          cd pro/ui
           npm ci
 
       # All platforms build identically on stable xterm 6.0.0. The Linux CJK
@@ -160,7 +180,7 @@ jobs:
       # Linux-only dependency override or a Linux-only tsc-skip build path.
       - name: Build frontend (tsc + vite)
         run: |
-          cd src-ui
+          cd pro/ui
           npm run build
 
       - name: Setup Rust
@@ -175,10 +195,10 @@ jobs:
 
       - name: Validate bundled terminal runtime (Windows)
         if: runner.os == 'Windows'
-        run: node src-ui/scripts/run-conpty-bundle-test.mjs
+        run: node pro/ui/scripts/run-conpty-bundle-test.mjs
 
       - name: Native regression tests
-        run: cargo test --locked --no-fail-fast ${{ matrix.args }}
+        run: cargo test --locked --no-fail-fast --features pro ${{ matrix.args }}
 
       - name: Install Tauri CLI
         # Keep utils.nsh and our custom NSIS template on the same interface.
@@ -193,7 +213,7 @@ jobs:
       # apps that aren't claiming hardened runtime.
       - name: Build .app only (macOS)
         if: runner.os == 'macOS'
-        run: cargo tauri build --bundles app ${{ matrix.args }}
+        run: cargo tauri build --bundles app --features pro --config pro/tauri.conf.json ${{ matrix.args }}
 
       - name: Re-sign without hardened runtime (macOS)
         if: runner.os == 'macOS'
@@ -219,12 +239,12 @@ jobs:
 
       - name: Build DMG from re-signed .app (macOS)
         if: runner.os == 'macOS'
-        run: cargo tauri bundle --bundles dmg ${{ matrix.args }}
+        run: cargo tauri bundle --bundles dmg --features pro --config pro/tauri.conf.json ${{ matrix.args }}
 
       # ── Windows / Linux: standard one-shot bundle build ──
       - name: Build all bundles (Windows / Linux)
         if: runner.os != 'macOS'
-        run: cargo tauri build ${{ matrix.args }}
+        run: cargo tauri build --features pro --config pro/tauri.conf.json ${{ matrix.args }}
 
       - name: Verify packaged orchestration protocol
         shell: bash
@@ -234,7 +254,7 @@ jobs:
           EXE="$GITHUB_WORKSPACE/target/${BUILD_TARGET:+$BUILD_TARGET/}release/coffee-cli"
           if [ "$RUNNER_OS" = "Windows" ]; then EXE="$EXE.exe"; fi
           export COFFEE_TEST_EXE="$EXE"
-          cd src-ui
+          cd pro/ui
           npm run test:native
 
       # ── Stage + rename artifacts to platform-labelled format ──

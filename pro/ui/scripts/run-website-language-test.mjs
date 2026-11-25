@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const root = new URL('../../Web-Home/', import.meta.url);
+const root = new URL('../../../Web-Home/', import.meta.url);
 const locales = ['', 'zh/', 'zh-hant/', 'ja/', 'ko/', 'es/', 'fr/', 'de/', 'pt/', 'ru/'];
 for (const locale of locales) {
   const html = readFileSync(new URL(`${locale}index.html`, root), 'utf8');

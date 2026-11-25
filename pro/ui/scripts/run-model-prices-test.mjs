@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { runInNewContext } from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { trim } from '../../scripts/refresh-prices.mjs';
+import { trim } from '../../../scripts/refresh-prices.mjs';
 
 // Trimming keeps first-party prices, the first provider's on a clash, and tiers by size.
 const catalogue = {

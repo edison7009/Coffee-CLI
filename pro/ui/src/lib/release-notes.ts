@@ -1,4 +1,4 @@
-import bundledNotes from '../../../install/release-notes-template.md?raw';
+import bundledNotes from '../../../../install/release-notes-template.md?raw';
 import { fetchNotesForVersion } from './update-manifest';
 
 export const BUNDLED_VERSION = bundledNotes.match(/^### Coffee CLI v(\d+\.\d+\.\d+)/m)?.[1] ?? '';

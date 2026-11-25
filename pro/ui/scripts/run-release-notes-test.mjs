@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-const bundled = readFileSync(new URL('../../install/release-notes-template.md', import.meta.url), 'utf8');
+const bundled = readFileSync(new URL('../../../install/release-notes-template.md', import.meta.url), 'utf8');
 const source = readFileSync(new URL('../src/lib/release-notes.ts', import.meta.url), 'utf8');
 const manifestSource = readFileSync(new URL('../src/lib/update-manifest.ts', import.meta.url), 'utf8');
 const values = new Map(), calls = [];
@@ -20,7 +20,7 @@ const context = {
 vm.runInNewContext(transpile(source), context);
 const { BUNDLED_VERSION, shouldShowReleaseNotes, notesForLocale, cachedReleaseNotes, loadReleaseNotes } = context.exports;
 const version = BUNDLED_VERSION;
-assert.equal(version, readFileSync(new URL('../../Cargo.toml', import.meta.url), 'utf8').match(/^version = "([^"]+)"/m)[1], 'bundled release notes match the application version');
+assert.equal(version, readFileSync(new URL('../../../Cargo.toml', import.meta.url), 'utf8').match(/^version = "([^"]+)"/m)[1], 'bundled release notes match the application version');
 for (const locale of ['zh-CN', 'en', 'zh-TW', 'ja', 'ko']) {
   const section = notesForLocale(bundled, locale);
   assert.ok(section.startsWith(`### Coffee CLI v${version} · `), `${locale} release header matches the application version`);

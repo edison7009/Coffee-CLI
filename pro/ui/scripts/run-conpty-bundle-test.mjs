@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const root = new URL('../../', import.meta.url), directory = new URL('resources/windows/conpty/', root);
+const root = new URL('../../../', import.meta.url), directory = new URL('resources/windows/conpty/', root);
 const manifest = JSON.parse(readFileSync(new URL('manifest.json', directory), 'utf8'));
 const config = JSON.parse(readFileSync(new URL('tauri.windows.conf.json', root), 'utf8'));
 for (const [name, metadata] of Object.entries(manifest.files)) {

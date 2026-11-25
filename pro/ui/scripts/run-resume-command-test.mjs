@@ -9,7 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const compiled = await build({ entryPoints: [`${root}src/lib/resume-command.ts`], bundle: true, platform: 'node', format: 'esm', write: false });
 const { buildResumeCommand } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`);
 
-const rust = await readFile(new URL('../../src/terminal.rs', import.meta.url), 'utf8');
+const rust = await readFile(new URL('../../src/agent_presets.rs', import.meta.url), 'utf8');
 const block = rust.slice(rust.indexOf('pub const AGENT_PRESETS'), rust.indexOf('pub fn find_preset'));
 const presets = [...block.matchAll(/AgentPreset \{([\s\S]*?)\n    \}/g)].map(([, body]) => ({
   tool: body.match(/tool_name: "([^"]+)"/)[1],

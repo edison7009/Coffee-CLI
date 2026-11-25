@@ -51,8 +51,8 @@ assert.equal(await inflate(fragment(await buildPromptLink('run\u200Bthis')).get(
 console.log('ok hidden characters stripped, emoji kept');
 
 // The website page and the desktop parser use the same rule as this module.
-const page = await readFile(new URL('../../Web-Home/p.html', import.meta.url), 'utf8');
-const rustText = await readFile(new URL('../../src/launch.rs', import.meta.url), 'utf8');
+const page = await readFile(new URL('../../../Web-Home/p.html', import.meta.url), 'utf8');
+const rustText = await readFile(new URL('../../../src/launch.rs', import.meta.url), 'utf8');
 function rustSource() { return rustText; }
 const lib = await readFile(new URL('../src/lib/prompt-link.ts', import.meta.url), 'utf8');
 const pattern = source => source.match(/HIDDEN = (\/\[.*?\]\/gu);/)[1];

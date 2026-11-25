@@ -30,16 +30,26 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      # The private Pro modules (tool integrations and the interface), at the tag of the same name.
+      - name: Check out Pro
+        uses: actions/checkout@v5
+        with:
+          repository: edison7009/Coffee-CLI-secret-
+          ref: main
+          path: pro
+          ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
+          persist-credentials: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: src-ui/package-lock.json
+          cache-dependency-path: pro/ui/package-lock.json
 
       - name: Build frontend
         run: |
-          cd src-ui
+          cd pro/ui
           npm ci
           npm run build
 
@@ -57,7 +67,7 @@ jobs:
         run: cargo install tauri-cli --version "^2.0" --locked
 
       - name: Build .app (no publish)
-        run: cargo tauri build --target aarch64-apple-darwin
+        run: cargo tauri build --features pro --config pro/tauri.conf.json --target aarch64-apple-darwin
 
       - name: Locate built app
         id: locate

@@ -15,14 +15,16 @@ function App(){return <div className="panel-center"><UsageDashboard/></div>};cre
 ` }, bundle: true, outfile: join(directory, 'fixture.js'), jsx: 'automatic', nodePaths: [join(project, 'node_modules')], external: ['/fonts/*', '/monogram.svg', '/backgrounds/*'], plugins: [{ name: 'usage-fixture', setup(b) {
   b.onResolve({ filter: /store\/app-state$/ }, () => ({ path: 'store', namespace: 'fixture' }));
   b.onResolve({ filter: /(^|\/)tauri$/ }, () => ({ path: 'native', namespace: 'fixture' }));
-  b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'store' ? `export function useAppLanguage(){return 'zh-CN'}` : `
+  // The tool filter's icons come from the whole tab strip; a plain mark stands in for them here.
+  b.onResolve({ filter: /\/CenterPanel$/ }, () => ({ path: 'icons', namespace: 'fixture' }));
+  b.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'icons' ? `export const getToolIcon=tool=><i data-icon={tool}/>` : args.path === 'store' ? `export function useAppLanguage(){return 'zh-CN'}` : `
 window.queries=[];window.waiting=[];window.heatmapCalls=0;
 const heatmapDate=days=>{const date=new Date();date.setHours(12,0,0,0);date.setDate(date.getDate()-days);return Math.floor(date.getTime()/1000)};
 export const isTauri=true;export const commands={async getMessageHeatmap(){window.heatmapCalls++;if(window.holdHeatmap)await new Promise(resolve=>{window.resolveHeatmap=resolve});return [{ts:heatmapDate(0),count:11},{ts:heatmapDate(250),count:7},{ts:heatmapDate(380),count:99}]}};
 const summary={sessions:12,prompts:36,calls:90,days:5,input:100000,output:20000,cacheRead:60000,cacheWrite:5000,reasoning:10000,tokens:185000};
 window.report={summary,daily:Array.from({length:7},(_,i)=>{const date=new Date();date.setDate(date.getDate()-6+i);const key=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');return {key,summary:{...summary,tokens:[3000,8000,4500,28000,6000,19000,12000][i],sessions:i%3}}}),models:[{key:'model-alpha',summary},{key:'model-beta',summary:{...summary,tokens:60000}}],projects:['D:/Alpha','D:/Beta'],sources:[{tool:'claude',files:12,available:true,errors:0},{tool:'codex',files:8,available:true,errors:0},{tool:'opencode',files:1,available:true,errors:0}]};
 export async function invoke(command,args){window.queries.push(args.query);if(window.fail)throw Error('fixture');if(window.defer){window.defer=false;return new Promise(resolve=>window.waiting.push(()=>resolve(structuredClone(window.report))))}return structuredClone(window.report)}
-`, loader: 'js' }));
+`, loader: args.path === 'icons' ? 'jsx' : 'js', resolveDir: project }));
 } }] });
 const server = http.createServer(async (req, res) => {
   if (req.url === '/') return res.setHeader('Content-Type', 'text/html; charset=utf-8').end(`<!doctype html><html data-mode="dark" data-shape="soft"><link rel="stylesheet" href="/fixture.css"><style>html,body,#root{margin:0;width:100%;height:100%}.panel-center{position:relative;height:100%;padding:0!important}:root{--font-nav:'Segoe UI',sans-serif;--accent:#c595a5;--bg-terminal:#211e20;--bg-panel:#292528;--bg-hover:#393236;--text-1:#e5dce1;--text-2:#bcb2b8;--text-3:#9f939a;--border:#443a40;--success:#6fa087;--info:#7d97b8;--warning:#baa274;--shape-radius-panel:14px;--shape-radius-btn:7px}html[data-mode=light]{--bg-terminal:#f7f4f0;--bg-panel:#eeebe5;--bg-hover:#e3ded7;--text-1:#34302c;--text-2:#625a53;--text-3:#786f65;--border:#d5cec6;--accent:#9a6979}</style><div id="root"></div><script src="/fixture.js"></script></html>`);
