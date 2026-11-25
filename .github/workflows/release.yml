@@ -204,42 +204,97 @@ jobs:
         # Keep utils.nsh and our custom NSIS template on the same interface.
         run: cargo install tauri-cli --version "2.12.2" --locked
 
-      # ── macOS: build .app, re-sign without hardened runtime, then bundle DMG ──
-      # tauri-bundler's default codesign for adhoc identities adds
-      # --options runtime, which without Apple notarization causes Gatekeeper
-      # to silently reject the GUI launch (click icon, nothing happens). We
-      # build the .app first, codesign --deep WITHOUT runtime, then bundle
-      # the DMG from the re-signed .app. Gatekeeper accepts adhoc-signed
-      # apps that aren't claiming hardened runtime.
-      - name: Build .app only (macOS)
+      # ── macOS ────────────────────────────────────────────────────────────
+      # Tauri compiles and (when signing) signs the .app; scripts/macos-release.sh
+      # does the rest: notarize + staple the .app, build the drag-to-install DMG
+      # (dmgbuild, scripts/dmg-settings.py), sign + notarize + staple the DMG,
+      # and check what users will download. See the script header.
+      #
+      # Signing is an explicit switch, not inferred from secrets, so a missing
+      # or expired secret fails the release instead of quietly shipping an
+      # unsigned DMG. Repository → Settings → Secrets and variables → Actions:
+      #   variable COFFEE_MACOS_SIGNED = true
+      #   secret   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
+      #   secret   APPLE_CERTIFICATE_PASSWORD  the .p12 export password
+      #   notarization, one of:
+      #     APPLE_API_KEY + APPLE_API_ISSUER + APPLE_API_KEY_P8 (App Store Connect
+      #       API key id, issuer id, and the .p8 file's text) — preferred
+      #     APPLE_ID + APPLE_PASSWORD (app-specific password) + APPLE_TEAM_ID
+      - name: Prepare Developer ID signing (macOS)
+        if: runner.os == 'macOS' && vars.COFFEE_MACOS_SIGNED == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          : "${APPLE_CERTIFICATE:?COFFEE_MACOS_SIGNED is true but APPLE_CERTIFICATE is missing}"
+          : "${APPLE_CERTIFICATE_PASSWORD:?APPLE_CERTIFICATE_PASSWORD is missing}"
+          KEYCHAIN="$RUNNER_TEMP/coffee-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          (umask 077; printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12")
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$RUNNER_TEMP/cert.p12"
+          # A .p12 carries only our certificate; codesign also needs Apple's
+          # Developer ID G2 intermediate to build the chain to Apple's root.
+          if curl -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$RUNNER_TEMP/DeveloperIDG2CA.cer"; then
+            security import "$RUNNER_TEMP/DeveloperIDG2CA.cer" -k "$KEYCHAIN" || true
+          else
+            echo "::warning::could not download the Developer ID G2 intermediate; relying on the runner's copy"
+          fi
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | sed -nE 's/.*"(Developer ID Application: [^"]+)".*/\1/p' | head -1)
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::APPLE_CERTIFICATE holds no 'Developer ID Application' identity"
+            security find-identity -v -p codesigning "$KEYCHAIN"
+            exit 1
+          fi
+          echo "Signing identity: $IDENTITY"
+          echo "APPLE_SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          # NOTARY_* rather than Tauri's APPLE_* names: Tauri then only signs,
+          # and notarization runs (with retries) in scripts/macos-release.sh.
+          if [ -n "$APPLE_API_KEY" ] && [ -n "$APPLE_API_ISSUER" ] && [ -n "$APPLE_API_KEY_P8" ]; then
+            KEY_PATH="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY}.p8"
+            (umask 077; printf '%s\n' "$APPLE_API_KEY_P8" > "$KEY_PATH")
+            {
+              echo "NOTARY_KEY_ID=$APPLE_API_KEY"
+              echo "NOTARY_ISSUER=$APPLE_API_ISSUER"
+              echo "NOTARY_KEY_PATH=$KEY_PATH"
+            } >> "$GITHUB_ENV"
+          elif [ -n "$APPLE_ID" ] && [ -n "$APPLE_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            {
+              echo "NOTARY_APPLE_ID=$APPLE_ID"
+              echo "NOTARY_PASSWORD=$APPLE_PASSWORD"
+              echo "NOTARY_TEAM_ID=$APPLE_TEAM_ID"
+            } >> "$GITHUB_ENV"
+          else
+            echo "::error::no notarization credentials (APPLE_API_KEY/APPLE_API_ISSUER/APPLE_API_KEY_P8 or APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID)"
+            exit 1
+          fi
+
+      - name: Build .app (macOS)
         if: runner.os == 'macOS'
         run: cargo tauri build --bundles app --features pro --config pro/tauri.conf.json ${{ matrix.args }}
 
-      - name: Re-sign without hardened runtime (macOS)
+      - name: Notarize and build drag-to-install DMG (macOS)
         if: runner.os == 'macOS'
+        timeout-minutes: 240  # a new team's first notarization can take hours
+        env:
+          COFFEE_MACOS_SIGNED: ${{ vars.COFFEE_MACOS_SIGNED == 'true' }}
         run: |
-          APP=$(find target/${{ matrix.target }}/release/bundle/macos -maxdepth 2 -name "*.app" | head -1)
-          if [ -z "$APP" ]; then
-            echo "::error::No .app found"
-            find target -name "*.app" 2>/dev/null
-            exit 1
-          fi
-          echo "Re-signing: $APP"
-          codesign --force --deep --sign - "$APP"
-          codesign -dv --verbose=4 "$APP" 2>&1
-          # Sanity assertion: no 'runtime' flag, sealed resources present.
-          if codesign -dv --verbose=4 "$APP" 2>&1 | grep -qE "flags=.*runtime"; then
-            echo "::error::runtime flag still present after re-sign"
-            exit 1
-          fi
-          if codesign -dv --verbose=4 "$APP" 2>&1 | grep -q "Sealed Resources=none"; then
-            echo "::error::Sealed Resources=none after re-sign"
-            exit 1
-          fi
-
-      - name: Build DMG from re-signed .app (macOS)
-        if: runner.os == 'macOS'
-        run: cargo tauri bundle --bundles dmg --features pro --config pro/tauri.conf.json ${{ matrix.args }}
+          bash scripts/macos-release.sh "${{ matrix.target }}" "${{ steps.tag.outputs.version }}" \
+            "target/${{ matrix.target }}/release/bundle"
 
       # ── Windows / Linux: standard one-shot bundle build ──
       - name: Build all bundles (Windows / Linux)

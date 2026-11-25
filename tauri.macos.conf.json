@@ -23,5 +23,11 @@
         }
       }
     ]
+  },
+  "bundle": {
+    "macOS": {
+      "hardenedRuntime": true,
+      "entitlements": "macos/entitlements.plist"
+    }
   }
 }

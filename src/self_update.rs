@@ -9,13 +9,21 @@
 //! through to the next source. Progress streams to the frontend's ring via
 //! `self-update-progress`.
 //!
-//! Windows then stops: the installer waits in Downloads, remembered by a
-//! receipt (version, path, size, SHA-256), and the update button turns into
-//! "Install". Only `install_downloaded_update` — the user's second click —
-//! re-checks the file against the receipt, runs it and closes Coffee CLI. The
-//! receipt outlives a restart, so a download finished earlier can still be
-//! installed later. macOS opens the DMG and Linux opens the Downloads folder
-//! right after downloading; both keep running.
+//! Windows and macOS then stop: the installer waits in Downloads, remembered
+//! by a receipt (version, path, size, SHA-256), and the update button turns
+//! into "Install". Only `install_downloaded_update` — the user's second click
+//! — re-checks the file against the receipt, installs it and closes Coffee
+//! CLI. The receipt outlives a restart, so a download finished earlier can
+//! still be installed later.
+//!
+//! Windows runs the NSIS installer silently. macOS mounts the DMG, checks the
+//! new app (intact signature, same bundle id, same Developer ID team once we
+//! are signed), copies it beside the running bundle and hands the swap to a
+//! small detached shell that waits for us to exit, renames the new bundle into
+//! place and relaunches it — the way Sparkle-style updaters do it. An app the
+//! user cannot replace (running from the DMG, App Translocation, a folder
+//! without write access) falls back to opening the DMG, as Linux falls back
+//! to opening the Downloads folder.
 //!
 //! ureq is blocking + rustls, so the work runs on spawn_blocking threads;
 //! `app.emit` works from any thread.
@@ -77,10 +85,11 @@ pub async fn download_update(app: tauri::AppHandle, expected: String) -> Result<
 }
 
 /// Whether the installer for `version` is already downloaded and intact, so
-/// the button can offer "Install" straight away (Windows only).
+/// the button can offer "Install" straight away (Windows, and macOS when the
+/// running app can be replaced in place).
 #[tauri::command]
 pub async fn is_update_downloaded(version: String) -> Result<bool, String> {
-    if !cfg!(target_os = "windows") {
+    if !installs_in_place() {
         return Ok(false);
     }
     tauri::async_runtime::spawn_blocking(move || {
@@ -124,11 +133,49 @@ pub async fn install_downloaded_update(app: tauri::AppHandle, version: String) -
         .await
         .map_err(|e| format!("self-update task join failed: {e}"))?
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        let busy = Busy::claim()?;
+        tauri::async_runtime::spawn_blocking(move || {
+            let _busy = busy;
+            let Some(receipt) = receipt_file().and_then(|file| ready_installer(&file, &version)) else {
+                return Ok(false);
+            };
+            emit(&app, "launching", 100);
+            match mac::install(&receipt.path, &receipt.version) {
+                Ok(()) => {
+                    // The swap shell waits for this process to exit.
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    app.exit(0);
+                    Ok(true)
+                }
+                Err(e) => {
+                    // Not replaceable after all, or the DMG failed its checks:
+                    // hand the user the DMG to drag across themselves.
+                    eprintln!("[self-update] in-place install failed: {e}");
+                    let _ = std::process::Command::new("open").arg(&receipt.path).spawn();
+                    emit(&app, "downloaded", 100);
+                    Ok(false)
+                }
+            }
+        })
+        .await
+        .map_err(|e| format!("self-update task join failed: {e}"))?
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
         let _ = (app, version);
         Ok(false)
     }
+}
+
+/// Whether a downloaded update can be installed by Coffee CLI itself (and so
+/// waits behind an "Install" button) rather than handed to the user.
+fn installs_in_place() -> bool {
+    #[cfg(target_os = "macos")]
+    return mac::current_bundle().is_some_and(|bundle| mac::replaceable(&bundle));
+    #[cfg(not(target_os = "macos"))]
+    cfg!(target_os = "windows")
 }
 
 /// The update platform this build runs on, in `update_sources` terms.
@@ -195,7 +242,7 @@ fn run_download(app: &tauri::AppHandle, expected: &str) -> Result<Option<String>
     }
     emit(app, "downloading", 100);
 
-    if cfg!(target_os = "windows") {
+    if installs_in_place() {
         let version = target
             .or(downloaded.header_version)
             .unwrap_or_else(|| expected.to_string());
@@ -255,7 +302,7 @@ fn receipt_file() -> Option<PathBuf> {
     dirs::home_dir().map(|home| home.join(".coffee-cli").join("self-update.json"))
 }
 
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "windows", target_os = "macos")), allow(dead_code))]
 fn save_receipt(file: &Path, receipt: &Receipt) -> std::io::Result<()> {
     let bytes = serde_json::to_vec_pretty(receipt).map_err(std::io::Error::other)?;
     crate::json_file::write_atomic(file, &bytes)
@@ -263,7 +310,7 @@ fn save_receipt(file: &Path, receipt: &Receipt) -> std::io::Result<()> {
 
 /// The receipt for `version` whose installer is still exactly the file that
 /// was downloaded; a removed, replaced or unfinished file does not count.
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "windows", target_os = "macos")), allow(dead_code))]
 fn ready_installer(file: &Path, version: &str) -> Option<Receipt> {
     let receipt: Receipt = serde_json::from_slice(&std::fs::read(file).ok()?).ok()?;
     if receipt.version != version.trim_start_matches('v') {
@@ -273,7 +320,7 @@ fn ready_installer(file: &Path, version: &str) -> Option<Receipt> {
     (size == receipt.size && sha256.eq_ignore_ascii_case(&receipt.sha256)).then_some(receipt)
 }
 
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+#[cfg_attr(not(any(target_os = "windows", target_os = "macos")), allow(dead_code))]
 fn hash_file(path: &Path) -> std::io::Result<(u64, String)> {
     use sha2::{Digest, Sha256};
     use std::io::Read;
@@ -352,6 +399,237 @@ fn download_installer(
     Ok(Downloaded { size: downloaded, sha256: digest, header_version })
 }
 
+/// The `.app` bundle an executable inside `Contents/MacOS` belongs to.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn bundle_of(exe: &Path) -> Option<PathBuf> {
+    let macos = exe.parent()?;
+    let contents = macos.parent()?;
+    let bundle = contents.parent()?;
+    (macos.file_name()? == "MacOS"
+        && contents.file_name()? == "Contents"
+        && bundle.extension()? == "app")
+        .then(|| bundle.to_path_buf())
+}
+
+/// Gatekeeper runs a quarantined app from a randomised read-only copy
+/// (App Translocation); replacing that copy would change nothing the user
+/// launches next time.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn translocated(bundle: &Path) -> bool {
+    bundle.components().any(|c| c.as_os_str() == "AppTranslocation")
+}
+
+/// Shell run detached once the new bundle sits beside the old one:
+/// `$1` pid to wait for, `$2` installed bundle, `$3` staged new bundle,
+/// `$4` relaunch command, `$5` DMG to open if the swap fails. The old bundle
+/// is moved aside first and restored if the new one cannot take its place,
+/// so a failure never leaves the user without an app.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const SWAP_SCRIPT: &str = r#"
+pid=$1; app=$2; new=$3; relaunch=$4; dmg=$5; old="$new.old"
+i=0
+while kill -0 "$pid" 2>/dev/null; do
+  i=$((i+1)); [ "$i" -gt 600 ] && exit 1
+  sleep 0.1
+done
+rm -rf "$old"
+ok=0
+if mv "$app" "$old"; then
+  if mv "$new" "$app"; then ok=1; else mv "$old" "$app"; fi
+fi
+rm -rf "$old" "$new"
+"$relaunch" "$app"
+[ "$ok" = 1 ] || "$relaunch" "$dmg"
+"#;
+
+#[cfg(target_os = "macos")]
+mod mac {
+    use super::{bundle_of, translocated, SWAP_SCRIPT};
+    use std::path::{Path, PathBuf};
+    use std::process::{Command, Stdio};
+
+    pub fn current_bundle() -> Option<PathBuf> {
+        let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
+        bundle_of(&exe)
+    }
+
+    /// The running bundle can be renamed away and replaced: not translocated,
+    /// and its folder (usually /Applications) is writable — which also rules
+    /// out the read-only DMG volume.
+    pub fn replaceable(bundle: &Path) -> bool {
+        use std::os::unix::ffi::OsStrExt;
+        if translocated(bundle) {
+            return false;
+        }
+        let Some(parent) = bundle.parent() else { return false };
+        let Ok(c) = std::ffi::CString::new(parent.as_os_str().as_bytes()) else { return false };
+        // SAFETY: a valid NUL-terminated path; access() only reads it.
+        unsafe { libc::access(c.as_ptr(), libc::W_OK) == 0 }
+    }
+
+    /// Mount `dmg`, check its app, stage it beside the running bundle and
+    /// start the detached swap. On Ok the caller exits; the shell relaunches.
+    pub fn install(dmg: &Path, version: &str) -> Result<(), String> {
+        let bundle = current_bundle().ok_or("not running from an app bundle")?;
+        if !replaceable(&bundle) {
+            return Err(format!("{} cannot be replaced", bundle.display()));
+        }
+        let parent = bundle.parent().ok_or("bundle has no parent folder")?;
+        let name = bundle.file_name().ok_or("bundle has no name")?.to_string_lossy().into_owned();
+        // Same volume as the bundle, so the final swap is a rename.
+        let staged = parent.join(format!(".{name}.update"));
+
+        let mount = Mount::attach(dmg)?;
+        let new_app = mount.app()?;
+        check_new_app(&new_app, &bundle, version)?;
+        let _ = std::fs::remove_dir_all(&staged);
+        let _ = std::fs::remove_dir_all(staged.with_extension("update.old"));
+        run(Command::new("/usr/bin/ditto").arg(&new_app).arg(&staged))
+            .map_err(|e| format!("copy new app failed: {e}"))?;
+        drop(mount);
+
+        Command::new("/bin/sh")
+            .arg("-c")
+            .arg(SWAP_SCRIPT)
+            .arg("coffee-cli-update")
+            .arg(std::process::id().to_string())
+            .arg(&bundle)
+            .arg(&staged)
+            .arg("/usr/bin/open")
+            .arg(dmg)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .process_group(0)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| {
+                let _ = std::fs::remove_dir_all(&staged);
+                format!("start update helper failed: {e}")
+            })
+    }
+
+    use std::os::unix::process::CommandExt;
+
+    /// The new app must be intact, be Coffee CLI at the version that was
+    /// downloaded, and — once the installed app carries a Developer ID — be
+    /// signed by Apple-issued certificates of the same team and notarized.
+    fn check_new_app(new_app: &Path, installed: &Path, version: &str) -> Result<(), String> {
+        let mut verify = Command::new("/usr/bin/codesign");
+        verify.args(["--verify", "--deep", "--strict"]);
+        let team = team_id(installed);
+        if let Some(team) = &team {
+            verify.arg(format!("-R={}", super::same_team_requirement(team)?));
+        }
+        run(verify.arg(new_app)).map_err(|e| format!("new app signature rejected: {e}"))?;
+        if team.is_some() {
+            run(Command::new("/usr/sbin/spctl").args(["--assess", "--type", "execute"]).arg(new_app))
+                .map_err(|e| format!("new app not accepted by Gatekeeper: {e}"))?;
+        }
+        let info = |app: &Path, key: &str| -> Option<String> {
+            let out = Command::new("/usr/libexec/PlistBuddy")
+                .args(["-c", &format!("Print :{key}")])
+                .arg(app.join("Contents/Info.plist"))
+                .output()
+                .ok()?;
+            out.status.success().then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
+        };
+        let id = info(new_app, "CFBundleIdentifier");
+        if id.is_none() || id != info(installed, "CFBundleIdentifier") {
+            return Err("new app has a different bundle identifier".into());
+        }
+        if info(new_app, "CFBundleShortVersionString").as_deref() != Some(version.trim_start_matches('v')) {
+            return Err(format!("new app is not version {version}"));
+        }
+        Ok(())
+    }
+
+    /// The Developer ID team of a signed app; `None` for ad-hoc signatures.
+    fn team_id(app: &Path) -> Option<String> {
+        let out = Command::new("/usr/bin/codesign").args(["-dv", "--verbose=2"]).arg(app).output().ok()?;
+        super::parse_team_id(&String::from_utf8_lossy(&out.stderr))
+    }
+
+    fn run(cmd: &mut Command) -> Result<(), String> {
+        let out = cmd.stdin(Stdio::null()).output().map_err(|e| e.to_string())?;
+        if out.status.success() {
+            Ok(())
+        } else {
+            Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+        }
+    }
+
+    /// A DMG mounted privately (no Finder window); detached on drop.
+    struct Mount {
+        point: tempfile::TempDir,
+    }
+
+    impl Mount {
+        fn attach(dmg: &Path) -> Result<Self, String> {
+            let point = tempfile::Builder::new()
+                .prefix("coffee-cli-update-")
+                .tempdir()
+                .map_err(|e| format!("create mount point failed: {e}"))?;
+            run(Command::new("/usr/bin/hdiutil")
+                .args(["attach", "-nobrowse", "-noautoopen", "-readonly", "-mountpoint"])
+                .arg(point.path())
+                .arg(dmg))
+            .map_err(|e| format!("mount update failed: {e}"))?;
+            Ok(Mount { point })
+        }
+
+        fn app(&self) -> Result<PathBuf, String> {
+            let mut apps = std::fs::read_dir(self.point.path())
+                .map_err(|e| format!("read update failed: {e}"))?
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| entry.file_type().is_ok_and(|t| t.is_dir()))
+                .map(|entry| entry.path())
+                .filter(|path| path.extension().is_some_and(|ext| ext == "app"));
+            match (apps.next(), apps.next()) {
+                (Some(app), None) => Ok(app),
+                _ => Err("update holds no single app".into()),
+            }
+        }
+    }
+
+    impl Drop for Mount {
+        fn drop(&mut self) {
+            let _ = Command::new("/usr/bin/hdiutil")
+                .args(["detach", "-force"])
+                .arg(self.point.path())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
+    }
+}
+
+/// Code requirement for an app signed with an Apple-issued Developer ID
+/// certificate of `team` — unlike `TeamIdentifier=`, a self-made
+/// certificate cannot satisfy it.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn same_team_requirement(team: &str) -> Result<String, String> {
+    if team.is_empty() || !team.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(format!("unexpected team identifier {team:?}"));
+    }
+    Ok(format!(
+        "anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] exists \
+         and certificate leaf[field.1.2.840.113635.100.6.1.13] exists \
+         and certificate leaf[subject.OU] = \"{team}\""
+    ))
+}
+
+/// `TeamIdentifier=…` from `codesign -dv` output; ad-hoc reports "not set".
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn parse_team_id(codesign_details: &str) -> Option<String> {
+    codesign_details
+        .lines()
+        .find_map(|line| line.strip_prefix("TeamIdentifier="))
+        .map(str::trim)
+        .filter(|team| !team.is_empty() && *team != "not set")
+        .map(str::to_string)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -392,6 +670,96 @@ mod tests {
 
         std::fs::write(&file, b"{not json").unwrap();
         assert!(ready_installer(&file, "4.0.8").is_none());
+    }
+
+    #[test]
+    fn finds_the_app_bundle_of_the_running_executable() {
+        assert_eq!(
+            bundle_of(Path::new("/Applications/Coffee CLI.app/Contents/MacOS/coffee-cli")),
+            Some(PathBuf::from("/Applications/Coffee CLI.app"))
+        );
+        assert_eq!(bundle_of(Path::new("/Volumes/扩展存储/coffee-cli/target/debug/coffee-cli")), None);
+        assert_eq!(bundle_of(Path::new("/Applications/Coffee CLI/Contents/MacOS/coffee-cli")), None);
+        assert!(translocated(Path::new(
+            "/private/var/folders/x/T/AppTranslocation/1234/d/Coffee CLI.app"
+        )));
+        assert!(!translocated(Path::new("/Applications/Coffee CLI.app")));
+    }
+
+    #[test]
+    fn reads_the_signing_team_and_treats_ad_hoc_as_none() {
+        let signed = "Identifier=com.coffeecli.desktop\nAuthority=Developer ID Application: Coffee (AB12CD34EF)\nTeamIdentifier=AB12CD34EF\n";
+        assert_eq!(parse_team_id(signed).as_deref(), Some("AB12CD34EF"));
+        assert_eq!(parse_team_id("Signature=adhoc\nTeamIdentifier=not set\n"), None);
+        assert_eq!(parse_team_id("Signature=adhoc\n"), None);
+    }
+
+    #[test]
+    fn requires_an_apple_issued_developer_id_of_the_same_team() {
+        let req = same_team_requirement("AB12CD34EF").unwrap();
+        assert!(req.starts_with("anchor apple generic and "), "{req}");
+        assert!(req.ends_with(r#"certificate leaf[subject.OU] = "AB12CD34EF""#), "{req}");
+        assert!(!req.contains("  "), "{req}");
+        assert!(same_team_requirement("").is_err());
+        assert!(same_team_requirement(r#"X" or true"#).is_err());
+    }
+
+    #[cfg(unix)]
+    fn run_swap(app: &Path, new: &Path) -> String {
+        let dir = app.parent().unwrap();
+        let log = dir.join("relaunched");
+        // Relaunch command that records what it was asked to open.
+        let relaunch = dir.join("relaunch.sh");
+        std::fs::write(&relaunch, format!("#!/bin/sh\necho \"$1\" >> '{}'\n", log.display())).unwrap();
+        std::process::Command::new("chmod").arg("+x").arg(&relaunch).status().unwrap();
+        let mut gone = std::process::Command::new("true").spawn().unwrap();
+        let pid = gone.id();
+        gone.wait().unwrap();
+        let status = std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(SWAP_SCRIPT)
+            .arg("swap")
+            .arg(pid.to_string())
+            .arg(app)
+            .arg(new)
+            .arg(&relaunch)
+            .arg(dir.join("update.dmg"))
+            .status()
+            .unwrap();
+        assert!(status.success());
+        std::fs::read_to_string(log).unwrap_or_default()
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn swap_replaces_the_bundle_and_relaunches_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = dir.path().join("Coffee CLI.app");
+        let new = dir.path().join(".Coffee CLI.app.update");
+        std::fs::create_dir_all(app.join("Contents")).unwrap();
+        std::fs::write(app.join("Contents/v"), "old").unwrap();
+        std::fs::create_dir_all(new.join("Contents")).unwrap();
+        std::fs::write(new.join("Contents/v"), "new").unwrap();
+
+        let opened = run_swap(&app, &new);
+        assert_eq!(std::fs::read_to_string(app.join("Contents/v")).unwrap(), "new");
+        assert!(!new.exists(), "staged copy is moved, not left behind");
+        assert!(!dir.path().join(".Coffee CLI.app.update.old").exists());
+        assert_eq!(opened.trim(), app.display().to_string());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn failed_swap_keeps_the_old_app_and_opens_the_dmg() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = dir.path().join("Coffee CLI.app");
+        std::fs::create_dir_all(app.join("Contents")).unwrap();
+        std::fs::write(app.join("Contents/v"), "old").unwrap();
+        // Nothing staged: the second rename fails.
+        let opened = run_swap(&app, &dir.path().join(".Coffee CLI.app.update"));
+        assert_eq!(std::fs::read_to_string(app.join("Contents/v")).unwrap(), "old");
+        let lines: Vec<_> = opened.lines().collect();
+        assert_eq!(lines, [app.display().to_string(), dir.path().join("update.dmg").display().to_string()]);
     }
 
     #[test]
