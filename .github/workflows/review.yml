@@ -1,57 +1,39 @@
 name: Review
 
+# This repository holds no source. Review is a build check of the private desktop source
+# (edison7009/Coffee-CLI-secret-), run here where Actions minutes are free: Actions → Review → Run workflow.
 on:
-  push:
-    branches: [main]
-    paths-ignore: ['Web-Home/**', 'README*', 'docs/**', 'install/release-notes-template.md']
-  pull_request:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit of the private desktop source to check
+        required: false
+        default: main
 
 permissions:
   contents: read
 
 concurrency:
-  group: review-${{ github.event.pull_request.number || github.ref }}
+  group: review-${{ inputs.ref }}
   cancel-in-progress: true
 
 jobs:
-  # The open-source core on its own: what every contributor's pull request can build.
-  core:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-      - name: Install Linux system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev libasound2-dev patchelf
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-        with:
-          key: review-core
-      - name: Core check
-        run: cargo check --locked
-      - name: Core static analysis
-        run: cargo clippy --locked --all-targets -- -D clippy::correctness -D clippy::suspicious
-      - name: Core regression tests
-        run: cargo test --locked --no-fail-fast
-
-  # The app as it ships, with the private Pro modules (tool integrations and the interface). Only runs where the
-  # deploy key is available: pushes and pull requests from this repository, never pull requests from forks.
   frontend:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - name: Check out Pro
+      - name: Check out desktop source
         uses: actions/checkout@v5
         with:
           repository: edison7009/Coffee-CLI-secret-
-          ref: main
-          path: pro
+          ref: ${{ inputs.ref }}
           ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
+          persist-credentials: false
+      # The website, for the tests that check the desktop against it.
+      - name: Check out website
+        uses: actions/checkout@v5
+        with:
+          path: public
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
@@ -60,6 +42,8 @@ jobs:
           cache-dependency-path: pro/ui/package-lock.json
       - name: Build, lint, and regression tests
         working-directory: pro/ui
+        env:
+          COFFEE_WEB_HOME: ${{ github.workspace }}/public/Web-Home
         run: |
           npm ci
           npm run build
@@ -74,7 +58,6 @@ jobs:
         run: npm run test:browser
 
   native:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
@@ -82,13 +65,11 @@ jobs:
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
-      - name: Check out Pro
+      - name: Check out desktop source
         uses: actions/checkout@v5
         with:
           repository: edison7009/Coffee-CLI-secret-
-          ref: main
-          path: pro
+          ref: ${{ inputs.ref }}
           ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
           persist-credentials: false
       - name: Install Linux system dependencies
@@ -101,8 +82,11 @@ jobs:
         with:
           key: review-${{ matrix.platform }}
       - name: Native check
-        run: cargo check --locked --features pro
+        run: cargo check --locked
+      - name: Core check without the Pro modules
+        if: runner.os == 'Linux'
+        run: cargo check --locked --no-default-features
       - name: Native static analysis
-        run: cargo clippy --locked --all-targets --features pro -- -D clippy::correctness -D clippy::suspicious
+        run: cargo clippy --locked --all-targets -- -D clippy::correctness -D clippy::suspicious
       - name: Native regression tests
-        run: cargo test --locked --no-fail-fast --features pro
+        run: cargo test --locked --no-fail-fast

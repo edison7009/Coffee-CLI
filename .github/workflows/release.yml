@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to rebuild (the private repository must have the same tag)
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,18 +20,28 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      # The private Pro modules (tool integrations and the interface), at the tag of the same name.
-      - name: Check out Pro
+      # This repository holds no source: the desktop source is the private repository's tag of the same name.
+      - name: Check out desktop source
         uses: actions/checkout@v5
         with:
           repository: edison7009/Coffee-CLI-secret-
-          ref: ${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
-          path: pro
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
           persist-credentials: false
+
+      - name: Verify source version
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::invalid release tag $TAG"; exit 1; }
+          CARGO=$(sed -nE 's/^version = "([^"]+)"/\1/p' Cargo.toml | head -1)
+          TAURI=$(node -p "require('./tauri.conf.json').version")
+          if [ "v$CARGO" != "$TAG" ] || [ "v$TAURI" != "$TAG" ]; then
+            echo "::error::desktop source version (Cargo $CARGO, Tauri $TAURI) differs from $TAG"; exit 1
+          fi
+          echo "Building $TAG from $(git rev-parse HEAD)"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -126,16 +141,12 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      # The private Pro modules (tool integrations and the interface), at the tag of the same name.
-      - name: Check out Pro
+      # This repository holds no source: the desktop source is the private repository's tag of the same name.
+      - name: Check out desktop source
         uses: actions/checkout@v5
         with:
           repository: edison7009/Coffee-CLI-secret-
-          ref: ${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
-          path: pro
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           ssh-key: ${{ secrets.PRO_DEPLOY_KEY }}
           persist-credentials: false
 
@@ -147,10 +158,7 @@ jobs:
           # the latest tag in the working tree. Bare version (no leading "v")
           # is what tauri stamps into bundle filenames; both forms are
           # exposed for downstream steps.
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [ "$TAG" = "$GITHUB_REF" ]; then
-            TAG=$(git describe --tags --abbrev=0)
-          fi
+          TAG="${{ inputs.tag || github.ref_name }}"
           VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -285,7 +293,7 @@ jobs:
 
       - name: Build .app (macOS)
         if: runner.os == 'macOS'
-        run: cargo tauri build --bundles app --features pro --config pro/tauri.conf.json ${{ matrix.args }}
+        run: cargo tauri build --bundles app --features pro ${{ matrix.args }}
 
       - name: Notarize and build drag-to-install DMG (macOS)
         if: runner.os == 'macOS'
@@ -299,7 +307,7 @@ jobs:
       # ── Windows / Linux: standard one-shot bundle build ──
       - name: Build all bundles (Windows / Linux)
         if: runner.os != 'macOS'
-        run: cargo tauri build --features pro --config pro/tauri.conf.json ${{ matrix.args }}
+        run: cargo tauri build --features pro ${{ matrix.args }}
 
       - name: Verify packaged orchestration protocol
         shell: bash
