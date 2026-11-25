@@ -45,6 +45,16 @@ struct Session {
     protocol: Protocol,
     stderr: Mutex<String>,
     prompts: AtomicUsize,
+    cwd: String,
+    /// The model in use, for the usage ledger: the session's model option, as the agent last reported it.
+    model: Mutex<String>,
+}
+/// The current model from a session result or update: the `model` config option, else ACP's `models` state.
+fn current_model(result: &Value) -> Option<String> {
+    result["configOptions"].as_array().and_then(|options| options.iter().find(|o| o["category"] == "model"))
+        .and_then(|o| o["currentValue"].as_str())
+        .or_else(|| result["models"]["currentModelId"].as_str())
+        .filter(|m| !m.is_empty()).map(str::to_owned)
 }
 #[derive(Default)]
 pub struct AcpSessions(Mutex<HashMap<String, Arc<Session>>>);
@@ -81,6 +91,8 @@ fn emit(app: &tauri::AppHandle, id: &str, s: &Session, event: Value) {
 }
 /// The arguments that start each tool's ACP server, as the official ACP registry lists them. A tool missing
 /// here has no desktop conversation.
+/// Every tool `acp_args` starts; keep in step with it (and with ACP_TOOLS in src-ui/src/lib/acp-tools.ts).
+pub(crate) const ACP_TOOLS: [&str; 12] = ["antigravity", "cursor", "kiro", "muse", "goose", "kilo", "kimicode", "grok", "cline", "codebuddy", "copilot", "qwen"];
 pub(crate) fn acp_args(tool: &str) -> Option<&'static [&'static str]> {
     Some(match tool {
         "antigravity" | "cursor" | "muse" | "goose" | "kilo" | "kimicode" => &["acp"],
@@ -135,7 +147,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, tool: String, cw
     #[cfg(windows)]
     crate::terminal::windows_job::assign_pid(child.id());
     let (stdout, stderr, input) = (child.stdout.take().unwrap(), child.stderr.take().unwrap(), child.stdin.take().unwrap());
-    let s = Arc::new(Session { tool: tool.clone(), generation, native_id: Mutex::default(), child: Mutex::new(child), input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::default(), prompts: AtomicUsize::new(0) });
+    let s = Arc::new(Session { tool: tool.clone(), generation, native_id: Mutex::default(), child: Mutex::new(child), input: Mutex::new(Some(input)), protocol: Protocol::default(), stderr: Mutex::default(), prompts: AtomicUsize::new(0), cwd: cwd.to_string_lossy().into_owned(), model: Mutex::default() });
     {
         let sessions = app.state::<AcpSessions>(); let mut map = sessions.0.lock().unwrap();
         if map.contains_key(&id) { s.stop(); return Err("This tab already owns a desktop session".into()); }
@@ -151,7 +163,13 @@ fn start(app: tauri::AppHandle, id: String, generation: String, tool: String, cw
         if let Ok(record) = serde_json::from_str::<Value>(&line) {
             if record.get("id").is_some() && record.get("method").is_some() && record["method"] != "session/request_permission" {
                 let _ = reader.write(&json!({"jsonrpc":"2.0","id":record["id"],"error":{"code":-32601,"message":"Client method not supported"}}));
-            } else if let Some(event) = reader.protocol.receive(record) { emit(&reader_app, &reader_id, &reader, event); }
+            } else if let Some(event) = reader.protocol.receive(record) {
+                let update = &event["params"]["update"];
+                if event["method"] == "session/update" && update["sessionUpdate"] == "config_option_update" {
+                    if let Some(model) = current_model(update) { *reader.model.lock().unwrap() = model; }
+                }
+                emit(&reader_app, &reader_id, &reader, event);
+            }
         }
     }});
     let watcher = s.clone(); let watcher_app = app.clone(); let watcher_id = id.clone();
@@ -173,6 +191,7 @@ fn start(app: tauri::AppHandle, id: String, generation: String, tool: String, cw
         let mut result = s.request(if resume.is_some() { "session/load" } else { "session/new" }, params, Duration::from_secs(90))?;
         let native_id = resume.unwrap_or_else(|| result["sessionId"].as_str().unwrap_or_default().to_string());
         if native_id.is_empty() { return Err("The tool returned no session ID".into()); }
+        if let Some(model) = current_model(&result) { *s.model.lock().unwrap() = model; }
         *s.native_id.lock().unwrap() = native_id.clone(); result["sessionId"] = json!(native_id); Ok(result)
     })();
     if result.is_err() { s.stop(); }
@@ -196,8 +215,16 @@ pub async fn acp_session_request(sessions: State<'_, AcpSessions>, id: String, g
     tauri::async_runtime::spawn_blocking(move || {
         if method == "session/cancel" { return s.write(&json!({"jsonrpc":"2.0","method":method,"params":params})).map(|_| Value::Null); }
         if method == "session/prompt" { s.prompts.fetch_add(1, Ordering::SeqCst); }
-        let result = s.request(&method, params, Duration::from_secs(if method == "session/prompt" { 3600 } else { 60 }));
-        if method == "session/prompt" && s.prompts.fetch_sub(1, Ordering::SeqCst) == 1 { s.protocol.permissions.lock().unwrap().clear(); }
+        let sent = chrono::Utc::now();
+        let result = s.request(&method, params.clone(), Duration::from_secs(if method == "session/prompt" { 3600 } else { 60 }));
+        if method == "session/prompt" {
+            if s.prompts.fetch_sub(1, Ordering::SeqCst) == 1 { s.protocol.permissions.lock().unwrap().clear(); }
+            let model = s.model.lock().unwrap().clone();
+            crate::usage_stats::record_acp_turn(&s.tool, &s.native_id.lock().unwrap(), &s.cwd, &model, sent, result.as_ref().ok().map(|r| &r["usage"]));
+        } else if let Ok(value) = &result {
+            let model = if method == "session/set_model" { params["modelId"].as_str().map(str::to_owned) } else { current_model(value) };
+            if let Some(model) = model.filter(|m| !m.is_empty()) { *s.model.lock().unwrap() = model; }
+        }
         result
     }).await.map_err(|e| e.to_string())?
 }
@@ -236,6 +263,15 @@ mod tests {
         assert_eq!(acp_args("qwen"), Some(&["--acp", "--experimental-skills"][..]));
         for tool in ["cursor", "muse", "goose", "kilo", "kimicode", "cline", "codebuddy", "copilot"] { assert!(acp_args(tool).is_some(), "{tool}"); assert!(crate::tools::find(tool).is_some(), "{tool} is a known tool"); }
         for tool in ["claude", "codex", "opencode", "pi", "dsh", "aider", "minimax"] { assert!(acp_args(tool).is_none(), "{tool}"); assert!(executable(tool).is_none()); }
+        for tool in ACP_TOOLS { assert!(acp_args(tool).is_some(), "{tool} is listed and starts"); }
+        assert_eq!(crate::tools::TOOLS.iter().filter(|t| acp_args(t.id).is_some()).count(), ACP_TOOLS.len(), "every ACP tool is listed");
+    }
+    #[test]
+    fn the_usage_ledger_follows_the_model_option() {
+        let options = json!({"configOptions":[{"id":"mode","category":"mode","currentValue":"build"},{"id":"model","category":"model","currentValue":"gemini-3-pro"}]});
+        assert_eq!(current_model(&options).as_deref(), Some("gemini-3-pro"));
+        assert_eq!(current_model(&json!({"models":{"currentModelId":"auto"}})).as_deref(), Some("auto"));
+        assert_eq!(current_model(&json!({"configOptions":[]})), None);
     }
     #[test]
     fn only_agents_that_offer_it_reopen_a_saved_session() {

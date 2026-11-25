@@ -8,7 +8,7 @@ export interface UsageSummary {
 export interface UsageGroup { key: string; summary: UsageSummary }
 export interface UsageReport {
   summary: UsageSummary; daily: UsageGroup[]; models: UsageGroup[]; projects: string[];
-  sources: { tool: string; files: number; available: boolean; errors: number }[];
+  sources: { tool: string; name?: string; files: number; available: boolean; errors: number }[];
 }
 
 const SNAPSHOT_KEY = 'cc-usage-snapshots-v1';

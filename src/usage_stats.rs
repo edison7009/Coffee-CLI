@@ -60,6 +60,16 @@ impl Tokens {
             reasoning: number(v, "reasoning_output_tokens"),
         }
     }
+    /// ACP's per-turn `PromptResponse.usage`; cache reads and writes are reported apart from input.
+    fn acp(v: &Value) -> Self {
+        Self {
+            input: number(v, "inputTokens"),
+            output: number(v, "outputTokens"),
+            cache_read: number(v, "cachedReadTokens"),
+            cache_write: number(v, "cachedWriteTokens"),
+            reasoning: number(v, "thoughtTokens"),
+        }
+    }
     fn delta(&self, previous: &Self) -> Self {
         fn sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
             a.map(|n| n.saturating_sub(b.unwrap_or(0)))
@@ -216,6 +226,8 @@ fn parse_line(
         }
     } else if tool == "pi" {
         parse_pi(db, file, p, v, &stamp)?;
+    } else if crate::acp_session::acp_args(tool).is_some() {
+        parse_acp(db, file, tool, p, v, &stamp)?;
     } else {
         let data = &v["payload"];
         if v["type"] == "session_meta" {
@@ -334,6 +346,54 @@ fn parse_pi(db: &Connection, file: &str, p: &mut Parser, v: &Value, stamp: &str)
         _ => {}
     }
     Ok(())
+}
+
+/// One turn of an ACP desktop conversation, as Coffee CLI's own ledger keeps it (see `record_acp_turn`).
+fn parse_acp(db: &Connection, file: &str, tool: &str, p: &mut Parser, v: &Value, stamp: &str) -> rusqlite::Result<()> {
+    let turn = text(v, "turn");
+    if turn.is_empty() {
+        return Ok(());
+    }
+    p.session = text(v, "sessionId");
+    p.project = text(v, "cwd").replace('\\', "/");
+    p.model = text(v, "model");
+    record(db, file, &format!("{tool}:prompt:{turn}"), tool, p, stamp, "prompt", Tokens::default())?;
+    let usage = Tokens::acp(&v["usage"]);
+    if usage.any() {
+        record(db, file, &format!("{tool}:usage:{turn}"), tool, p, stamp, "usage", usage)?;
+    }
+    Ok(())
+}
+
+fn acp_ledger(home: &Path) -> PathBuf {
+    home.join(".coffee-cli/usage/acp")
+}
+
+/// ACP tools keep their histories in formats of their own, so Coffee CLI records each turn of the desktop
+/// conversations it runs: when it was sent, where, on which model, and the usage the reply reports (if any).
+pub(crate) fn record_acp_turn(tool: &str, session: &str, cwd: &str, model: &str, sent: chrono::DateTime<chrono::Utc>, usage: Option<&Value>) {
+    use std::io::Write;
+    let Some(home) = dirs::home_dir() else { return };
+    let directory = acp_ledger(&home);
+    if std::fs::create_dir_all(&directory).is_err() {
+        return;
+    }
+    let mut line = serde_json::json!({
+        "timestamp": sent.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        "turn": uuid::Uuid::new_v4().to_string(),
+        "sessionId": session,
+        "cwd": cwd,
+        "model": model,
+    });
+    if let Some(usage) = usage.filter(|u| u.is_object()) {
+        line["usage"] = usage.clone();
+    }
+    let Ok(mut text) = serde_json::to_string(&line) else { return };
+    text.push('\n');
+    // One append per turn, so concurrent tabs never interleave and the importer only reads whole lines.
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(directory.join(format!("{tool}.jsonl"))) {
+        let _ = file.write_all(text.as_bytes());
+    }
 }
 
 fn import_file(db: &mut Connection, path: &Path, tool: &str) -> Result<(), String> {
@@ -585,18 +645,25 @@ fn collect(root: &Path, depth: u8, out: &mut Vec<PathBuf>) {
 #[serde(rename_all = "camelCase")]
 pub struct Source {
     tool: String,
+    /// The registry's display name, so the page never keeps its own label table.
+    name: &'static str,
     files: usize,
     available: bool,
     errors: usize,
 }
 
+fn display_name(tool: &str) -> &'static str {
+    crate::tools::find(tool).map_or("", |t| t.display_name)
+}
+
 fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
     let (dsh_root, dsh_logs) = crate::dsh_session::usage_logs();
     let dsh_errors = dsh_logs.iter().filter(|path| import_dsh(db, path).is_err()).count();
-    let dsh = Source { tool: "dsh".into(), files: dsh_logs.len(), available: dsh_root.is_dir(), errors: dsh_errors };
+    let dsh = Source { tool: "dsh".into(), name: display_name("dsh"), files: dsh_logs.len(), available: dsh_root.is_dir(), errors: dsh_errors };
     let opencode_db = crate::tool_config::history_path_for("opencode", home.join(".local/share/opencode")).join("opencode.db");
     let opencode = Source {
         tool: "opencode".into(),
+        name: display_name("opencode"),
         files: usize::from(opencode_db.is_file()),
         available: opencode_db.is_file(),
         errors: usize::from(opencode_db.is_file() && import_opencode(db, &opencode_db).is_err()),
@@ -604,7 +671,16 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
     let pi_root = crate::tool_config::history_path_for("pi", std::env::var_os("PI_CODING_AGENT_DIR").filter(|dir| !dir.is_empty()).map(PathBuf::from).unwrap_or_else(|| home.join(".pi/agent")).join("sessions"));
     let mut pi_files = Vec::new();
     collect(&pi_root, 2, &mut pi_files);
-    let pi = Source { tool: "pi".into(), files: pi_files.len(), available: pi_root.is_dir(), errors: pi_files.iter().filter(|path| import_file(db, path, "pi").is_err()).count() };
+    let pi = Source { tool: "pi".into(), name: display_name("pi"), files: pi_files.len(), available: pi_root.is_dir(), errors: pi_files.iter().filter(|path| import_file(db, path, "pi").is_err()).count() };
+    // Every ACP tool is listed so it can be picked; only one used in a desktop conversation has a ledger yet.
+    let acp: Vec<Source> = crate::acp_session::ACP_TOOLS
+        .iter()
+        .map(|tool| {
+            let path = acp_ledger(home).join(format!("{tool}.jsonl"));
+            let available = path.is_file();
+            Source { tool: (*tool).into(), name: display_name(tool), files: usize::from(available), available, errors: usize::from(available && import_file(db, &path, tool).is_err()) }
+        })
+        .collect();
     ["claude", "codex"]
         .into_iter()
         .map(|tool| {
@@ -634,12 +710,14 @@ fn sync(db: &mut Connection, home: &Path) -> Vec<Source> {
                 .count();
             Source {
                 tool: tool.into(),
+                name: display_name(tool),
                 files: files.len(),
                 available: root.is_dir(),
                 errors,
             }
         })
         .chain([dsh, opencode, pi])
+        .chain(acp)
         .collect()
 }
 
@@ -761,7 +839,7 @@ pub async fn get_usage_statistics(query: Query) -> Result<Report, String> {
         || !matches!(
             query.tool.as_deref(),
             None | Some("") | Some("claude") | Some("codex") | Some("dsh") | Some("opencode") | Some("pi")
-        )
+        ) && !query.tool.as_deref().is_some_and(|tool| crate::acp_session::acp_args(tool).is_some())
     {
         return Err("Invalid usage range or tool".into());
     }
@@ -1038,6 +1116,21 @@ mod tests {
             json!({"type":"response_item","timestamp":"2026-10-24T00:01:00Z","payload":{"type":"message","role":"user","content":[]}}),
         );
         assert_eq!(totals(&c).summary.prompts, 2);
+    }
+
+    #[test]
+    fn acp_turns_count_prompts_and_reported_usage_per_tool() {
+        let c = db();
+        let mut p = Parser::default();
+        line(&c, &mut p, "antigravity", json!({"timestamp":"2026-11-24T08:00:00.000Z","turn":"t1","sessionId":"s1","cwd":"C:\\work\\app","model":"gemini-3-pro","usage":{"inputTokens":100,"outputTokens":20,"cachedReadTokens":50,"thoughtTokens":5,"totalTokens":175}}));
+        line(&c, &mut p, "antigravity", json!({"timestamp":"2026-11-24T08:05:00.000Z","turn":"t2","sessionId":"s1","cwd":"C:\\work\\app","model":"gemini-3-pro"}));
+        line(&c, &mut p, "kiro", json!({"timestamp":"2026-11-24T08:06:00.000Z","turn":"t3","sessionId":"k1","cwd":"/repo","model":"auto","usage":{"inputTokens":10,"outputTokens":2}}));
+        let r = totals(&c);
+        assert_eq!((r.summary.sessions, r.summary.prompts, r.summary.calls), (2, 3, 2));
+        assert_eq!(r.summary.tokens, Some(182));
+        assert!(r.projects.contains(&"C:/work/app".to_string()));
+        let kiro = report(&c, Query { from: 0, to: 4102444800, tool: Some("kiro".into()), project: None }, vec![]).unwrap();
+        assert_eq!((kiro.summary.prompts, kiro.summary.tokens), (1, Some(12)));
     }
 
     #[test]
