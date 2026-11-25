@@ -231,6 +231,7 @@ export const zhCN = {
   'explorer.tab.workspace': '工作区',
   'explorer.tab.history': '会话记录',
   'explorer.new_session': '新建会话',
+  'workbench.title': '我的工作台',
   'explorer.filter_files': '筛选文件和文件夹…',
   'explorer.no_matches': '没有匹配的文件或文件夹。',
   'history.search': '搜索',

@@ -231,6 +231,7 @@ export const ja = {
   'explorer.tab.workspace': 'ワークスペース',
   'explorer.tab.history': 'セッション履歴',
   'explorer.new_session': '新しいセッション',
+  'workbench.title': 'マイワークベンチ',
   'explorer.filter_files': 'ファイルとフォルダーを絞り込み…',
   'explorer.no_matches': '一致するファイルやフォルダーはありません。',
   'history.search': '検索',

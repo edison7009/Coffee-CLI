@@ -57,7 +57,7 @@ try {
   await page.getByRole('button', { name: 'Agent configuration', exact: true }).click();
   assert.equal(await page.getByText('Agent Tools', { exact: true }).count(), 0, 'retired category is removed');
   assert.equal(await page.getByText('Coffee 101', { exact: true }).count(), 0);
-  await page.getByRole('complementary').getByRole('button', { name: 'New session', exact: true }).click();
+  await page.getByRole('complementary').getByRole('button', { name: 'My workbench', exact: true }).click();
   for (const session of [
     { id: 'a', tool: 'claude', claudeMode: 'conversation', resumeToken: 'thread-a', toolTitle: 'Claude desktop task' },
     { id: 'b', tool: 'codex', codexMode: 'conversation', resumeToken: 'thread-b', toolTitle: 'Codex desktop task' },
@@ -97,9 +97,9 @@ try {
   }));
   // Code 方案 A: the entries are one row of icons — statistics sizes its icon exactly like app configuration.
   assert.deepEqual({ ...navigationStyles[1], iconX: 0 }, { ...navigationStyles[0], iconX: 0 }, 'statistics use the same icon button as app configuration');
-  // New session is not one of them: a named button on a row of its own, as wide as the row of icons.
-  const newSession = await page.evaluate(() => { const button = document.querySelector('.explorer-new-button'), row = document.querySelector('.explorer-tabs'); const a = button.getBoundingClientRect(), b = row.getBoundingClientRect(); return { text: button.textContent.trim(), width: a.width, rowWidth: b.width, above: a.bottom <= b.top, inRow: !!row.querySelector('[aria-label="New session"]') }; });
-  assert.equal(newSession.text, 'New session');
+  // My workbench is not one of them: a named button on a row of its own, as wide as the row of icons.
+  const newSession = await page.evaluate(() => { const button = document.querySelector('.explorer-new-button'), row = document.querySelector('.explorer-tabs'); const a = button.getBoundingClientRect(), b = row.getBoundingClientRect(); return { text: button.textContent.trim(), width: a.width, rowWidth: b.width, above: a.bottom <= b.top, inRow: !!row.querySelector('[aria-label="My workbench"]') }; });
+  assert.equal(newSession.text, 'My workbench');
   assert.ok(newSession.above && Math.abs(newSession.width - newSession.rowWidth) < 1 && !newSession.inRow, `new session sits alone above the icons (${JSON.stringify(newSession)})`);
   assert.equal(await page.locator('[data-fixture-view]:visible').count(), 0, 'statistics hide native surfaces without ending their sessions');
   assert.equal(await page.locator('.gambit').count(), 0, 'statistics do not leave the composer over the charts');

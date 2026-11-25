@@ -229,6 +229,7 @@ export const ru = {
   'split.resize': 'Изменить размер области',
   'split.full': 'До четырёх сеансов в разделённом виде',
   'explorer.new_session': 'Новая сессия',
+  'workbench.title': 'Моё рабочее место',
   'explorer.filter_files': 'Фильтр файлов и папок…',
   'explorer.no_matches': 'Нет подходящих файлов или папок.',
   'history.search': 'Поиск',

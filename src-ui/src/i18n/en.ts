@@ -230,6 +230,7 @@ export const en = {
   'explorer.tab.workspace': 'Workspace',
   'explorer.tab.history': 'Sessions',
   'explorer.new_session': 'New session',
+  'workbench.title': 'My workbench',
   'explorer.filter_files': 'Filter files and folders…',
   'explorer.no_matches': 'No matching files or folders.',
   'history.search': 'Search',

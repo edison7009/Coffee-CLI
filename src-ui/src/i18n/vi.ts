@@ -229,6 +229,7 @@ export const vi = {
   'split.resize': 'Đổi kích thước khung chia',
   'split.full': 'Tối đa bốn phiên trong chế độ chia màn hình',
   'explorer.new_session': 'Phiên mới',
+  'workbench.title': 'Bàn làm việc của tôi',
   'explorer.filter_files': 'Lọc tệp và thư mục…',
   'explorer.no_matches': 'Không có tệp hoặc thư mục phù hợp.',
   'history.search': 'Tìm kiếm',

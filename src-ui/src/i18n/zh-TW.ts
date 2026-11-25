@@ -231,6 +231,7 @@ export const zhTW = {
   'explorer.tab.workspace': '工作區',
   'explorer.tab.history': '會話記錄',
   'explorer.new_session': '新建會話',
+  'workbench.title': '我的工作台',
   'explorer.filter_files': '篩選檔案和資料夾…',
   'explorer.no_matches': '沒有相符的檔案或資料夾。',
   'history.search': '搜尋',

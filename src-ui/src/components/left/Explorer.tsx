@@ -647,9 +647,10 @@ export function Explorer() {
       <div className="explorer-scroll" data-tab={activeTab} ref={scrollRef}>
       {/* The sidebar's most used action, on a row of its own with its name. */}
       <button type="button" className="explorer-new-button" onClick={() => window.dispatchEvent(new Event('coffee-new-session'))}>
-        {/* Lucide plus; license in /icons/LICENSE-lucide.txt. */}
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-        <span>{t('explorer.new_session')}</span>
+        {/* 我的工作台: back to the tool cards (a new tab only when none is waiting there). Lucide house; license in
+            /icons/LICENSE-lucide.txt. */}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+        <span>{t('workbench.title')}</span>
       </button>
       <div className="explorer-tabs">
         {/* Code 方案 A: the sidebar's other entries as one row of icons (names in the tips), the sessions right under. */}

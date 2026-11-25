@@ -33,7 +33,7 @@ const browser = await chromium.launch({ headless: true, ...(process.env.COFFEE_C
 try {
   const page = await browser.newPage({ viewport: { width: 700, height: 200 } });
   await page.goto(`http://127.0.0.1:${server.address().port}`);
-  const add = page.getByRole('button', { name: '新建会话', exact: true });
+  const add = page.getByRole('button', { name: '我的工作台', exact: true });
   await add.waitFor();
   assert.equal(await add.getAttribute('title'), null, 'no native browser tooltip');
   const [box, last, header] = await Promise.all([add.boundingBox(), page.locator('.chrome-tab').last().boundingBox(), page.locator('.chrome-tabs-header').boundingBox()]);

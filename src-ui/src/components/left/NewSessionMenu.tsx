@@ -60,8 +60,8 @@ export function NewSessionMenu({ onDone, autoFocus = false }: { onDone: () => vo
     else if (event.key === 'ArrowRight' && !inFolders) { event.preventDefault(); requestAnimationFrame(() => target.parentElement?.querySelector<HTMLElement>('.rail-new-folder')?.focus()); }
     else if (event.key === 'ArrowLeft' && inFolders) { event.preventDefault(); target.closest('.rail-new-tool')?.querySelector<HTMLElement>('.rail-new-row')?.focus(); }
   };
-  return <div ref={root} className="rail-new" role="menu" aria-label={t('explorer.new_session')} onKeyDown={onKeyDown}>
-    <div className="rail-new-head">{t('explorer.new_session')}</div>
+  return <div ref={root} className="rail-new" role="menu" aria-label={t('workbench.title')} onKeyDown={onKeyDown}>
+    <div className="rail-new-head">{t('workbench.title')}</div>
     {tools.map(tool => {
       const disabled = installed[tool] === false, last = lastFolders[tool];
       // The tool's last folder first, then the other recent ones.

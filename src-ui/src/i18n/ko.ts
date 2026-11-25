@@ -231,6 +231,7 @@ export const ko = {
   'explorer.tab.workspace': '작업 공간',
   'explorer.tab.history': '세션 기록',
   'explorer.new_session': '새 세션',
+  'workbench.title': '내 작업대',
   'explorer.filter_files': '파일 및 폴더 필터링…',
   'explorer.no_matches': '일치하는 파일이나 폴더가 없습니다.',
   'history.search': '검색',

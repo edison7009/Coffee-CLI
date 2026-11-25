@@ -22,7 +22,8 @@ import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
 const ICONS: Record<string, ReactNode> = {
-  new: <><path d="M12 5v14M5 12h14" /></>,
+  // 我的工作台 (Lucide house): back to the tool cards.
+  new: <><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   // Lucide message-square: the conversations list is a list of conversations, not a search.
   conversations: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
@@ -92,7 +93,7 @@ function useRailTip() {
 function SessionButton({ session, active, unread, onPick, onMenu, tipFor, kids, onPickKid }: { session: TerminalSession; active: boolean; unread: boolean; onPick: () => void; onMenu: (x: number, y: number) => void; tipFor: ReturnType<typeof useRailTip>['tipFor']; kids?: TabChild[]; onPickKid: (id: string) => void }) {
   const t = useT();
   const folder = session.folderPath?.split(/[\\/]/).filter(Boolean).pop() ?? '';
-  const title = session.pinnedTitle || session.toolTitle || (session.tool ? getToolDisplayName(session.tool) : t('explorer.new_session'));
+  const title = session.pinnedTitle || session.toolTitle || (session.tool ? getToolDisplayName(session.tool) : t('workbench.title'));
   const letter = Array.from(title.trim())[0]?.toUpperCase() ?? '·';
   const state = session.agentStatus === 'working' ? 'working' : session.agentStatus === 'wait_input' ? 'waiting' : unread && !active ? 'unread' : '';
   // Close sits on the icon's corner, where the pointer already is; the rest of the conversation's actions are on right-click.
@@ -167,7 +168,7 @@ export function IconRail() {
   return <nav className="icon-rail" aria-label={t('rail.label')}>
     {/* Start something, or find something. */}
     {/* Click: the start page in the middle, as before. Hover: the tools and their folders, beside the rail. */}
-    <button ref={newToggle} type="button" className="icon-rail-button icon-rail-start" aria-label={t('explorer.new_session')} aria-expanded={flyout === 'new'} aria-haspopup="menu"
+    <button ref={newToggle} type="button" className="icon-rail-button icon-rail-start" aria-label={t('workbench.title')} aria-expanded={flyout === 'new'} aria-haspopup="menu"
       onClick={() => { setFlyout(null); window.dispatchEvent(new Event('coffee-new-session')); }} onMouseEnter={() => { hide(); holdList('new'); }} onMouseLeave={releaseList}
       onKeyDown={event => { if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); setNewByKey(true); holdList('new'); } }}>
       {glyph('new')}
@@ -204,7 +205,7 @@ export function IconRail() {
     {flyout === 'conversations' && <div ref={list} className="icon-rail-list" role="dialog" aria-label={t('rail.conversations')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
       <div className="explorer-history-host"><HistoryBoard /></div>
     </div>}
-    {flyout === 'new' && <div ref={list} className="icon-rail-list icon-rail-new" role="dialog" aria-label={t('explorer.new_session')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
+    {flyout === 'new' && <div ref={list} className="icon-rail-list icon-rail-new" role="dialog" aria-label={t('workbench.title')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>
       <NewSessionMenu autoFocus={newByKey} onDone={() => setFlyout(null)} />
     </div>}
     {flyout === 'changes' && <div ref={list} className="icon-rail-list icon-rail-changes" role="dialog" aria-label={t('rail.changes')} onMouseEnter={() => holdList()} onMouseLeave={releaseList}>

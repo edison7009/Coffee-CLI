@@ -315,6 +315,9 @@ const TerminalIcon = () => {
 
 // (terminal label now from i18n: t('tool.terminal'))
 
+const SvgHome = ({ active }: { active: boolean }) => (
+  <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: active ? 'var(--accent)' : 'inherit' }} aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
+);
 const SvgPlus = ({ active }: { active: boolean }) => (
   <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: active ? 'var(--accent)' : 'inherit' }}>
     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1253,8 +1256,8 @@ export function CenterPanel() {
     const pathTip = session.folderPath ?? undefined;
     // Icon comes from the shared tool→glyph map (also used by the Gambit
     // workspace chip) so the tab and the compose footer can't drift apart.
-    // The placeholder new-tab (tool === null) falls back to the plus glyph.
-    const icon = getToolIcon(session.tool) ?? <SvgPlus active={isActive} />;
+    // The placeholder tab (tool === null, 我的工作台) takes the house; a tool without a glyph, the plus.
+    const icon = getToolIcon(session.tool) ?? (session.tool === null ? <SvgHome active={isActive} /> : <SvgPlus active={isActive} />);
     switch (session.tool) {
       case 'claude': return { icon, title: cwd ?? getToolDisplayName('claude'), tooltip: pathTip };
       case 'qwen': return { icon, title: cwd ?? getToolDisplayName('qwen'), tooltip: pathTip };
@@ -1299,7 +1302,8 @@ export function CenterPanel() {
         return { icon, title, tooltip: undefined };
       }
       case 'terminal': return { icon, title: cwd ?? t('tool.terminal'), tooltip: pathTip };
-      default: return { icon: <SvgPlus active={isActive} />, title: t('tab.new'), tooltip: undefined };
+      // The placeholder tab is 我的工作台, the tool cards: the house, as its buttons show.
+      default: return { icon: <SvgHome active={isActive} />, title: t('workbench.title'), tooltip: undefined };
     }
   };
 

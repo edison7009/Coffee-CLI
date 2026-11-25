@@ -229,6 +229,7 @@ export const pt = {
   'split.resize': 'Redimensionar vista dividida',
   'split.full': 'Até quatro sessões em vista dividida',
   'explorer.new_session': 'Nova sessão',
+  'workbench.title': 'Minha bancada',
   'explorer.filter_files': 'Filtrar arquivos e pastas…',
   'explorer.no_matches': 'Nenhum arquivo ou pasta correspondente.',
   'history.search': 'Pesquisar',

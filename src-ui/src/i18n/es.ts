@@ -229,6 +229,7 @@ export const es = {
   'split.resize': 'Cambiar tamaño de la vista dividida',
   'split.full': 'Hasta cuatro sesiones en vista dividida',
   'explorer.new_session': 'Nueva sesión',
+  'workbench.title': 'Mi mesa de trabajo',
   'explorer.filter_files': 'Filtrar archivos y carpetas…',
   'explorer.no_matches': 'No hay archivos ni carpetas coincidentes.',
   'history.search': 'Buscar',

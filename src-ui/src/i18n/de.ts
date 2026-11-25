@@ -229,6 +229,7 @@ export const de = {
   'split.resize': 'Größe der geteilten Ansicht ändern',
   'split.full': 'Bis zu vier Sitzungen in geteilter Ansicht',
   'explorer.new_session': 'Neue Sitzung',
+  'workbench.title': 'Mein Arbeitsplatz',
   'explorer.filter_files': 'Dateien und Ordner filtern…',
   'explorer.no_matches': 'Keine passenden Dateien oder Ordner.',
   'history.search': 'Suchen',

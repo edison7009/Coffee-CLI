@@ -229,6 +229,7 @@ export const fr = {
   'split.resize': 'Redimensionner la vue partagée',
   'split.full': 'Quatre sessions au maximum en vue partagée',
   'explorer.new_session': 'Nouvelle session',
+  'workbench.title': 'Mon espace de travail',
   'explorer.filter_files': 'Filtrer les fichiers et dossiers…',
   'explorer.no_matches': 'Aucun fichier ou dossier correspondant.',
   'history.search': 'Rechercher',
