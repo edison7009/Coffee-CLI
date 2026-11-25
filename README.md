@@ -8,6 +8,13 @@
   <strong>Vibe Coding on one side, looking stylish on the other.</strong>
 </p>
 
+> **This repository only builds and publishes Coffee CLI releases. It is not an open-source project and takes
+> part in no open-source activity.** Code after v4.1.1 carries no license and is provided as is: no promise, no
+> warranty, no liability. Versions up to and including v4.1.1 were released under AGPL-3.0.
+>
+> **本仓库仅用于编译和发布 Coffee CLI 安装包，不是开源项目，不参与任何开源活动。** v4.1.1 之后的代码不附任何许可，
+> 按现状提供，不承诺、不保证、不负责。v4.1.1 及之前的版本按 AGPL-3.0 发布。
+
 <p align="center">
   <a href="#english">English</a> ·
   <a href="#简体中文">简体中文</a> ·
