@@ -1,46 +1,30 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Without Pro, nothing starts the terminal engine and helpers that the Pro layer drives.
+#![cfg_attr(not(feature = "pro"), allow(dead_code))]
 
 mod terminal;
-mod claude_session;
-mod codex_session;
-mod opencode_session;
-mod dsh_session;
-mod pi_session;
-mod acp_session;
+// Tool integrations live in the private Pro modules (pro/src); their items keep their `crate::` paths.
+#[cfg(feature = "pro")]
+#[path = "../pro/src/mod.rs"]
+mod pro;
+#[cfg(feature = "pro")]
+use pro::*;
 mod session_directory;
-mod opencode_island;
 mod server;
 mod app_close;
-mod skill_catalog;
 mod credentials;
-mod hook_installer;
 mod fonts;
 mod fs_watcher;
 mod launch;
-mod tool_config;
 mod json_file;
-mod cli_updates;
-mod tool_memory;
-mod tool_skills;
-mod tool_control;
-mod computer_control;
-mod orchestration;
 mod mobile_rpc;
 mod folder_picker;
-mod worker_worktree;
 mod notify_sound;
 mod remote_link;
 mod remote_window;
-mod window_control;
-mod tools;
 mod update_sources;
 mod self_update;
-mod usage_stats;
-mod usage_quota;
-mod voice_input;
 mod git;
-mod git_project_status;
-mod session_git_context;
 mod shell_probe;
 #[cfg(target_os = "linux")]
 mod linux_blur;
@@ -61,38 +45,10 @@ fn main() -> Result<()> {
     // backend to ring before any HTTPS or WSS client is created.
     let _ = rustls::crypto::ring::default_provider().install_default();
     // These helpers run inside a visible Coffee Terminal, before single-instance GUI routing.
+    #[cfg(feature = "pro")]
     let helper_args: Vec<String> = std::env::args().collect();
-    if matches!(helper_args.get(1).map(String::as_str), Some("__team_mcp" | "__team_worker")) {
-        #[cfg(windows)]
-        if helper_args[1] == "__team_worker" {
-            use windows::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
-            let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
-        }
-        let result = (|| {
-            let port = helper_args.get(2).and_then(|value| value.parse::<u16>().ok()).ok_or("Invalid local coordinator port")?;
-            let token = helper_args.get(3).ok_or("Coordinator token missing")?;
-            if helper_args[1] == "__team_mcp" { orchestration::mcp(port, token) }
-            else { orchestration::worker_cli(port, token, &helper_args[4..]) }
-        })();
-        if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
-        return Ok(());
-    }
-    if helper_args.get(1).map(String::as_str) == Some(window_control::SUBCOMMAND) {
-        let result = match (helper_args.get(2).and_then(|value| value.parse::<u16>().ok()), helper_args.get(3)) {
-            (Some(port), Some(token)) => window_control::mcp(port, token),
-            _ => Err("Expected port and token".into()),
-        };
-        if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
-        return Ok(());
-    }
-    if helper_args.get(1).map(String::as_str) == Some("__ui-control") {
-        let result = match (helper_args.get(2), helper_args.get(3)) {
-            (Some(kind), Some(tool)) => tool_control::serve(kind, tool),
-            _ => Err("Expected capability and agent".into()),
-        };
-        if let Err(error) = result { eprintln!("{error}"); std::process::exit(1); }
-        return Ok(());
-    }
+    #[cfg(feature = "pro")]
+    if pro::run_helper(&helper_args) { return Ok(()); }
     // ── Legacy hook compatibility (fast path) ────────────────────────────
     // Current builds install no hooks. Keep the historical subcommands as
     // silent exit-0 handlers so a stale config that startup could not rewrite

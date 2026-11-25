@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use std::{fs, io::{BufRead, BufReader, Read, Write}, process::{Child, ChildStdin, Command, Stdio}, sync::mpsc::{self, Receiver}, time::{Duration, Instant}};
 
 const SCRIPT: &str = include_str!("assets/computer-use-windows.ps1");
-const LICENSE: &str = include_str!("../licenses/computer-use-windows.txt");
+const LICENSE: &str = include_str!("../../licenses/computer-use-windows.txt");
 const MAX_RESPONSE: u64 = 4_000_000;
 
 struct Worker {

@@ -471,6 +471,7 @@ async fn handle(client: &Client, request: &Value) -> Result<Value, RpcError> {
         }
         // Work this device hands to this computer's coordination (a window controlling it, on another computer).
         // The device is the one this connection authenticated, so it only reaches the work it delegated.
+        #[cfg(feature = "pro")]
         "team.delegate" | "team.call" => {
             let device = client.device.clone();
             let method = request["method"].as_str().unwrap_or("").to_owned();

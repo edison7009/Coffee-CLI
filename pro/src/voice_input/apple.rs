@@ -132,7 +132,7 @@ mod tests {
     /// into the compiler's runtime library, which the Rust link does not include, and the app failed to link.
     #[test]
     fn speech_bridge_needs_no_compiler_runtime_on_older_macos() {
-        let source = concat!(env!("CARGO_MANIFEST_DIR"), "/src/voice_input/apple_speech.m");
+        let source = concat!(env!("CARGO_MANIFEST_DIR"), "/pro/src/voice_input/apple_speech.m");
         let dir = std::env::temp_dir().join(format!("coffee-apple-speech-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         for arch in ["arm64", "x86_64"] {

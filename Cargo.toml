@@ -13,6 +13,10 @@ build = "build.rs"
 name = "coffee-cli"
 path = "src/main.rs"
 
+[features]
+# Tool integrations and desktop conversations from the private repository, checked out at ./pro.
+pro = []
+
 [build-dependencies]
 cc = "1"
 tauri-build = { version = "2", features = [] }

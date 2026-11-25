@@ -6,7 +6,7 @@ use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, process::{Command, Stdio
 static CONFIG_LOCK: Mutex<()> = Mutex::new(());
 static INSTALL_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 const BROWSER_VERSION: &str = "0.39.4";
-const BROWSER_LICENSE: &str = include_str!("../licenses/agent-browser.txt");
+const BROWSER_LICENSE: &str = include_str!("../../licenses/agent-browser.txt");
 
 pub(crate) fn root() -> Result<PathBuf, String> {
     Ok(dirs::home_dir().ok_or("control_read")?.join(".coffee-cli/control"))

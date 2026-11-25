@@ -144,25 +144,7 @@ pub fn command_binary<'a>(tool: &str, binary: &'a str) -> &'a str {
     if tool == "cursor" && binary == "agent" { "cursor-agent" } else { binary }
 }
 
-/// Expand a leading `~/` or bare `~` to the user's home directory.
-/// Used by both `default_cwd` and `history_path` overrides since users
-/// reasonably write `~/.hermes/sessions` and expect us to handle it.
-/// Windows paths (`\\wsl.localhost\...` / `C:\...`) and absolute Unix
-/// paths pass through unchanged.
-pub fn expand_path(input: &str) -> std::path::PathBuf {
-    if input == "~" {
-        if let Some(home) = dirs::home_dir() {
-            return home;
-        }
-        return std::path::PathBuf::from("~");
-    }
-    if let Some(stripped) = input.strip_prefix("~/").or_else(|| input.strip_prefix("~\\")) {
-        if let Some(home) = dirs::home_dir() {
-            return home.join(stripped);
-        }
-    }
-    std::path::PathBuf::from(input)
-}
+pub use crate::session_directory::expand_path;
 
 /// Resolve a tool's effective history-scan directory: user override
 /// (with ~ expansion) if set, else `default` (caller-supplied).

@@ -58,6 +58,14 @@ pub struct LaunchRequest {
 /// the `launch` subcommand or a `coffeecli://` link anywhere in argv.
 /// Returns `None` when argv is not a launch request, the tool id is not
 /// registered, or `--cwd` points at a directory that doesn't exist.
+/// Only tools Pro integrates can be launched from outside; the public core knows none.
+fn known_tool(id: &str) -> bool {
+    #[cfg(feature = "pro")]
+    return crate::tools::find(id).is_some();
+    #[cfg(not(feature = "pro"))]
+    { let _ = id; false }
+}
+
 pub fn parse_launch_args(args: &[String]) -> Option<LaunchRequest> {
     if let Some(link) = args.iter().skip(1).chain(args.first()).find(|a| is_prompt_link(a)) {
         return parse_prompt_link(link);
@@ -99,7 +107,7 @@ pub fn parse_launch_args(args: &[String]) -> Option<LaunchRequest> {
 
     let tool = tool?;
     // Unknown tool ids degrade to the plain launchpad.
-    crate::tools::find(&tool)?;
+    if !known_tool(&tool) { return None; }
     if let Some(dir) = &cwd {
         if !std::path::Path::new(dir).is_dir() {
             return None;
@@ -228,7 +236,7 @@ pub fn deliver(app: &tauri::AppHandle, req: LaunchRequest) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "pro"))]
 mod tests {
     use super::*;
 

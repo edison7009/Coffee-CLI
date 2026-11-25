@@ -45,7 +45,7 @@ pub struct DirectoryCheck { path: String, status: DirectoryStatus }
 #[tauri::command]
 pub async fn check_project_directories(paths: Vec<String>) -> Result<Vec<DirectoryCheck>, String> {
     tauri::async_runtime::spawn_blocking(move || paths.into_iter().map(|path| {
-        let status = status(&crate::tool_config::expand_path(&path));
+        let status = status(&expand_path(&path));
         DirectoryCheck { path, status }
     }).collect()).await.map_err(|error| error.to_string())
 }
@@ -88,4 +88,24 @@ mod tests {
         assert_eq!(failed_lookup(ErrorKind::PermissionDenied, true), DirectoryStatus::Unavailable);
         assert_eq!(failed_lookup(ErrorKind::Other, true), DirectoryStatus::Unavailable);
     }
+}
+
+/// Expand a leading `~/` or bare `~` to the user's home directory.
+/// Used by both `default_cwd` and `history_path` overrides since users
+/// reasonably write `~/.hermes/sessions` and expect us to handle it.
+/// Windows paths (`\\wsl.localhost\...` / `C:\...`) and absolute Unix
+/// paths pass through unchanged.
+pub fn expand_path(input: &str) -> std::path::PathBuf {
+    if input == "~" {
+        if let Some(home) = dirs::home_dir() {
+            return home;
+        }
+        return std::path::PathBuf::from("~");
+    }
+    if let Some(stripped) = input.strip_prefix("~/").or_else(|| input.strip_prefix("~\\")) {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(stripped);
+        }
+    }
+    std::path::PathBuf::from(input)
 }

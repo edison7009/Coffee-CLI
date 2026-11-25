@@ -212,6 +212,7 @@ pub async fn remote_window_open(app: AppHandle, address: String, prefix: String)
     window.on_window_event(move |event| {
         if matches!(event, tauri::WindowEvent::Destroyed) {
             crate::remote_link::close_window(&closed_label);
+            #[cfg(feature = "pro")]
             crate::orchestration::remote_window_gone(&closed_label);
             if let Ok(mut map) = entries().lock() {
                 map.remove(&closed_label);

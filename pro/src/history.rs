@@ -2,9 +2,31 @@
 //! message heatmap for every supported tool. Split out of server.rs.
 
 #![allow(clippy::too_many_arguments)]
-use super::*;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
-pub(super) fn file_created_epoch_ms(path: &std::path::Path) -> Option<String> {
+#[derive(Serialize, Deserialize, Clone)]
+pub(crate) struct SavedSession {
+    pub(crate) id: String,
+    pub(crate) name: String,
+    pub(crate) tool: String,
+    pub(crate) cwd: String,
+    pub(crate) session_token: Option<String>,
+    pub(crate) saved_at: String,
+    #[serde(default)]
+    pub(crate) created_at: Option<String>,
+    pub(crate) file_path: Option<String>,
+    pub(crate) turn_count: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) git_context: Option<crate::session_git_context::SessionGitContext>,
+    /// A conversation held in a Coffee worktree that still exists resumes there rather than in the project.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) worktree_cwd: Option<String>,
+}
+
+
+pub(crate) fn file_created_epoch_ms(path: &std::path::Path) -> Option<String> {
     let metadata = std::fs::metadata(path).ok()?;
     // `modified()` is deliberately not a fallback here: session transcripts
     // are append-only, so mtime advances on every turn and is not a stable
@@ -15,7 +37,7 @@ pub(super) fn file_created_epoch_ms(path: &std::path::Path) -> Option<String> {
     Some(duration.as_millis().to_string())
 }
 
-pub(super) fn json_timestamp_string(value: &serde_json::Value) -> Option<String> {
+pub(crate) fn json_timestamp_string(value: &serde_json::Value) -> Option<String> {
     if let Some(value) = value.as_str().filter(|value| !value.is_empty()) {
         return Some(value.to_string());
     }
@@ -36,7 +58,7 @@ pub(super) fn json_timestamp_string(value: &serde_json::Value) -> Option<String>
 /// the user typed — filtering them out of the history title extractor
 /// keeps the sidebar readable (no more "<ide_opened_file>The user
 /// opened the..." or "# AGENTS.md instructions for ..." cards).
-pub(super) const SYSTEM_INJECTION_TAGS: &[&str] = &[
+pub(crate) const SYSTEM_INJECTION_TAGS: &[&str] = &[
     // Codex Desktop injects the currently available-but-uninstalled plugin
     // catalogue as the first synthetic user message. It can be several KB
     // long and must never become a session title.
@@ -76,7 +98,7 @@ pub(crate) fn is_system_injected(text: &str) -> bool {
 }
 
 /// A first-prompt title, cut to the history card's 40 characters.
-pub(super) fn clip_title(text: &str) -> String {
+pub(crate) fn clip_title(text: &str) -> String {
     let mut chars = text.chars();
     let chunk: String = chars.by_ref().take(40).collect();
     if chars.next().is_some() { format!("{chunk}...") } else { chunk }
@@ -88,7 +110,7 @@ pub(super) fn clip_title(text: &str) -> String {
 /// typed prompt, as is the "[Request interrupted by user]" marker. That one
 /// rule covers wrappers no list has seen yet. A slash command is remembered as
 /// a fallback; a `!` shell line reads as `! <command>`.
-pub(super) fn claude_prompt_title(text: &str, command_fallback: &mut String) -> Option<String> {
+pub(crate) fn claude_prompt_title(text: &str, command_fallback: &mut String) -> Option<String> {
     use std::sync::LazyLock;
     static COMMAND: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"<command-name>(.*?)</command-name>").unwrap());
     static BASH: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"^<bash-input>([\s\S]*?)</bash-input>").unwrap());
@@ -132,7 +154,7 @@ pub(super) fn claude_prompt_title(text: &str, command_fallback: &mut String) -> 
 /// plain non-hidden `worktrees/` folder) is returned unchanged. Guaranteed to
 /// never return an empty string when given a non-empty one.
 /// A cwd inside a worktree Coffee made (`.claude/worktrees/coffee-*`), as opposed to one Claude Code made itself.
-pub(super) fn coffee_worktree_cwd(cwd: &str) -> bool {
+pub(crate) fn coffee_worktree_cwd(cwd: &str) -> bool {
     let parts = cwd.split(['/', '\\']).collect::<Vec<_>>();
     parts.windows(3).any(|w| w[0] == ".claude" && w[1] == "worktrees" && w[2].starts_with("coffee-"))
 }
@@ -187,7 +209,7 @@ pub(crate) fn project_root_from_cwd(cwd: &str) -> String {
 ///
 /// Built ONCE per history scan and passed into `parse_agent_jsonl`, rather than
 /// re-reading + re-parsing this (often 100 KB+) file per candidate session.
-pub(super) fn load_claude_project_map(home: &std::path::Path) -> std::collections::HashMap<String, String> {
+pub(crate) fn load_claude_project_map(home: &std::path::Path) -> std::collections::HashMap<String, String> {
     let mut map = std::collections::HashMap::new();
     let path = home.join(".claude.json");
     let raw = match std::fs::read_to_string(&path) {
@@ -221,9 +243,9 @@ pub(super) fn load_claude_project_map(home: &std::path::Path) -> std::collection
 }
 
 // Larger sequential reads reduce syscall overhead for long JSONL transcripts.
-pub(super) const SESSION_READ_BUF: usize = 128 * 1024;
+pub(crate) const SESSION_READ_BUF: usize = 128 * 1024;
 
-pub(super) fn parse_agent_jsonl(
+pub(crate) fn parse_agent_jsonl(
     file_path: &std::path::Path,
     tool_name: &str,
     claude_projects: &std::collections::HashMap<String, String>,
@@ -407,7 +429,7 @@ pub(super) fn parse_agent_jsonl(
 /// rows (and anything written before envelopes landed) are the bare item.
 /// The item itself carries `cwd`, a millisecond `timestamp`, and — for
 /// conversation rows — `type:"message"` + `role` + content blocks.
-pub(super) fn parse_codebuddy_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+pub(crate) fn parse_codebuddy_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
     let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
@@ -527,7 +549,7 @@ pub(super) fn parse_codebuddy_session_jsonl(file_path: &std::path::Path) -> Opti
 
 /// Flatten a CodeBuddy history item's `content` (a string, or an array of
 /// `{type:"input_text"|"output_text"|"text", text}` blocks) to plain text.
-pub(super) fn codebuddy_content_text(content: Option<&serde_json::Value>) -> String {
+pub(crate) fn codebuddy_content_text(content: Option<&serde_json::Value>) -> String {
     let Some(content) = content else { return String::new() };
     if let Some(text) = content.as_str() {
         return text.to_string();
@@ -547,7 +569,7 @@ pub(super) fn codebuddy_content_text(content: Option<&serde_json::Value>) -> Str
 /// incoming teammate mail (`providerData.teammateMessage.from`) are all stored
 /// as ordinary `role:"user"` rows. Without this they'd win the title and — for
 /// a session that holds nothing else — surface a phantom history card.
-pub(super) fn codebuddy_is_real_user_prompt(item: &serde_json::Value) -> bool {
+pub(crate) fn codebuddy_is_real_user_prompt(item: &serde_json::Value) -> bool {
     let Some(provider) = item.get("providerData") else { return true };
     let flag = |key: &str| provider.get(key).and_then(|value| value.as_bool()).unwrap_or(false);
     if flag("skipRun") || flag("isCompactInternal") {
@@ -574,7 +596,7 @@ pub(super) fn codebuddy_is_real_user_prompt(item: &serde_json::Value) -> bool {
 /// here so no bucket-name decoding), and message rows are
 /// `{type:"message", message:{role, content:[{type:"text", text}]}}`.
 /// `pi --session <id>` resumes by (partial) UUID — see AGENT_PRESETS.
-pub(super) fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<SavedSession> {
+pub(crate) fn parse_pi_session_jsonl(file_path: &std::path::Path, tool: &str) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
     let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
@@ -729,7 +751,7 @@ pub(crate) fn strip_codex_desktop_file_preamble(text: &str) -> &str {
 ///     the same row schema and are parsed here uniformly)
 ///   - subsequent rows: `{type: "response_item", payload: {type: "message", role, content: [{type: "input_text", text}]}}`
 ///     (also `user_message`, `event_msg`, `turn_context`, etc. — we ignore the non-message ones)
-pub(super) fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+pub(crate) fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
     let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
@@ -859,7 +881,7 @@ pub(super) fn parse_codex_session_jsonl(file_path: &std::path::Path) -> Option<S
 /// `~/.codex/session_index.jsonl` is append-only — one
 /// `{"id", "thread_name", "updated_at"}` row per (re)naming — so a later row
 /// for the same id replaces the earlier one.
-pub(super) fn parse_codex_thread_names(index: &str) -> std::collections::HashMap<String, String> {
+pub(crate) fn parse_codex_thread_names(index: &str) -> std::collections::HashMap<String, String> {
     let mut names = std::collections::HashMap::new();
     for line in index.lines() {
         let Ok(row) = serde_json::from_str::<serde_json::Value>(line) else { continue };
@@ -878,7 +900,7 @@ pub(super) fn parse_codex_thread_names(index: &str) -> std::collections::HashMap
 /// `parse_codex_session_jsonl` because the name lives outside the rollout
 /// file: a rename leaves the rollout's stamp untouched, so a name baked into
 /// the per-file parse cache would go stale.
-pub(super) fn apply_codex_thread_names(history_dir: &std::path::Path, sessions: &mut [SavedSession]) {
+pub(crate) fn apply_codex_thread_names(history_dir: &std::path::Path, sessions: &mut [SavedSession]) {
     if !sessions.iter().any(|s| s.tool == "codex") {
         return;
     }
@@ -914,7 +936,7 @@ pub(super) fn apply_codex_thread_names(history_dir: &std::path::Path, sessions: 
 ///   - `thread_source == "subagent"` (`ThreadSource::Subagent`).
 ///
 /// Validated against real Codex Desktop data.
-pub(super) fn is_codex_subagent_session(payload: &serde_json::Value) -> bool {
+pub(crate) fn is_codex_subagent_session(payload: &serde_json::Value) -> bool {
     // Primary: the `source` enum. `contains_key("subagent")` matches regardless
     // of which `SubAgentSource` variant is nested (thread_spawn object, "review"
     // unit variant, etc.).
@@ -941,7 +963,7 @@ pub(super) fn is_codex_subagent_session(payload: &serde_json::Value) -> bool {
 ///   • cwd is on every row (no separate projects.json reverse map needed)
 ///   • text lives in `message.parts[].text`, not the top-level `content[]`
 ///   • assistant rows use `type: 'assistant'`, not `'gemini'`
-pub(super) fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
+pub(crate) fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<SavedSession> {
     use std::io::BufRead;
     let file = std::fs::File::open(file_path).ok()?;
     let reader = std::io::BufReader::with_capacity(SESSION_READ_BUF, file);
@@ -1027,7 +1049,7 @@ pub(super) fn parse_qwen_session_jsonl(file_path: &std::path::Path) -> Option<Sa
     })
 }
 
-pub(super) fn validated_native_session_path(file_path: &str) -> Result<std::path::PathBuf, String> {
+pub(crate) fn validated_native_session_path(file_path: &str) -> Result<std::path::PathBuf, String> {
     let path = std::path::Path::new(&file_path);
 
     // Only allow .jsonl / .json files
@@ -1129,13 +1151,13 @@ pub(super) fn validated_native_session_path(file_path: &str) -> Result<std::path
 // has zero text turns, returns an empty string and the frontend renders the
 // "no readable conversation records" empty state.
 
-pub(super) struct DatabaseChatPage {
-    pub(super) data: String,
-    pub(super) history_cursor: u64,
-    pub(super) has_older: bool,
+pub(crate) struct DatabaseChatPage {
+    pub(crate) data: String,
+    pub(crate) history_cursor: u64,
+    pub(crate) has_older: bool,
 }
 
-pub(super) fn sqlite_table_exists(conn: &rusqlite::Connection, table: &str) -> bool {
+pub(crate) fn sqlite_table_exists(conn: &rusqlite::Connection, table: &str) -> bool {
     conn.query_row(
         "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",
         [table],
@@ -1143,7 +1165,7 @@ pub(super) fn sqlite_table_exists(conn: &rusqlite::Connection, table: &str) -> b
     ).unwrap_or(false)
 }
 
-pub(super) fn opencode_v2_session(conn: &rusqlite::Connection, session_id: &str) -> bool {
+pub(crate) fn opencode_v2_session(conn: &rusqlite::Connection, session_id: &str) -> bool {
     if !sqlite_table_exists(conn, "session_message") {
         return false;
     }
@@ -1164,7 +1186,7 @@ pub(super) fn opencode_v2_session(conn: &rusqlite::Connection, session_id: &str)
 
 /// Shared session/count source for history and heatmap. A migrated V2 row
 /// replaces its V1 row, including its archived state, so neither scan doubles it.
-pub(super) fn opencode_sessions_sql(conn: &rusqlite::Connection) -> String {
+pub(crate) fn opencode_sessions_sql(conn: &rusqlite::Connection) -> String {
     let has_v2_sessions = sqlite_table_exists(conn, "session_v2");
     let has_v2_messages = sqlite_table_exists(conn, "session_message");
     let v2_count = "(SELECT COUNT(*) FROM session_message WHERE session_id = s.id \
@@ -1193,7 +1215,7 @@ pub(super) fn opencode_sessions_sql(conn: &rusqlite::Connection) -> String {
     queries.join(" UNION ALL ")
 }
 
-pub(super) fn read_opencode_v2_session_page(
+pub(crate) fn read_opencode_v2_session_page(
     conn: &rusqlite::Connection,
     session_id: &str,
     before: Option<u64>,
@@ -1233,7 +1255,7 @@ pub(super) fn read_opencode_v2_session_page(
     Ok(DatabaseChatPage { data: out, history_cursor: start, has_older: start > 0 })
 }
 
-pub(super) fn read_opencode_sqlite_session_page(
+pub(crate) fn read_opencode_sqlite_session_page(
     db_path: &std::path::Path,
     session_id: &str,
     before: Option<u64>,
@@ -1348,14 +1370,14 @@ pub(super) fn read_opencode_sqlite_session_page(
     Ok(DatabaseChatPage { data: out, history_cursor: start, has_older: start > 0 })
 }
 
-pub(super) fn read_opencode_sqlite_session(
+pub(crate) fn read_opencode_sqlite_session(
     db_path: &std::path::Path,
     session_id: &str,
 ) -> Result<String, String> {
     read_opencode_sqlite_session_page(db_path, session_id, None).map(|page| page.data)
 }
 
-pub(super) fn read_opencode_json_dir(message_dir: &std::path::Path) -> Result<String, String> {
+pub(crate) fn read_opencode_json_dir(message_dir: &std::path::Path) -> Result<String, String> {
     // Legacy layout: storage/message/<sid>/<msg-id>.json. Each file is the
     // full message info JSON (including role + content blocks). Sort by file
     // name so chronological order of message creation is preserved (OpenCode
@@ -1409,7 +1431,7 @@ pub(super) fn read_opencode_json_dir(message_dir: &std::path::Path) -> Result<St
     Ok(out)
 }
 
-pub(super) fn read_opencode_session(session_id: String) -> Result<String, String> {
+pub(crate) fn read_opencode_session(session_id: String) -> Result<String, String> {
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
 
     // Honor user-configured OpenCode history path from
@@ -1452,7 +1474,7 @@ pub(super) fn read_opencode_session(session_id: String) -> Result<String, String
 /// schema). Primary path is `~/.local/share/mimocode/mimocode.db`, with the
 /// older/atypical `~/.config/mimocode/mimocode.db` as fallback. None when
 /// neither exists.
-pub(super) fn mimocode_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn mimocode_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
     // Primary root honors any tools.json history-path override (the field
     // ToolConfigModal surfaces for MiMo Code), defaulting to the descriptor's
     // declared `.local/share/mimocode` root — same contract as opencode_root /
@@ -1476,7 +1498,7 @@ pub(super) fn mimocode_db(home: &std::path::Path) -> Option<std::path::PathBuf> 
 /// schema). XDG data root is `~/.local/share/kilo/kilo.db` (`app = "kilo"` in
 /// the fork's packages/core/src/global.ts; the fork also honors a `KILO_DB`
 /// env override that Coffee CLI does not read). None when absent.
-pub(super) fn kilo_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn kilo_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
     let primary_root = crate::tools::find("kilo")
         .and_then(|tool| {
             tool.history_shape
@@ -1490,35 +1512,35 @@ pub(super) fn kilo_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
 
 /// Read one MiMo Code session transcript. Same schema as OpenCode, so this
 /// just points `read_opencode_sqlite_session` at `mimocode.db`.
-pub(super) fn read_mimocode_session(session_token: String) -> Result<String, String> {
+pub(crate) fn read_mimocode_session(session_token: String) -> Result<String, String> {
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
     let db = mimocode_db(&home).ok_or("MiMo Code session storage not found")?;
     read_opencode_sqlite_session(&db, &session_token)
 }
 
 #[derive(Serialize)]
-pub(super) struct ChatSessionRead {
-    pub(super) data: String,
-    pub(super) cursor: Option<u64>,
-    pub(super) history_cursor: Option<u64>,
-    pub(super) has_older: bool,
-    pub(super) revision: String,
-    pub(super) append: bool,
-    pub(super) prepend: bool,
-    pub(super) unchanged: bool,
+pub(crate) struct ChatSessionRead {
+    pub(crate) data: String,
+    pub(crate) cursor: Option<u64>,
+    pub(crate) history_cursor: Option<u64>,
+    pub(crate) has_older: bool,
+    pub(crate) revision: String,
+    pub(crate) append: bool,
+    pub(crate) prepend: bool,
+    pub(crate) unchanged: bool,
 }
 
 #[derive(Serialize)]
-pub(super) struct ChatNavigationRow {
-    pub(super) data: String,
-    pub(super) cursor: u64,
+pub(crate) struct ChatNavigationRow {
+    pub(crate) data: String,
+    pub(crate) cursor: u64,
 }
 
 /// Read one session through the storage adapter for its tool. Append-only
 /// JSONL sources return only bytes written after `cursor`; database and JSON
 /// sources return a full snapshot only when their revision changed.
 #[tauri::command]
-pub(super) async fn read_chat_session(
+pub(crate) async fn read_chat_session(
     session: SavedSession,
     cursor: Option<u64>,
     revision: Option<String>,
@@ -1532,13 +1554,13 @@ pub(super) async fn read_chat_session(
 }
 
 #[tauri::command]
-pub(super) async fn read_chat_navigation(session: SavedSession) -> Result<Vec<ChatNavigationRow>, String> {
+pub(crate) async fn read_chat_navigation(session: SavedSession) -> Result<Vec<ChatNavigationRow>, String> {
     tauri::async_runtime::spawn_blocking(move || read_chat_navigation_blocking(session))
         .await
         .map_err(|error| format!("Chat navigation task join failed: {error}"))?
 }
 
-pub(super) fn navigation_candidate(line: &str) -> bool {
+pub(crate) fn navigation_candidate(line: &str) -> bool {
     // Native writers serialize compact JSON in practice; the frontend's
     // normal transcript parser remains the final injected-message filter.
     line.contains("\"role\":\"user\"") ||
@@ -1546,7 +1568,7 @@ pub(super) fn navigation_candidate(line: &str) -> bool {
         line.contains("context.append_message")
 }
 
-pub(super) fn push_navigation_lines(
+pub(crate) fn push_navigation_lines(
     rows: &mut Vec<ChatNavigationRow>,
     data: &str,
     base_cursor: u64,
@@ -1564,7 +1586,7 @@ pub(super) fn push_navigation_lines(
     }
 }
 
-pub(super) fn read_chat_navigation_blocking(
+pub(crate) fn read_chat_navigation_blocking(
     session: SavedSession,
 ) -> Result<Vec<ChatNavigationRow>, String> {
     if let Some(path) = chat_session_file_path(&session)? {
@@ -1653,10 +1675,10 @@ pub(super) fn read_chat_navigation_blocking(
 // keeps ordinary chats close to Zeron's recent-tail strategy, while the byte
 // cap prevents one turn with a large tool payload from monopolising the IPC
 // channel and React's Markdown pipeline.
-pub(super) const CHAT_WINDOW_ROWS: usize = 192;
-pub(super) const CHAT_WINDOW_BYTES: u64 = 1024 * 1024;
+pub(crate) const CHAT_WINDOW_ROWS: usize = 192;
+pub(crate) const CHAT_WINDOW_BYTES: u64 = 1024 * 1024;
 
-pub(super) fn jsonl_window_bounds(bytes: &[u8], absolute_start: u64) -> (usize, u64) {
+pub(crate) fn jsonl_window_bounds(bytes: &[u8], absolute_start: u64) -> (usize, u64) {
     let mut aligned_start = 0usize;
     if absolute_start > 0 {
         // The byte window can begin in the middle of a UTF-8 codepoint or JSON
@@ -1684,7 +1706,7 @@ pub(super) fn jsonl_window_bounds(bytes: &[u8], absolute_start: u64) -> (usize, 
     (selected_start, absolute_start + selected_start as u64)
 }
 
-pub(super) fn decode_window(bytes: Vec<u8>) -> (String, u64) {
+pub(crate) fn decode_window(bytes: Vec<u8>) -> (String, u64) {
     match String::from_utf8(bytes) {
         Ok(data) => {
             let consumed = data.len() as u64;
@@ -1701,7 +1723,7 @@ pub(super) fn decode_window(bytes: Vec<u8>) -> (String, u64) {
     }
 }
 
-pub(super) fn read_jsonl_file_window(
+pub(crate) fn read_jsonl_file_window(
     path: &std::path::Path,
     end: u64,
 ) -> Result<(String, u64, u64, bool), String> {
@@ -1739,7 +1761,7 @@ pub(super) fn read_jsonl_file_window(
     Ok((data, history_cursor, history_cursor + consumed, false))
 }
 
-pub(super) fn slice_jsonl_window(data: &str, end: u64) -> (String, u64) {
+pub(crate) fn slice_jsonl_window(data: &str, end: u64) -> (String, u64) {
     let bytes = data.as_bytes();
     let safe_end = (end as usize).min(bytes.len());
     let read_start = (safe_end as u64).saturating_sub(CHAT_WINDOW_BYTES) as usize;
@@ -1751,7 +1773,7 @@ pub(super) fn slice_jsonl_window(data: &str, end: u64) -> (String, u64) {
     (data[start..safe_end].to_string(), history_cursor)
 }
 
-pub(super) fn chat_session_file_path(session: &SavedSession) -> Result<Option<std::path::PathBuf>, String> {
+pub(crate) fn chat_session_file_path(session: &SavedSession) -> Result<Option<std::path::PathBuf>, String> {
     let path = match session.tool.as_str() {
         "opencode" | "mimocode" | "kilo" => return Ok(None),
         "hermes" if session.file_path.is_none() => return Ok(None),
@@ -1772,14 +1794,14 @@ pub(super) fn chat_session_file_path(session: &SavedSession) -> Result<Option<st
     Ok(Some(validated_native_session_path(&path.to_string_lossy())?))
 }
 
-pub(super) fn content_revision(content: &str) -> String {
+pub(crate) fn content_revision(content: &str) -> String {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     content.hash(&mut hasher);
     format!("content:{:016x}", hasher.finish())
 }
 
-pub(super) fn drizzle_session_revision(
+pub(crate) fn drizzle_session_revision(
     db_path: &std::path::Path,
     session_token: &str,
 ) -> Result<String, String> {
@@ -1813,7 +1835,7 @@ pub(super) fn drizzle_session_revision(
     ))
 }
 
-pub(super) fn hermes_session_revision(
+pub(crate) fn hermes_session_revision(
     db_path: &std::path::Path,
     session_token: &str,
 ) -> Result<String, String> {
@@ -1849,7 +1871,7 @@ pub(super) fn hermes_session_revision(
 /// Return a cheap database revision without materializing message bodies.
 /// Older/variant schemas fall back to the content hash path so compatibility
 /// is preserved even if a fork lacks one of the timestamp columns.
-pub(super) fn database_chat_revision(tool: &str, session_token: &str) -> Option<String> {
+pub(crate) fn database_chat_revision(tool: &str, session_token: &str) -> Option<String> {
     let home = dirs::home_dir()?;
     match tool {
         "opencode" => {
@@ -1870,7 +1892,7 @@ pub(super) fn database_chat_revision(tool: &str, session_token: &str) -> Option<
     }
 }
 
-pub(super) fn database_chat_page(
+pub(crate) fn database_chat_page(
     tool: &str,
     session_token: &str,
     before: Option<u64>,
@@ -1894,7 +1916,7 @@ pub(super) fn database_chat_page(
     }
 }
 
-pub(super) fn read_chat_session_blocking(
+pub(crate) fn read_chat_session_blocking(
     session: SavedSession,
     cursor: Option<u64>,
     known_revision: Option<&str>,
@@ -2055,7 +2077,7 @@ pub(super) fn read_chat_session_blocking(
 /// also need to configure our tools.json override; otherwise the registry-
 /// declared `~/.kimi-code/` (honoring any tools.json history-path override).
 /// Flat on every OS — no XDG / `%APPDATA%` split (verified).
-pub(super) fn kimi_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn kimi_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
     if let Ok(env_home) = std::env::var("KIMI_CODE_HOME") {
         if !env_home.is_empty() {
             let p = std::path::PathBuf::from(env_home);
@@ -2076,7 +2098,7 @@ pub(super) fn kimi_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
 /// `state.json` for title / updatedAt. Sub-agents (`agents/agent-0/`) are
 /// nested under each main session's dir and never get their own index entry,
 /// so the index yields main sessions only — no parent_id filtering needed.
-pub(super) fn find_kimi_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
+pub(crate) fn find_kimi_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
     let Some(root) = kimi_root(home) else { return };
     let Ok(index) = std::fs::read_to_string(root.join("session_index.jsonl")) else { return };
 
@@ -2154,7 +2176,7 @@ pub(super) fn find_kimi_sessions(home: &std::path::Path, result: &mut Vec<SavedS
 /// agents) avoids double-counting one conversation. Shares the file-based
 /// heatmap count cache (keyed by wire.jsonl path + mtime) so warm starts
 /// skip the re-count — same optimization as the JSONL pipeline.
-pub(super) fn collect_kimi_heatmap_entries(
+pub(crate) fn collect_kimi_heatmap_entries(
     home: &std::path::Path,
     cutoff_secs: i64,
     out: &mut Vec<HeatmapEntry>,
@@ -2217,7 +2239,7 @@ pub(super) fn collect_kimi_heatmap_entries(
 /// otherwise the registry-declared `~/.grok/sessions` (honoring any tools.json
 /// history-path override). `GROK_HOME` points at the base (~/.grok), so we
 /// append `sessions`.
-pub(super) fn grok_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn grok_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
     if let Ok(env_home) = std::env::var("GROK_HOME") {
         if !env_home.is_empty() {
             let p = std::path::PathBuf::from(env_home).join("sessions");
@@ -2238,7 +2260,7 @@ pub(super) fn grok_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
 /// survivor's `summary.json` for title / cwd / timestamps. `summary.json`
 /// carries the real cwd in `info.cwd`, so the URL-encoded parent dir name
 /// never needs decoding.
-pub(super) fn find_grok_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
+pub(crate) fn find_grok_sessions(home: &std::path::Path, result: &mut Vec<SavedSession>) {
     let Some(root) = grok_root(home) else { return };
 
     // (summary.json mtime, session_dir)
@@ -2325,7 +2347,7 @@ pub(super) fn find_grok_sessions(home: &std::path::Path, result: &mut Vec<SavedS
 /// line count = intensity. Shares the file-based heatmap count cache (keyed
 /// by chat_history.jsonl path + mtime) so warm starts skip the re-count -
 /// same optimization as the JSONL pipeline and Kimi's wire.jsonl pass.
-pub(super) fn collect_grok_heatmap_entries(
+pub(crate) fn collect_grok_heatmap_entries(
     home: &std::path::Path,
     cutoff_secs: i64,
     out: &mut Vec<HeatmapEntry>,
@@ -2375,7 +2397,7 @@ pub(super) fn collect_grok_heatmap_entries(
     }
 }
 
-pub(super) fn collect_jsonl_paths_with_mtime(
+pub(crate) fn collect_jsonl_paths_with_mtime(
     dir: std::path::PathBuf,
     depth: u8,
     tool: &'static str,
@@ -2436,7 +2458,7 @@ pub(super) fn collect_jsonl_paths_with_mtime(
     }
 }
 
-pub(super) fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
+pub(crate) fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSession> {
     let content = std::fs::read_to_string(file_path).ok()?;
     let value: serde_json::Value = serde_json::from_str(&content).ok()?;
     let created_at = value
@@ -2512,7 +2534,7 @@ pub(super) fn parse_hermes_json(file_path: &std::path::Path) -> Option<SavedSess
     })
 }
 
-pub(super) fn parse_opencode_session(file_path: &std::path::Path, message_dir: &std::path::Path) -> Option<SavedSession> {
+pub(crate) fn parse_opencode_session(file_path: &std::path::Path, message_dir: &std::path::Path) -> Option<SavedSession> {
     let content = std::fs::read_to_string(file_path).ok()?;
     let value: serde_json::Value = serde_json::from_str(&content).ok()?;
 
@@ -2560,7 +2582,7 @@ pub(super) fn parse_opencode_session(file_path: &std::path::Path, message_dir: &
     })
 }
 
-pub(super) fn find_opencode_sessions(base_dir: std::path::PathBuf, result: &mut Vec<SavedSession>) {
+pub(crate) fn find_opencode_sessions(base_dir: std::path::PathBuf, result: &mut Vec<SavedSession>) {
     // Prefer SQLite DB (current OpenCode format) over legacy JSON files
     let db_path = base_dir.join("opencode.db");
     if db_path.is_file() {
@@ -2595,7 +2617,7 @@ pub(super) fn find_opencode_sessions(base_dir: std::path::PathBuf, result: &mut 
 
 /// Read V1/V2 SQLite sessions. Shared by OpenCode and its forks, which pass
 /// their own `tool_id` / `default_title` and db path.
-pub(super) fn find_drizzle_sessions_sqlite(
+pub(crate) fn find_drizzle_sessions_sqlite(
     db_path: &std::path::Path,
     tool_id: &str,
     default_title: &str,
@@ -2676,7 +2698,7 @@ pub(super) fn find_drizzle_sessions_sqlite(
     }
 }
 
-pub(super) fn collect_hermes_paths_with_mtime(
+pub(crate) fn collect_hermes_paths_with_mtime(
     dir: std::path::PathBuf,
     out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
 ) {
@@ -2715,7 +2737,7 @@ pub(super) fn collect_hermes_paths_with_mtime(
 /// history-path override), or None if Hermes Agent isn't in the registry.
 /// Mirrors `opencode_root` so the history + heatmap passes resolve the
 /// identical db path.
-pub(super) fn hermes_state_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn hermes_state_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
     let tool = crate::tools::find("hermes")?;
     let shape = tool.history_shape.as_ref()?;
     let dir = crate::tool_config::history_path_for(tool.id, shape.join_under(home));
@@ -2727,7 +2749,7 @@ pub(super) fn hermes_state_db(home: &std::path::Path) -> Option<std::path::PathB
 /// scan — if the db is missing, empty, locked, corrupt, or has an unexpected
 /// schema this returns false and the JSON path stays as a fallback, so Hermes
 /// history never silently empties out from under a usable legacy store.
-pub(super) fn hermes_db_has_sessions(db_path: &std::path::Path) -> bool {
+pub(crate) fn hermes_db_has_sessions(db_path: &std::path::Path) -> bool {
     let Ok(conn) = rusqlite::Connection::open_with_flags(
         db_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
@@ -2742,7 +2764,7 @@ pub(super) fn hermes_db_has_sessions(db_path: &std::path::Path) -> bool {
 /// store float seconds, but the unit is unverified across versions; treat any
 /// value past ~year-5138-in-seconds (i.e. a millisecond timestamp) as ms so the
 /// history sort and the seconds-based heatmap stay correct either way.
-pub(super) fn hermes_started_at_secs(raw: f64) -> f64 {
+pub(crate) fn hermes_started_at_secs(raw: f64) -> f64 {
     if raw > 1e11 { raw / 1000.0 } else { raw }
 }
 
@@ -2758,7 +2780,7 @@ pub(super) fn hermes_started_at_secs(raw: f64) -> f64 {
 /// `file_path` is intentionally None: these sessions live in the shared db,
 /// not a per-session file, so the chat adapter routes them through
 /// `read_hermes_session` instead of the JSONL file path.
-pub(super) fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
+pub(crate) fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
     let conn = match rusqlite::Connection::open_with_flags(
         db_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
@@ -2838,14 +2860,14 @@ pub(super) fn find_hermes_sessions_sqlite(db_path: &std::path::Path, result: &mu
 /// `~/.gemini/antigravity-cli/conversation_summaries.db` (verified against agy 1.4.12):
 /// title, step count, last change and the workspace as `file://` URIs. Sub-agent
 /// conversations carry a parent id and are skipped; resume is `agy --conversation <id>`.
-pub(super) fn antigravity_summaries_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn antigravity_summaries_db(home: &std::path::Path) -> Option<std::path::PathBuf> {
     let db = home.join(".gemini").join("antigravity-cli").join("conversation_summaries.db");
     db.is_file().then_some(db)
 }
 
 /// `last_modified_time` is SQLite text such as `2026-11-03 22:19:37.954952+00:00`;
 /// a value without an offset is UTC.
-pub(super) fn antigravity_time_ms(text: &str) -> Option<i64> {
+pub(crate) fn antigravity_time_ms(text: &str) -> Option<i64> {
     let text = text.trim();
     chrono::DateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S%.f%:z")
         .or_else(|_| chrono::DateTime::parse_from_rfc3339(text))
@@ -2855,7 +2877,7 @@ pub(super) fn antigravity_time_ms(text: &str) -> Option<i64> {
 }
 
 /// First workspace of the JSON array of `file://` URIs, as a local path.
-pub(super) fn antigravity_workspace(uris: &str) -> String {
+pub(crate) fn antigravity_workspace(uris: &str) -> String {
     serde_json::from_str::<Vec<String>>(uris).ok()
         .and_then(|uris| uris.into_iter().next())
         .and_then(|uri| url::Url::parse(&uri).ok())
@@ -2864,7 +2886,7 @@ pub(super) fn antigravity_workspace(uris: &str) -> String {
         .unwrap_or_default()
 }
 
-pub(super) fn antigravity_connection(db_path: &std::path::Path) -> Option<rusqlite::Connection> {
+pub(crate) fn antigravity_connection(db_path: &std::path::Path) -> Option<rusqlite::Connection> {
     rusqlite::Connection::open_with_flags(
         db_path,
         rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
@@ -2872,13 +2894,13 @@ pub(super) fn antigravity_connection(db_path: &std::path::Path) -> Option<rusqli
 }
 
 /// Only ids `agy --conversation` can take count as conversations.
-pub(super) fn antigravity_valid_id(id: &str) -> bool {
+pub(crate) fn antigravity_valid_id(id: &str) -> bool {
     !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
 }
 
 /// Root conversations with at least one step. An index without those columns (another agy
 /// version) still lists every row rather than none: the filter is optional, the history is not.
-pub(super) fn antigravity_rows(conn: &rusqlite::Connection) -> &'static str {
+pub(crate) fn antigravity_rows(conn: &rusqlite::Connection) -> &'static str {
     if conn.prepare("SELECT parent_conversation_id, step_count FROM conversation_summaries LIMIT 0").is_ok() {
         "1, step_count FROM conversation_summaries WHERE parent_conversation_id = '' AND step_count > 0"
     } else {
@@ -2886,7 +2908,7 @@ pub(super) fn antigravity_rows(conn: &rusqlite::Connection) -> &'static str {
     }
 }
 
-pub(super) fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
+pub(crate) fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut Vec<SavedSession>) {
     let Some(conn) = antigravity_connection(db_path) else { return };
     let query = format!("SELECT conversation_id, title, preview, last_modified_time, workspace_uris, {}", antigravity_rows(&conn));
     let Ok(mut stmt) = conn.prepare(&query) else { return };
@@ -2928,7 +2950,7 @@ pub(super) fn find_antigravity_sessions(db_path: &std::path::Path, result: &mut 
 
 /// Heatmap second pass for Antigravity CLI: one entry per root conversation,
 /// its last change and step count.
-pub(super) fn collect_antigravity_heatmap_entries(db_path: &std::path::Path, cutoff_secs: i64, out: &mut Vec<HeatmapEntry>) {
+pub(crate) fn collect_antigravity_heatmap_entries(db_path: &std::path::Path, cutoff_secs: i64, out: &mut Vec<HeatmapEntry>) {
     let Some(conn) = antigravity_connection(db_path) else { return };
     let Ok(mut stmt) = conn.prepare(&format!("SELECT conversation_id, last_modified_time, {}", antigravity_rows(&conn))) else { return };
     let Ok(rows) = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, i64>(3).unwrap_or(1)))) else { return };
@@ -2944,7 +2966,7 @@ pub(super) fn collect_antigravity_heatmap_entries(db_path: &std::path::Path, cut
 /// Heatmap second pass for Hermes `state.db` — one entry per session
 /// (started_at seconds + message_count). Mirrors
 /// `collect_opencode_heatmap_entries`. Best-effort.
-pub(super) fn collect_hermes_heatmap_entries(
+pub(crate) fn collect_hermes_heatmap_entries(
     db_path: &std::path::Path,
     cutoff_secs: i64,
     out: &mut Vec<HeatmapEntry>,
@@ -2984,7 +3006,7 @@ pub(super) fn collect_hermes_heatmap_entries(
 /// Decode one Hermes `messages.content` cell. Plain text is stored raw;
 /// structured / multimodal content is `"\x00json:"` + JSON (Hermes'
 /// `_encode_content`). Strip the marker and pull the text back out.
-pub(super) fn hermes_decode_content(raw: &str) -> String {
+pub(crate) fn hermes_decode_content(raw: &str) -> String {
     let Some(json_part) = raw.strip_prefix("\u{0}json:") else {
         return raw.to_string();
     };
@@ -2997,7 +3019,7 @@ pub(super) fn hermes_decode_content(raw: &str) -> String {
 /// Best-effort text extraction from a decoded Hermes content value — a bare
 /// string, `{text: ...}`, or an array of `{type, text}` blocks. Anything
 /// else collapses to compact JSON so the turn still shows something.
-pub(super) fn hermes_extract_text(v: &serde_json::Value) -> String {
+pub(crate) fn hermes_extract_text(v: &serde_json::Value) -> String {
     match v {
         serde_json::Value::String(s) => s.clone(),
         serde_json::Value::Array(items) => items
@@ -3020,7 +3042,7 @@ pub(super) fn hermes_extract_text(v: &serde_json::Value) -> String {
 ///
 /// Schema (messages table): `session_id`, `role`, `content`, ordered by
 /// rowid (insertion order). Best-effort.
-pub(super) fn read_hermes_session_page(
+pub(crate) fn read_hermes_session_page(
     session_token: &str,
     before: Option<u64>,
 ) -> Result<DatabaseChatPage, String> {
@@ -3069,12 +3091,12 @@ pub(super) fn read_hermes_session_page(
     Ok(DatabaseChatPage { data: out, history_cursor: start, has_older: start > 0 })
 }
 
-pub(super) fn read_hermes_session(session_token: String) -> Result<String, String> {
+pub(crate) fn read_hermes_session(session_token: String) -> Result<String, String> {
     read_hermes_session_page(&session_token, None).map(|page| page.data)
 }
 
 #[tauri::command]
-pub(super) async fn get_native_history(force: Option<bool>) -> Result<Vec<SavedSession>, String> {
+pub(crate) async fn get_native_history(force: Option<bool>) -> Result<Vec<SavedSession>, String> {
     // Async command + spawn_blocking so the file I/O runs on a dedicated
     // blocking thread pool and never blocks the Tauri command dispatcher.
     // Other IPC calls (resize, theme switches, etc.) stay responsive while
@@ -3084,18 +3106,18 @@ pub(super) async fn get_native_history(force: Option<bool>) -> Result<Vec<SavedS
         .map_err(|e| format!("History task join failed: {e}"))?
 }
 
-pub(super) struct NativeHistoryCache {
-    pub(super) fetched_at: std::time::Instant,
-    pub(super) sessions: Vec<SavedSession>,
+pub(crate) struct NativeHistoryCache {
+    pub(crate) fetched_at: std::time::Instant,
+    pub(crate) sessions: Vec<SavedSession>,
 }
 
-pub(super) static NATIVE_HISTORY_CACHE: OnceLock<Mutex<Option<NativeHistoryCache>>> = OnceLock::new();
+pub(crate) static NATIVE_HISTORY_CACHE: OnceLock<Mutex<Option<NativeHistoryCache>>> = OnceLock::new();
 
 /// Coalesce native-history requests from the History board and conversation
 /// tabs. Holding this mutex through the scan intentionally gives concurrent
 /// callers one producer; waiters then clone the same fresh result instead of
 /// walking every CLI history directory again.
-pub(super) fn load_native_history_cached(force: bool) -> Result<Vec<SavedSession>, String> {
+pub(crate) fn load_native_history_cached(force: bool) -> Result<Vec<SavedSession>, String> {
     const CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(5);
     let cache = NATIVE_HISTORY_CACHE.get_or_init(|| Mutex::new(None));
     let mut guard = cache
@@ -3117,7 +3139,7 @@ pub(super) fn load_native_history_cached(force: bool) -> Result<Vec<SavedSession
     Ok(sessions)
 }
 
-pub(super) fn saved_session_epoch_ms(value: &str) -> u64 {
+pub(crate) fn saved_session_epoch_ms(value: &str) -> u64 {
     let parsed = value.parse::<u64>().unwrap_or(0);
     if parsed > 0 && parsed < 100_000_000_000 {
         parsed.saturating_mul(1_000)
@@ -3130,15 +3152,15 @@ pub(super) fn saved_session_epoch_ms(value: &str) -> u64 {
 // and appended rows can change metadata as well as counts. Changed files always
 // use the same full parser as a cold scan.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(super) struct SessionFileStamp {
-    pub(super) modified: std::time::SystemTime,
-    pub(super) created: Option<std::time::SystemTime>,
-    pub(super) size: u64,
+pub(crate) struct SessionFileStamp {
+    pub(crate) modified: std::time::SystemTime,
+    pub(crate) created: Option<std::time::SystemTime>,
+    pub(crate) size: u64,
     #[cfg(unix)]
-    pub(super) identity: (u64, u64),
+    pub(crate) identity: (u64, u64),
 }
 
-pub(super) fn file_stamp(path: &std::path::Path) -> Option<SessionFileStamp> {
+pub(crate) fn file_stamp(path: &std::path::Path) -> Option<SessionFileStamp> {
     let metadata = std::fs::metadata(path).ok()?;
     #[cfg(unix)]
     use std::os::unix::fs::MetadataExt;
@@ -3151,25 +3173,25 @@ pub(super) fn file_stamp(path: &std::path::Path) -> Option<SessionFileStamp> {
     })
 }
 
-pub(super) struct CachedSession {
-    pub(super) stamp: SessionFileStamp,
-    pub(super) session: SavedSession,
+pub(crate) struct CachedSession {
+    pub(crate) stamp: SessionFileStamp,
+    pub(crate) session: SavedSession,
 }
 
 #[derive(Default)]
-pub(super) struct SessionParseCache {
+pub(crate) struct SessionParseCache {
     // Compare the map actually used by the parser, avoiding timestamp
     // collisions and a race between reading it and statting it afterwards.
-    pub(super) claude_projects: std::collections::HashMap<String, String>,
-    pub(super) entries: std::collections::HashMap<std::path::PathBuf, CachedSession>,
+    pub(crate) claude_projects: std::collections::HashMap<String, String>,
+    pub(crate) entries: std::collections::HashMap<std::path::PathBuf, CachedSession>,
 }
 
-pub(super) fn session_parse_cache() -> &'static std::sync::Mutex<SessionParseCache> {
+pub(crate) fn session_parse_cache() -> &'static std::sync::Mutex<SessionParseCache> {
     static CACHE: std::sync::OnceLock<std::sync::Mutex<SessionParseCache>> = std::sync::OnceLock::new();
     CACHE.get_or_init(|| std::sync::Mutex::new(SessionParseCache::default()))
 }
 
-pub(super) fn sync_aux_generation(
+pub(crate) fn sync_aux_generation(
     cache: &mut SessionParseCache,
     claude_projects: &std::collections::HashMap<String, String>,
 ) -> bool {
@@ -3184,7 +3206,7 @@ pub(super) fn sync_aux_generation(
 /// Dispatch one candidate file to its tool-specific parser. Split out of
 /// `load_native_history_blocking` so the cache wrapper around it stays
 /// readable; the match arms are unchanged.
-pub(super) fn parse_session_file(
+pub(crate) fn parse_session_file(
     path: &std::path::Path,
     tool: &str,
     claude_project_map: &std::collections::HashMap<String, String>,
@@ -3202,7 +3224,7 @@ pub(super) fn parse_session_file(
 /// Cache a stable successful parse. None also means an unreadable file in the
 /// existing parsers, so do not persist it: a temporary sharing/permission error
 /// must be retried even if the file's metadata does not change.
-pub(super) fn parse_session_cached(
+pub(crate) fn parse_session_cached(
     cache: &mut SessionParseCache,
     path: &std::path::Path,
     tool: &str,
@@ -3226,7 +3248,7 @@ pub(super) fn parse_session_cached(
     Some(session)
 }
 
-pub(super) fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
+pub(crate) fn load_native_history_blocking() -> Result<Vec<SavedSession>, String> {
     // Cap history to the N most recent entries. Keeps UI responsive when users
     // have hundreds of sessions — parsing a full jsonl/json file is expensive,
     // so we pre-select candidates by file mtime and only parse the top N.
@@ -3400,7 +3422,7 @@ pub(super) fn load_native_history_blocking() -> Result<Vec<SavedSession>, String
 /// Shared between `load_native_history_blocking` (History board)
 /// and `load_message_heatmap_blocking` (contribution heatmap) so
 /// the two surfaces can't drift.
-pub(super) fn collect_registry_history_candidates(
+pub(crate) fn collect_registry_history_candidates(
     home: &std::path::Path,
     out: &mut Vec<(std::time::SystemTime, std::path::PathBuf, &'static str)>,
 ) {
@@ -3425,7 +3447,7 @@ pub(super) fn collect_registry_history_candidates(
     }
 }
 
-pub(super) fn history_root(tool: &crate::tools::ToolDescriptor, shape: &crate::tools::HistoryShape, home: &std::path::Path) -> PathBuf {
+pub(crate) fn history_root(tool: &crate::tools::ToolDescriptor, shape: &crate::tools::HistoryShape, home: &std::path::Path) -> PathBuf {
     let mut default = shape.join_under(home);
     if tool.id == "omp" {
         if let Ok(agent_dir) = std::env::var("PI_CODING_AGENT_DIR") {
@@ -3452,7 +3474,7 @@ pub(super) fn history_root(tool: &crate::tools::ToolDescriptor, shape: &crate::t
 /// or wherever `~/.coffee-cli/tools.json` redirects). `None` if
 /// OpenCode isn't in the registry — should never happen in
 /// practice, but keeps the call sites total.
-pub(super) fn opencode_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
+pub(crate) fn opencode_root(home: &std::path::Path) -> Option<std::path::PathBuf> {
     let tool = crate::tools::find("opencode")?;
     let shape = tool.history_shape.as_ref()?;
     Some(crate::tool_config::history_path_for(tool.id, shape.join_under(home)))
@@ -3463,9 +3485,9 @@ pub(super) fn opencode_root(home: &std::path::Path) -> Option<std::path::PathBuf
 // bucketing here would require a TZ database (chrono/time) just to honour
 // the user's local midnight, which isn't worth the dependency.
 #[derive(serde::Serialize)]
-pub(super) struct HeatmapEntry {
-    pub(super) ts: i64,    // file mtime, seconds since UNIX_EPOCH
-    pub(super) count: u32, // approximate message count for the session
+pub(crate) struct HeatmapEntry {
+    pub(crate) ts: i64,    // file mtime, seconds since UNIX_EPOCH
+    pub(crate) count: u32, // approximate message count for the session
 }
 
 /// Persisted line-count cache for the heatmap scanner. One JSON file at
@@ -3474,23 +3496,23 @@ pub(super) struct HeatmapEntry {
 /// from disk. The mtime stored is seconds-since-epoch (matches the i64 `ts`
 /// field on HeatmapEntry) so a single integer comparison decides cache hit.
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub(super) struct CachedCount {
-    pub(super) mtime: i64,
-    pub(super) count: u32,
+pub(crate) struct CachedCount {
+    pub(crate) mtime: i64,
+    pub(crate) count: u32,
 }
 
-pub(super) fn count_cache_path() -> Option<std::path::PathBuf> {
+pub(crate) fn count_cache_path() -> Option<std::path::PathBuf> {
     let home = dirs::home_dir()?;
     Some(home.join(".coffee-cli").join("cache").join("heatmap-counts.json"))
 }
 
-pub(super) fn read_count_cache() -> std::collections::HashMap<String, CachedCount> {
+pub(crate) fn read_count_cache() -> std::collections::HashMap<String, CachedCount> {
     let Some(path) = count_cache_path() else { return std::collections::HashMap::new(); };
     let Ok(content) = std::fs::read_to_string(&path) else { return std::collections::HashMap::new(); };
     serde_json::from_str(&content).unwrap_or_default()
 }
 
-pub(super) fn write_count_cache(map: &std::collections::HashMap<String, CachedCount>) {
+pub(crate) fn write_count_cache(map: &std::collections::HashMap<String, CachedCount>) {
     let Some(path) = count_cache_path() else { return; };
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -3501,13 +3523,13 @@ pub(super) fn write_count_cache(map: &std::collections::HashMap<String, CachedCo
 }
 
 #[tauri::command]
-pub(super) async fn get_message_heatmap() -> Result<Vec<HeatmapEntry>, String> {
+pub(crate) async fn get_message_heatmap() -> Result<Vec<HeatmapEntry>, String> {
     tauri::async_runtime::spawn_blocking(load_message_heatmap_blocking)
         .await
         .map_err(|e| format!("Heatmap task join failed: {e}"))?
 }
 
-pub(super) fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
+pub(crate) fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, String> {
     // Cover the full 53-week grid, including its first partial week.
     const LOOKBACK_SECS: u64 = 371 * 86400;
     let now = std::time::SystemTime::now();
@@ -3692,7 +3714,7 @@ pub(super) fn load_message_heatmap_blocking() -> Result<Vec<HeatmapEntry>, Strin
 /// any schema drift in opencode.db hits both queries together. Best-effort:
 /// any error (locked DB, schema change, file missing) silently yields zero
 /// rows — opencode just doesn't appear in the heatmap that session.
-pub(super) fn collect_opencode_heatmap_entries(
+pub(crate) fn collect_opencode_heatmap_entries(
     db_path: &std::path::Path,
     cutoff_secs: i64,
     out: &mut Vec<HeatmapEntry>,
@@ -3738,7 +3760,7 @@ pub(super) fn collect_opencode_heatmap_entries(
 // line as one "turn" — including system / tool-result rows. The heatmap
 // is an activity proxy, not a strict user-message tally, so over-
 // counting tool spam is fine (more chatter = darker square).
-pub(super) fn count_jsonl_message_lines(path: &std::path::Path) -> u32 {
+pub(crate) fn count_jsonl_message_lines(path: &std::path::Path) -> u32 {
     use std::io::{BufRead, BufReader, Read};
     let file = match std::fs::File::open(path) {
         Ok(f) => f,
@@ -3761,7 +3783,7 @@ pub(super) fn count_jsonl_message_lines(path: &std::path::Path) -> u32 {
     count
 }
 
-pub(super) fn count_omp_messages(path: &std::path::Path) -> u32 {
+pub(crate) fn count_omp_messages(path: &std::path::Path) -> u32 {
     use std::io::{BufRead, Read};
     let Ok(file) = std::fs::File::open(path) else { return 0 };
     std::io::BufReader::new(file.take(32 * 1024 * 1024)).lines().map_while(Result::ok)
@@ -3774,7 +3796,7 @@ pub(super) fn count_omp_messages(path: &std::path::Path) -> u32 {
 // Hermes stores one big JSON file per session, not JSONL — so line-
 // counting wouldn't work. Approximate message count by counting
 // "role" key occurrences. Cheaper than a full serde_json parse.
-pub(super) fn count_hermes_messages(path: &std::path::Path) -> u32 {
+pub(crate) fn count_hermes_messages(path: &std::path::Path) -> u32 {
     let bytes = match std::fs::read(path) {
         Ok(b) => b,
         Err(_) => return 0,
@@ -3793,3 +3815,11 @@ pub(super) fn count_hermes_messages(path: &std::path::Path) -> u32 {
     count
 }
 
+
+#[cfg(test)]
+#[path = "history_cache_tests.rs"]
+mod history_cache_tests;
+
+#[cfg(test)]
+#[path = "opencode_tests.rs"]
+mod opencode_tests;
