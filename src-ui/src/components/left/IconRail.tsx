@@ -22,8 +22,8 @@ import './IconRail.css';
 
 // Lucide strokes (license in /icons/LICENSE-lucide.txt).
 const ICONS: Record<string, ReactNode> = {
-  // 我的工作台 (Lucide house): back to the tool cards.
-  new: <><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
+  // 我的工作台: back to the tool cards. A solid house: the button is inverted, where an outline reads thin.
+  new: <><path fill="currentColor" stroke="none" d="M10.7 2.5a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2h-4.2v-5.3a2.8 2.8 0 0 0-5.6 0V21H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 .7-1.5z" /></>,
   search: <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>,
   // Lucide message-square: the conversations list is a list of conversations, not a search.
   conversations: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
