@@ -791,6 +791,8 @@ export const en = {
   'usage.period.daily': 'day',
   'usage.period.weekly': 'wk',
   'usage.period.monthly': 'mo',
+  'usage.period.session': 'session',
+  'usage.period.billingCycle': 'cycle',
   'usage.remaining': '{percent}% left',
   'usage.resets_in': 'resets in {time}',
   'usage.balance_label': 'Balance',

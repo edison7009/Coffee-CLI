@@ -790,6 +790,8 @@ export const zhCN = {
   'usage.period.daily': '日',
   'usage.period.weekly': '周',
   'usage.period.monthly': '月',
+  'usage.period.session': '会话',
+  'usage.period.billingCycle': '本期',
   'usage.remaining': '剩余 {percent}%',
   'usage.resets_in': '{time}后重置',
   'usage.balance_label': '余额',

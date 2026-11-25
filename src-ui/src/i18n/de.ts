@@ -785,6 +785,8 @@ export const de = {
   'usage.period.daily': 'Tag',
   'usage.period.weekly': 'Wo',
   'usage.period.monthly': 'Mon',
+  'usage.period.session': 'Sitzung',
+  'usage.period.billingCycle': 'Zyklus',
   'usage.remaining': '{percent}% übrig',
   'usage.resets_in': 'zurückgesetzt in {time}',
   'usage.balance_label': 'Guthaben',

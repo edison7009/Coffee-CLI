@@ -789,6 +789,8 @@ export const vi = {
   'usage.period.daily': 'ngày',
   'usage.period.weekly': 'tuần',
   'usage.period.monthly': 'tháng',
+  'usage.period.session': 'phiên',
+  'usage.period.billingCycle': 'chu kỳ',
   'usage.remaining': 'còn {percent}%',
   'usage.resets_in': 'đặt lại sau {time}',
   'usage.balance_label': 'Số dư',

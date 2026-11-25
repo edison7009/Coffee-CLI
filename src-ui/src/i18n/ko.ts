@@ -788,6 +788,8 @@ export const ko = {
   'usage.period.daily': '일',
   'usage.period.weekly': '주',
   'usage.period.monthly': '월',
+  'usage.period.session': '세션',
+  'usage.period.billingCycle': '주기',
   'usage.remaining': '{percent}% 남음',
   'usage.resets_in': '{time} 후 초기화',
   'usage.balance_label': '잔액',

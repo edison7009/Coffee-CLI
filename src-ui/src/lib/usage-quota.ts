@@ -10,14 +10,18 @@ import { controlClaude, useClaudeSession } from './claude-session';
 import { readCodexRateLimits, useCodexSession } from './codex-session';
 import { useDshSession } from './dsh-session';
 
-export type QuotaPeriod = 'fiveHour' | 'daily' | 'weekly' | 'monthly';
+export type QuotaPeriod = 'session' | 'fiveHour' | 'daily' | 'weekly' | 'monthly' | 'billingCycle';
+/** Each window's short name, as the meter and the start-page cards label it. */
+export const PERIOD_KEYS = { session: 'usage.period.session', fiveHour: 'usage.period.fiveHour', daily: 'usage.period.daily', weekly: 'usage.period.weekly', monthly: 'usage.period.monthly', billingCycle: 'usage.period.billingCycle' } as const;
 export interface Quota { period?: QuotaPeriod; used?: number; resetAt?: number; balance?: number; unit?: string; spent?: boolean }
 
 type Json = Record<string, unknown>;
 // Fixed-interval refresh; turn ends refresh conversation tabs at most this often too,
 // and a click on the meter refreshes at once, past the backend cache.
 const REFRESH_MS = 60_000;
-const ORDER: QuotaPeriod[] = ['fiveHour', 'daily', 'weekly', 'monthly'];
+/** Nearest window first. */
+export const PERIOD_ORDER: QuotaPeriod[] = ['session', 'fiveHour', 'daily', 'weekly', 'monthly', 'billingCycle'];
+const ORDER = PERIOD_ORDER;
 
 const num = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' && value.trim() && Number.isFinite(Number(value)) ? Number(value) : undefined;
 const obj = (value: unknown): Json => value && typeof value === 'object' ? value as Json : {};

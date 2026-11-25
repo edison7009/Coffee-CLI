@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useT } from '../../i18n/useT';
-import { compactCountdown, formatBalance, remainingPercent, visibleQuotas, type Quota } from '../../lib/usage-quota';
+import { compactCountdown, formatBalance, PERIOD_KEYS, remainingPercent, visibleQuotas, type Quota } from '../../lib/usage-quota';
 import './UsageMeter.css';
 
-const PERIOD_KEYS = { fiveHour: 'usage.period.fiveHour', daily: 'usage.period.daily', weekly: 'usage.period.weekly', monthly: 'usage.period.monthly' } as const;
 
 function tone(remaining: number) {
   return remaining > 30 ? 'healthy' : remaining > 10 ? 'low' : 'critical';

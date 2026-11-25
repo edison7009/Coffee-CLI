@@ -788,6 +788,8 @@ export const ja = {
   'usage.period.daily': '日',
   'usage.period.weekly': '週',
   'usage.period.monthly': '月',
+  'usage.period.session': 'セッション',
+  'usage.period.billingCycle': '期間',
   'usage.remaining': '残り {percent}%',
   'usage.resets_in': '{time}後にリセット',
   'usage.balance_label': '残高',

@@ -785,6 +785,8 @@ export const ru = {
   'usage.period.daily': 'день',
   'usage.period.weekly': 'нед',
   'usage.period.monthly': 'мес',
+  'usage.period.session': 'сеанс',
+  'usage.period.billingCycle': 'цикл',
   'usage.remaining': 'осталось {percent}%',
   'usage.resets_in': 'сброс через {time}',
   'usage.balance_label': 'Баланс',

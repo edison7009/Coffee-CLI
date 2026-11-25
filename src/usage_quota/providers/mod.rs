@@ -1,17 +1,27 @@
-//! Usage query providers, ported from EchoBird (src-tauri/src/services/usage_providers @ 7b743eaa).
+//! Usage query providers, ported from EchoBird (src-tauri/src/services/usage_providers @ 7b743eaa,
+//! with MiMo, Ollama Cloud and Command Code from fa81f543).
 //!
 //! Each provider is implemented in its own module for easy maintenance and extension.
-//! Volcengine and Zhipu team usage were left out: both need credentials EchoBird stores itself.
+//! Volcengine, Zhipu team usage and ZenMux's management API were left out: each needs credentials
+//! EchoBird stores itself.
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::future::Future;
+use std::sync::{Arc, Mutex, OnceLock, PoisonError, Weak};
+use tokio::sync::OnceCell;
 
 pub mod account;
+pub mod command_code;
 pub mod deepseek;
 pub mod kimi;
+pub mod mimo;
 pub mod minimax;
 pub mod moonshot;
 pub mod new_api;
 pub mod novita;
+pub mod ollama;
 pub mod opencode;
 pub mod openrouter;
 pub mod relay_subscription;
@@ -27,6 +37,8 @@ pub enum QuotaPeriod {
     Daily,
     Weekly,
     Monthly,
+    BillingCycle,
+    Session,
 }
 
 /// Single usage quota data (progress bar)
@@ -37,6 +49,8 @@ pub struct UsageQuota {
     pub reset_at: i64,   // Unix timestamp (ms); 0 when the reset time is unknown
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub period: Option<QuotaPeriod>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amounts: Option<QuotaAmounts>,
     // Balance display (for providers like DeepSeek that show remaining balance)
     pub balance: Option<f64>,         // Remaining balance (e.g., 10.50 USD)
     pub balance_unit: Option<String>, // Currency unit (e.g., "USD", "CNY", "Credits")
@@ -45,12 +59,21 @@ pub struct UsageQuota {
     pub spent: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuotaAmounts {
+    pub used: f64,
+    pub remaining: f64,
+    pub unit: String,
+}
+
 impl UsageQuota {
     fn balance(amount: f64, unit: &str) -> Option<Self> {
         (amount.is_finite() && !unit.trim().is_empty()).then(|| Self {
             percentage: 0.0,
             reset_at: 0,
             period: None,
+            amounts: None,
             balance: Some(amount),
             balance_unit: Some(unit.to_string()),
             spent: false,
@@ -62,10 +85,38 @@ impl UsageQuota {
             percentage: used.clamp(0.0, 100.0),
             reset_at: reset_at.filter(|value| *value > 0).unwrap_or(0),
             period: Some(period),
+            amounts: None,
             balance: None,
             balance_unit: None,
             spent: false,
         })
+    }
+
+    fn allowance(
+        period: QuotaPeriod,
+        total: f64,
+        used: f64,
+        remaining: f64,
+        unit: &str,
+        reset_at: Option<i64>,
+    ) -> Option<Self> {
+        if total < 0.0 || used < 0.0 || remaining < 0.0 {
+            return None;
+        }
+        let percentage = if total > 0.0 {
+            (1.0 - (remaining / total).min(1.0)) * 100.0
+        } else if remaining == 0.0 {
+            100.0
+        } else {
+            return None;
+        };
+        let mut quota = Self::window(period, percentage, reset_at)?;
+        quota.amounts = Some(QuotaAmounts {
+            used,
+            remaining,
+            unit: unit.to_string(),
+        });
+        Some(quota)
     }
 }
 
@@ -153,6 +204,58 @@ async fn fetch_usage(url: &str, authorization: &str) -> Result<serde_json::Value
     .await
 }
 
+type SharedRead = OnceCell<UsageResult>;
+
+/// Readers of the same account and endpoint share a read that is in flight (relays limit these
+/// queries per IP). Nothing outlives it: once the read finishes, the next refresh asks again.
+async fn share_read(
+    endpoint: &str,
+    api_key: &str,
+    read: impl Future<Output = UsageResult>,
+) -> UsageResult {
+    static READS: OnceLock<Mutex<HashMap<String, Weak<SharedRead>>>> = OnceLock::new();
+    let reads = READS.get_or_init(Mutex::default);
+    let key = format!("{endpoint}\n{:x}", Sha256::digest(api_key.as_bytes()));
+    let shared = {
+        let mut reads = reads.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(existing) = reads.get(&key).and_then(Weak::upgrade) {
+            existing
+        } else {
+            // A cancelled request must not retain its key or result across refreshes.
+            reads.retain(|_, read| read.strong_count() > 0);
+            let shared = Arc::new(SharedRead::new());
+            reads.insert(key.clone(), Arc::downgrade(&shared));
+            shared
+        }
+    };
+    let usage = shared.get_or_init(|| read).await.clone();
+    let mut reads = reads.lock().unwrap_or_else(PoisonError::into_inner);
+    if reads
+        .get(&key)
+        .is_some_and(|current| std::ptr::eq(current.as_ptr(), Arc::as_ptr(&shared)))
+    {
+        reads.remove(&key);
+    }
+    usage
+}
+
+/// A vendor's own usage API: the key goes to that host only, never on to a redirect.
+async fn fetch_official_usage(
+    url: impl reqwest::IntoUrl,
+    api_key: &str,
+) -> Result<serde_json::Value, String> {
+    static CLIENT: OnceLock<Result<reqwest::Client, reqwest::Error>> = OnceLock::new();
+    let client = CLIENT
+        .get_or_init(|| {
+            reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+        })
+        .as_ref()
+        .map_err(|_| "Unable to initialize the usage API client".to_string())?;
+    send_usage_request(client.get(url).bearer_auth(api_key)).await
+}
+
 fn usage_status_error(status: reqwest::StatusCode) -> String {
     match status.as_u16() {
         401 => "Usage authentication failed (HTTP 401)".to_string(),
@@ -180,6 +283,8 @@ async fn send_usage_request(request: reqwest::RequestBuilder) -> Result<serde_js
 }
 
 /// Provider trait - each provider implements this
+// The attribute macro adds `must_use` to a future that already has it.
+#[allow(clippy::double_must_use)]
 #[async_trait::async_trait]
 pub trait UsageProvider {
     /// Query usage from provider API
@@ -195,11 +300,14 @@ pub trait UsageProvider {
 
 /// Provider enum - concrete type wrapper
 pub enum Provider {
+    CommandCode(command_code::CommandCodeProvider),
     DeepSeek(deepseek::DeepSeekProvider),
     Kimi(kimi::KimiProvider),
+    MiMo(mimo::MiMoProvider),
     Moonshot(moonshot::MoonshotProvider),
     MiniMax(minimax::MiniMaxProvider),
     Novita(novita::NovitaProvider),
+    Ollama(ollama::OllamaProvider),
     OpenCode(opencode::OpenCodeProvider),
     OpenRouter(openrouter::OpenRouterProvider),
     SiliconFlow(siliconflow::SiliconFlowProvider),
@@ -212,11 +320,14 @@ pub enum Provider {
 impl Provider {
     pub async fn query_usage(&self, api_key: &str, base_url: &str) -> Result<UsageResult, String> {
         match self {
+            Provider::CommandCode(p) => p.query_usage(api_key, base_url).await,
             Provider::DeepSeek(p) => p.query_usage(api_key, base_url).await,
             Provider::Kimi(p) => p.query_usage(api_key, base_url).await,
+            Provider::MiMo(p) => p.query_usage(api_key, base_url).await,
             Provider::Moonshot(p) => p.query_usage(api_key, base_url).await,
             Provider::MiniMax(p) => p.query_usage(api_key, base_url).await,
             Provider::Novita(p) => p.query_usage(api_key, base_url).await,
+            Provider::Ollama(p) => p.query_usage(api_key, base_url).await,
             Provider::OpenCode(p) => p.query_usage(api_key, base_url).await,
             Provider::OpenRouter(p) => p.query_usage(api_key, base_url).await,
             Provider::SiliconFlow(p) => p.query_usage(api_key, base_url).await,
@@ -232,11 +343,17 @@ impl Provider {
 pub fn detect_provider(base_url: &str) -> Option<Provider> {
     let url = base_url.to_lowercase();
 
+    if command_code::CommandCodeProvider.can_handle(&url) {
+        return Some(Provider::CommandCode(command_code::CommandCodeProvider));
+    }
     if deepseek::DeepSeekProvider.can_handle(&url) {
         return Some(Provider::DeepSeek(deepseek::DeepSeekProvider));
     }
     if kimi::KimiProvider.can_handle(&url) {
         return Some(Provider::Kimi(kimi::KimiProvider));
+    }
+    if mimo::MiMoProvider.can_handle(&url) {
+        return Some(Provider::MiMo(mimo::MiMoProvider));
     }
     if moonshot::MoonshotProvider.can_handle(&url) {
         return Some(Provider::Moonshot(moonshot::MoonshotProvider));
@@ -246,6 +363,9 @@ pub fn detect_provider(base_url: &str) -> Option<Provider> {
     }
     if novita::NovitaProvider.can_handle(&url) {
         return Some(Provider::Novita(novita::NovitaProvider));
+    }
+    if ollama::OllamaProvider.can_handle(&url) {
+        return Some(Provider::Ollama(ollama::OllamaProvider));
     }
     if opencode::OpenCodeProvider.can_handle(&url) {
         return Some(Provider::OpenCode(opencode::OpenCodeProvider));

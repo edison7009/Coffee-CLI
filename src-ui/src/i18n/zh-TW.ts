@@ -789,6 +789,8 @@ export const zhTW = {
   'usage.period.daily': '日',
   'usage.period.weekly': '週',
   'usage.period.monthly': '月',
+  'usage.period.session': '工作階段',
+  'usage.period.billingCycle': '本期',
   'usage.remaining': '剩餘 {percent}%',
   'usage.resets_in': '{time}後重置',
   'usage.balance_label': '餘額',

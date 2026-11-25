@@ -785,6 +785,8 @@ export const fr = {
   'usage.period.daily': 'jour',
   'usage.period.weekly': 'sem',
   'usage.period.monthly': 'mois',
+  'usage.period.session': 'session',
+  'usage.period.billingCycle': 'cycle',
   'usage.remaining': '{percent}% restant',
   'usage.resets_in': 'réinitialisé dans {time}',
   'usage.balance_label': 'Solde',

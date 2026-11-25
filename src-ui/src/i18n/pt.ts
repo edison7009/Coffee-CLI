@@ -785,6 +785,8 @@ export const pt = {
   'usage.period.daily': 'dia',
   'usage.period.weekly': 'sem',
   'usage.period.monthly': 'mês',
+  'usage.period.session': 'sessão',
+  'usage.period.billingCycle': 'ciclo',
   'usage.remaining': '{percent}% restante',
   'usage.resets_in': 'redefine em {time}',
   'usage.balance_label': 'Saldo',

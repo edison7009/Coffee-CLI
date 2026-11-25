@@ -7,16 +7,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useT } from '../../i18n/useT';
 import type { I18nKey } from '../../i18n/en';
-import { compactCountdown, formatBalance, remainingPercent, useUsageQuota, type Quota } from '../../lib/usage-quota';
+import { compactCountdown, formatBalance, PERIOD_KEYS, PERIOD_ORDER, remainingPercent, useUsageQuota, type Quota } from '../../lib/usage-quota';
 import { LAUNCH_PERMISSIONS, launchPermission, setLaunchPermission, type LaunchTool } from '../../lib/launch-permission';
 
-const PERIOD_KEYS = { fiveHour: 'usage.period.fiveHour', daily: 'usage.period.daily', weekly: 'usage.period.weekly', monthly: 'usage.period.monthly' } as const;
 const tone = (remaining: number) => remaining > 30 ? 'healthy' : remaining > 10 ? 'low' : 'critical';
 
-const ORDER = ['fiveHour', 'daily', 'weekly', 'monthly'];
 /** Usage windows nearest first, then balances: every reading, not only the composer's two. */
 const ordered = (quotas: Quota[]) => [
-  ...quotas.filter(q => q.balance === undefined).sort((a, b) => (a.period ? ORDER.indexOf(a.period) : 9) - (b.period ? ORDER.indexOf(b.period) : 9)),
+  ...quotas.filter(q => q.balance === undefined).sort((a, b) => (a.period ? PERIOD_ORDER.indexOf(a.period) : 9) - (b.period ? PERIOD_ORDER.indexOf(b.period) : 9)),
   ...quotas.filter(q => q.balance !== undefined),
 ];
 const unitOf = (quota: Quota) => (quota.unit ?? (formatBalance(quota).startsWith('$') ? 'USD' : 'CNY')).toUpperCase();
