@@ -390,35 +390,32 @@ Claude Code и Codex CLI поддерживают режимы `Desktop / Termin
 
 ## License & Trademarks
 
-**Code** — This repository contains no application source. Versions up to and including v4.1.1 were
-published under [AGPL-3.0](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE). Coffee CLI is
-provided as is: no promise, no warranty, no liability.
+As part of our evolving product strategy and development roadmap, certain non-core features of Coffee CLI will be
+gradually separated and developed into independent products.
 
-**Brand** — *Coffee CLI*, *Gambit*, *Pitch*, *VibeID*, *Vibetype* (and the 16 individual Vibetype names),
-*Coffee-CLI MCP*, *Sentinel Protocol* and *Hyper-Agent* are trademarks of edison7009. Reviews, tutorials and
-honest references, including critical ones, are welcome without permission; any other use needs written
-permission. See [TRADEMARKS.md](TRADEMARKS.md).
+To protect innovation and maintain the market competitiveness of our new products, we have temporarily restricted
+public access to Coffee CLI's source code, while keeping user feedback channels open. Releases up to and including
+v4.1.1 remain available under [AGPL-3.0](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE).
 
-**Business & enterprise** — Customization, white-label distribution, embedding in your own product, custom
-development, priority support and SLAs: contact **hi@coffeecli.com**.
+*Coffee CLI* and its related product names are trademarks of edison7009 — see [TRADEMARKS.md](TRADEMARKS.md).
+Coffee CLI is provided as is, without warranty. For business and enterprise partnerships, contact
+**hi@coffeecli.com**; feedback is always welcome through [Issues](https://github.com/edison7009/Coffee-CLI/issues).
 
-**Contributing** — This repository does not accept pull requests. Bug reports are welcome as issues.
+Thank you for your continued support and understanding.
 
 ---
 
 ## 协议与商标
 
-**代码** — 本仓库不包含应用源码。v4.1.1 及之前的版本按
-[AGPL-3.0](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE) 发布。Coffee CLI 按现状提供，
-不承诺、不保证、不负责。
+因产品战略与发展规划调整，Coffee CLI 的部分非核心功能将逐步剥离，并作为独立的新产品进行开发与运营。
 
-**品牌** — *Coffee CLI*、*Gambit*、*Pitch / 投递*、*VibeID*、*Vibetype / Vibe 型*(及 16 个具体 Vibetype 名称)、
-*Coffee-CLI MCP*、*哨兵协议 / Sentinel Protocol*、*Hyper-Agent* 为 edison7009 的商标。评测、教程、事实性引用 ——
-包括批评 —— 都欢迎，无需授权；其他使用需要书面许可。完整政策见 [TRADEMARKS.md](TRADEMARKS.md)。
+同时，为保护新产品的创新成果并保持市场竞争力，Coffee CLI 将暂时停止公开源代码，仅保留用户反馈渠道。v4.1.1 及之前的版本仍按
+[AGPL-3.0](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE) 提供。
 
-**商业与企业** — 定制、白标分发、嵌入你的产品、定制开发、优先支持与 SLA,请联系 **hi@coffeecli.com**。
+*Coffee CLI* 及相关产品名称为 edison7009 的商标，详见 [TRADEMARKS.md](TRADEMARKS.md)。Coffee CLI 按现状提供，不作任何担保。
+商务与企业合作请联系 **hi@coffeecli.com**，问题反馈欢迎提交 [Issue](https://github.com/edison7009/Coffee-CLI/issues)。
 
-**贡献** — 本仓库不接受 Pull Request,欢迎通过 Issue 反馈问题。
+感谢大家一直以来的关注与支持。
 
 ---
 
