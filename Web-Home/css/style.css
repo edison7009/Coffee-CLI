@@ -119,13 +119,10 @@ body {
   color: var(--brand-color);
 }
 
-/* Brand logo (static coffee cup) */
-.dynamic-brand-logo {
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.logo:hover .dynamic-brand-logo {
-  /* Intentionally static on hover - no wobble */
+/* Brand logo = app icon */
+.brand-logo {
+  display: block;
+  flex-shrink: 0;
 }
 
 .nav-links {
