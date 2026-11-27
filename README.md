@@ -390,15 +390,15 @@ Claude Code и Codex CLI поддерживают режимы `Desktop / Termin
 
 ## License & Trademarks
 
-As part of our evolving product strategy and development roadmap, certain non-core features of Coffee CLI will be
+As part of our evolving product strategy and development roadmap, certain non-core features of our existing product will be
 gradually separated and developed into independent products.
 
 To protect innovation and maintain the market competitiveness of our new products, we have temporarily restricted
-public access to Coffee CLI's source code, while keeping user feedback channels open. Releases up to and including
+public access to the existing product's source code, while keeping user feedback channels open. Releases up to and including
 v4.1.1 remain available under [AGPL-3.0](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE).
 
 *Coffee CLI* and its related product names are trademarks of edison7009 — see [TRADEMARKS.md](TRADEMARKS.md).
-Coffee CLI is provided as is, without warranty. For business and enterprise partnerships, contact
+The product is provided as is, without warranty. For business and enterprise partnerships, contact
 **hi@coffeecli.com**; feedback is always welcome through [Issues](https://github.com/edison7009/Coffee-CLI/issues).
 
 Thank you for your continued support and understanding.
@@ -407,12 +407,12 @@ Thank you for your continued support and understanding.
 
 ## 协议与商标
 
-因产品战略与发展规划调整，Coffee CLI 的部分非核心功能将逐步剥离，并作为独立的新产品进行开发与运营。
+因产品战略与发展规划调整，现有产品的部分非核心功能将逐步剥离，并作为独立的新产品进行开发与运营。
 
-同时，为保护新产品的创新成果并保持市场竞争力，Coffee CLI 将暂时停止公开源代码，仅保留用户反馈渠道。v4.1.1 及之前的版本仍按
+同时，为保护新产品的创新成果并保持市场竞争力，现有产品将暂时停止公开源代码，仅保留用户反馈渠道。v4.1.1 及之前的版本仍按
 [AGPL-3.0](https://github.com/edison7009/Coffee-CLI/blob/v4.1.1/LICENSE) 提供。
 
-*Coffee CLI* 及相关产品名称为 edison7009 的商标，详见 [TRADEMARKS.md](TRADEMARKS.md)。Coffee CLI 按现状提供，不作任何担保。
+*Coffee CLI* 及相关产品名称为 edison7009 的商标，详见 [TRADEMARKS.md](TRADEMARKS.md)。本产品按现状提供，不作任何担保。
 商务与企业合作请联系 **hi@coffeecli.com**，问题反馈欢迎提交 [Issue](https://github.com/edison7009/Coffee-CLI/issues)。
 
 感谢大家一直以来的关注与支持。
