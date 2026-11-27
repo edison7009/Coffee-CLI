@@ -52,16 +52,6 @@ brand and naming policy.
 THIRD-PARTY ASSETS (ICONS / ARTWORK)
 ================================================================================
 
-  - Coffee CLI app icon (icons/icon.png and animated brand variant)
-      Source:  line-md icon set, "coffee-filled-loop"
-               https://github.com/cyberalien/line-md
-      Author:  Vjacheslav Trushkin (cyberalien)
-      License: Apache-2.0
-      Use:     The icon is used unmodified (or with minor color/size
-               adjustment) as the Coffee CLI application icon and brand
-               glyph. No trademark rights are claimed in the icon itself
-               — see TRADEMARKS.md for the scope of brand rights claimed.
-
   - File-icon themes under the app bundle's icons/themes/
       Six upstream icon sets (material, vscode-icons, catppuccin-mocha,
       devicon/Phosphor, fluent, symbols) are used under their MIT licenses.
