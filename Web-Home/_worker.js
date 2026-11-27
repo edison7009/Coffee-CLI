@@ -251,8 +251,15 @@ export default {
       // mirror that has this exact version (fast there, and no long proxy
       // through Cloudflare). Falls through to the proxy below on any miss.
       const source = url.searchParams.get("source") || ""
-      const country = request.cf && request.cf.country
-      const wantMirror = source === "cnb" || source === "gitcode" || (source !== "github" && country === "CN")
+      // coffeecli.com is fronted by Tencent EdgeOne, so Cloudflare sees the
+      // EdgeOne node instead of the visitor. EdgeOne forwards the visitor's
+      // country in EO-Client-IPCountry; fall back to Cloudflare's value for
+      // requests that reach Pages directly.
+      const country = (request.headers.get("EO-Client-IPCountry") || (request.cf && request.cf.country) || "")
+        .trim()
+        .toUpperCase()
+      const mainland = country === "CN"
+      const wantMirror = source === "cnb" || source === "gitcode" || (source !== "github" && mainland)
       if (wantMirror) {
         const hit = await findMirror(env, asset, source === "cnb" || source === "gitcode" ? source : "")
         if (hit) {
@@ -269,10 +276,24 @@ export default {
         }
       }
 
-      // Proxy the asset so the download stays on coffeecli.com (reachable
-      // where github.com is slow). If GitHub's CDN answers badly for this
-      // edge — or the subrequest throws — retry once, then send the browser
-      // straight to the GitHub asset instead of surfacing a bare 502.
+      // Outside the mainland GitHub is fast, so redirect there and keep the
+      // installer bytes off the CDN in front of coffeecli.com.
+      if (!mainland) {
+        return new Response(null, {
+          status: 302,
+          headers: {
+            "Location": asset.url,
+            "Cache-Control": "no-store",
+            "X-Coffee-Version": asset.version,
+            "X-Coffee-Source": "github",
+          },
+        })
+      }
+
+      // Mainland visitor with no matching mirror: proxy the asset so the
+      // download stays on coffeecli.com (github.com is slow there). If
+      // GitHub's CDN answers badly — or the subrequest throws — retry once,
+      // then send the browser straight to the GitHub asset instead of a 502.
       let fileRes = null
       for (let attempt = 0; attempt < 2 && !(fileRes && fileRes.ok && fileRes.body); attempt++) {
         try {
