@@ -397,8 +397,7 @@ provided as is: no promise, no warranty, no liability.
 **Brand** — *Coffee CLI*, *Gambit*, *Pitch*, *VibeID*, *Vibetype* (and the 16 individual Vibetype names),
 *Coffee-CLI MCP*, *Sentinel Protocol* and *Hyper-Agent* are trademarks of edison7009. Reviews, tutorials and
 honest references, including critical ones, are welcome without permission; any other use needs written
-permission. The app icon is from the [line-md](https://github.com/cyberalien/line-md) icon set (Apache-2.0,
-by Vjacheslav Trushkin) and is not claimed as a mark. See [TRADEMARKS.md](TRADEMARKS.md).
+permission. See [TRADEMARKS.md](TRADEMARKS.md).
 
 **Business & enterprise** — Customization, white-label distribution, embedding in your own product, custom
 development, priority support and SLAs: contact **hi@coffeecli.com**.
@@ -415,9 +414,7 @@ development, priority support and SLAs: contact **hi@coffeecli.com**.
 
 **品牌** — *Coffee CLI*、*Gambit*、*Pitch / 投递*、*VibeID*、*Vibetype / Vibe 型*(及 16 个具体 Vibetype 名称)、
 *Coffee-CLI MCP*、*哨兵协议 / Sentinel Protocol*、*Hyper-Agent* 为 edison7009 的商标。评测、教程、事实性引用 ——
-包括批评 —— 都欢迎，无需授权；其他使用需要书面许可。应用图标取自
-[line-md 图标集](https://github.com/cyberalien/line-md)(Apache-2.0,作者 Vjacheslav Trushkin),不主张为本项目商标。
-完整政策见 [TRADEMARKS.md](TRADEMARKS.md)。
+包括批评 —— 都欢迎，无需授权；其他使用需要书面许可。完整政策见 [TRADEMARKS.md](TRADEMARKS.md)。
 
 **商业与企业** — 定制、白标分发、嵌入你的产品、定制开发、优先支持与 SLA,请联系 **hi@coffeecli.com**。
 
