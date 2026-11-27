@@ -29,14 +29,7 @@ in commerce by the Coffee CLI project and its primary maintainer
 No right to use the Marks is granted by this repository, by any download of Coffee CLI, or by any license
 that applied to code published up to v4.1.1.
 
-**Not claimed.** The Coffee CLI app icon is the *coffee-filled-loop* glyph
-from the [line-md icon set](https://github.com/cyberalien/line-md) by
-Vjacheslav Trushkin, used under the icon set's open-source license (see
-[NOTICE](NOTICE)). We claim no trademark rights in the glyph itself —
-others are free to use the same icon. We may, in the future, claim rights
-in the *combination* of the wordmark *Coffee CLI* with this icon as a
-composite brand element, but the icon alone is not ours. Likewise, terms
-that originated outside this project — including but not limited to
+**Not claimed.** Terms that originated outside this project — including but not limited to
 *VibeCoding* (popularized by Andrej Karpathy) and *Claw* — are not claimed
 as marks of Coffee CLI.
 
@@ -95,13 +88,7 @@ https://github.com/edison7009/Coffee-CLI/issues with the label `trademark`.
 
 本仓库、任何 Coffee CLI 下载，以及 v4.1.1 及之前代码所适用的任何许可，均**不**授予使用上述标识的权利。
 
-**不主张的部分**。Coffee CLI 应用图标采用
-[line-md 图标集](https://github.com/cyberalien/line-md) 中的
-*coffee-filled-loop* 图形,作者 Vjacheslav Trushkin,按其开源协议
-使用(见 [NOTICE](NOTICE))。我们**不**对该图标本身主张商标权 ——
-他人同样可以自由使用同一图标。未来我们可能会就"*Coffee CLI* 文字 +
-该图标"的**组合**作为复合品牌元素主张权利,但单独的图标不归我们所有。
-同理,**起源于本项目之外的词语** —— 包括但不限于 *VibeCoding*
+**不主张的部分**。**起源于本项目之外的词语** —— 包括但不限于 *VibeCoding*
 (由 Andrej Karpathy 推广的概念)与 *Claw* —— 也不在 Coffee CLI 商标
 主张范围内。
 
