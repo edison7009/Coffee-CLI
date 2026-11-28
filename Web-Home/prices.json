@@ -541,6 +541,10 @@
    "input": 0,
    "output": 0
   },
+  "glm-4-32b-0414-128k": {
+   "input": 0.1,
+   "output": 0.1
+  },
   "glm-4.5": {
    "input": 0.6,
    "output": 2.2,
@@ -1279,6 +1283,30 @@
    "input": 4.35,
    "output": 8.7,
    "cache_read": 0.036
+  },
+  "mindlab/macaron-v1-tall": {
+   "input": 0.45,
+   "output": 2.6,
+   "cache_read": 0.08,
+   "cache_write": 0.08
+  },
+  "mindlab/macaron-v1.1-coding-venti": {
+   "input": 1.19,
+   "output": 3.74,
+   "cache_read": 0.22,
+   "cache_write": 0.22
+  },
+  "mindlab/macaron-v1.1-venti": {
+   "input": 1.19,
+   "output": 3.74,
+   "cache_read": 0.22,
+   "cache_write": 0.22
+  },
+  "mindlab/macaron-v1.1-venti-pro": {
+   "input": 2,
+   "output": 10,
+   "cache_read": 0.1,
+   "cache_write": 0.1
   },
   "minimax-m2": {
    "input": 0.3,
