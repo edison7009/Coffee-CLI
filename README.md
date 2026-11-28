@@ -5,8 +5,8 @@
 <h1 align="center">Coffee CLI</h1>
 
 <p align="center">
-  <strong>Coffee CLI 区别于其他网红工具，我们不魔改、不反代、不夹带私货。</strong><br/>
-  <strong>Unlike other hyped tools, Coffee CLI never modifies, never reverse-proxies, and never sneaks in hidden extras.</strong>
+  <strong>Coffee CLI 区别于其他网红工具，我们不魔改、不反代、不收集和卖数据。</strong><br/>
+  <strong>Unlike other hyped tools, Coffee CLI runs your CLIs as-is — no patched builds, no proxy in the middle, and we never collect or sell your data.</strong>
 </p>
 
 <p align="center">
