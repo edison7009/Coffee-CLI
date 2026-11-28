@@ -5,10 +5,14 @@
 <h1 align="center">Coffee CLI</h1>
 
 <p align="center">
-  <strong>Coffee CLI 区别于其他网红工具，我们不魔改、不反代、不夹带私货。</strong>
+  <strong>Coffee CLI 区别于其他网红工具，我们不魔改、不反代、不夹带私货。</strong><br/>
+  <strong>Unlike other hyped tools, Coffee CLI never modifies, never reverse-proxies, and never sneaks in hidden extras.</strong>
 </p>
 
-<p align="center">我们会在远程多端、易用性和界面美观上深度创新和优化...</p>
+<p align="center">
+  我们会在远程多端、易用性和界面美观上深度创新和优化...<br/>
+  We go deep on remote multi-device access, ease of use, and beautiful design...
+</p>
 
 <p align="center">
   <a href="#english">English</a> ·
