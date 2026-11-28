@@ -5,10 +5,10 @@
 <h1 align="center">Coffee CLI</h1>
 
 <p align="center">
-  <strong>Vibe Coding on one side, looking stylish on the other.</strong>
+  <strong>Coffee CLI 区别于其他网红工具，我们不魔改、不反代、不夹带私货。</strong>
 </p>
 
-This repository hosts the Coffee CLI website, documentation, changelogs, downloads, and issue tracker.
+<p align="center">我们会在远程多端、易用性和界面美观上深度创新和优化...</p>
 
 <p align="center">
   <a href="#english">English</a> ·
